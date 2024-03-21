@@ -4,7 +4,7 @@ const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -14,10 +14,9 @@ const config: Config = {
       //     "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       // },
 
-      // set bg image to ./public/Adamant-bg-dark.png
-
       backgroundImage: {
-        adamant: "url('/Adamant-bg-dark.png')",
+        "tubeshapes-dark": "url('/images/Adamant-bg-dark.png')",
+        "tubeshapes-light": "url('/images/Adamant-bg-light.png')",
       },
       colors: {
         adamant: {
