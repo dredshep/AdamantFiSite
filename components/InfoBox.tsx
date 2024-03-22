@@ -1,4 +1,5 @@
 import cn from "classnames";
+import Link from "next/link";
 
 type InfoBoxProps = {
   title: string;
@@ -24,7 +25,7 @@ function InfoBox({
       <p className="text-lg opacity-50 leading-8 mt-2 font-bold">
         {description}
       </p>
-      <a
+      <Link
         href={link}
         className={cn(
           "bg-opacity-10 mt-4 rounded-md text-base font-bold text-adamant-accentText leading-8",
@@ -32,7 +33,7 @@ function InfoBox({
         )}
       >
         {buttonText}
-      </a>
+      </Link>
     </div>
   );
 }

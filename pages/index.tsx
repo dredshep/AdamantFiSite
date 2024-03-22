@@ -50,13 +50,13 @@ const infoBoxes = (
       title="Grants"
       description="Would you like to build a new protocol for Adamant or implement our liquidity?"
       buttonText="APPLY FOR A GRANT"
-      link="/grants" // Replace with your actual link
+      link="https://adamantfi.gitbook.io/documentation/" // Replace with your actual link
     />
     <InfoBox
       title="Infra and SDKs"
       description="Adamant tech stack offers many solutions that can provide your application the necessary infrastructure."
       buttonText="LEARN MORE"
-      link="/infra-and-sdks" // Replace with your actual link
+      link="https://github.com/dredshep/AdamantFiSite" // Replace with your actual link
     />
   </div>
 );
@@ -86,18 +86,24 @@ export default function Home() {
 
         {/* nav */}
         <div className="flex items-center space-x-11 uppercase text-base font-medium">
-          <a
+          <Link
             href="#"
             className="text-white border-b-2 border-[#8A754A] pb-2 px-2"
           >
             Products
-          </a>
-          <a href="#" className="text-white brightness-50 pb-2 px-2">
+          </Link>
+          <Link
+            href="https://github.com/dredshep/AdamantFiSite"
+            className="text-white brightness-50 pb-2 px-2"
+          >
             Developers
-          </a>
-          <a href="#" className="text-white brightness-50 pb-2 px-2">
+          </Link>
+          <Link
+            href="https://forum.scrt.network/"
+            className="text-white brightness-50 pb-2 px-2"
+          >
             Governance
-          </a>
+          </Link>
           <Link
             href="/app"
             className="text-black uppercase bg-white px-4 py-2 rounded-lg text-base font-bold"

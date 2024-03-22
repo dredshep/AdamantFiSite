@@ -89,24 +89,24 @@ export default function Home() {
 
         {/* nav */}
         <div className="flex items-center space-x-11 uppercase text-base font-medium leading-6">
-          <a
+          <Link
             href="#"
             className="text-white border-b-2 border-[#8A754A] pb-1 px-2"
           >
             Swap
-          </a>
-          <a
+          </Link>
+          <Link
             href="#"
             className="text-white border-b-2 border-transparent brightness-50 pb-1 px-2"
           >
             Tokens
-          </a>
-          <a
+          </Link>
+          <Link
             href="#"
             className="text-white border-b-2 border-transparent brightness-50 pb-1 px-2"
           >
             Pools
-          </a>
+          </Link>
         </div>
         <UserWallet
           isConnected={true}
