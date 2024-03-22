@@ -5,7 +5,9 @@ import InfoBox from "@/components/InfoBox";
 import Footer from "@/components/Footer";
 import Head from "next/head";
 import UserWallet from "@/components/app/UserWallet";
-import { BiCaretUp } from "react-icons/bi";
+import Link from "next/link";
+import SwapForm from "@/components/organisms/SwapForm";
+import ComboboxForm from "@/components/organisms/SwapForm";
 
 const jura = Jura({ subsets: ["latin"] });
 
@@ -78,12 +80,12 @@ export default function Home() {
       </Head>
       <div className="px-6 py-8 flex w-full justify-between">
         {/* logo */}
-        <div className="flex items-center ">
+        <Link className="flex items-center " href="/">
           <Logo className="h-10 w-10" />
           <div className="text-white text-lg font-bold leading-6 tracking-wider ml-2">
             ADAMANT<span className="text-adamant-dark">.FI</span>
           </div>
-        </div>
+        </Link>
 
         {/* nav */}
         <div className="flex items-center space-x-11 uppercase text-base font-medium leading-6">
@@ -134,7 +136,7 @@ export default function Home() {
           <div>+ Add liquidity for SRCT/SHD</div>
         </div>
         <div className="bg-[#30364E] w-[400px] h-[400px] leading-none rounded-xl text-xl uppercase mt-2 p-5">
-          test
+          <ComboboxForm />
         </div>
         <Footer />
       </div>

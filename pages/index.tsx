@@ -4,6 +4,7 @@ import CoolBox from "@/components/CoolBox";
 import InfoBox from "@/components/InfoBox";
 import Footer from "@/components/Footer";
 import Head from "next/head";
+import Link from "next/link";
 
 const jura = Jura({ subsets: ["latin"] });
 
@@ -66,7 +67,8 @@ export default function Home() {
   return (
     <div
       className={
-        jura.className + " bg-tubeshapes-dark bg-cover min-h-screen pb-20"
+        jura.className +
+        " bg-tubeshapes-dark bg-cover min-h-screen pb-20 text-white"
       }
     >
       <Head>
@@ -75,12 +77,12 @@ export default function Home() {
       </Head>
       <div className="px-6 py-8 flex w-full justify-between">
         {/* logo */}
-        <div className="flex items-center ">
+        <Link className="flex items-center " href="/">
           <Logo className="h-10 w-10" />
           <div className="text-white text-2xl font-bold tracking-wider ml-2">
             ADAMANT<span className="text-adamant-dark">.FI</span>
           </div>
-        </div>
+        </Link>
 
         {/* nav */}
         <div className="flex items-center space-x-11 uppercase text-base font-medium">
@@ -96,12 +98,12 @@ export default function Home() {
           <a href="#" className="text-white brightness-50 pb-2 px-2">
             Governance
           </a>
-          <a
+          <Link
             href="/app"
             className="text-black uppercase bg-white px-4 py-2 rounded-lg text-base font-bold"
           >
             Launch App
-          </a>
+          </Link>
         </div>
       </div>
       {/* container div simply setting max width and perhaps other settings for content only */}
