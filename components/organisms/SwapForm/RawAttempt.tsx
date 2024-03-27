@@ -1,4 +1,9 @@
+import ImageWithPlaceholder from "@/components/app/ImageWithPlaceholder";
 import InputLabel from "@/components/app/atoms/InputLabel";
+import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
+import TokenInput from "@/components/app/molecules/TokenInput";
+import Image from "next/image";
+import { RxCaretDown } from "react-icons/rx";
 
 export default function RawAttempt() {
   return (
@@ -6,17 +11,12 @@ export default function RawAttempt() {
       <div className="flex flex-col gap-6 px-8">
         <div className="flex flex-col gap-2">
           <InputLabel label="You Pay" caseType="uppercase" />
-          <input
-            className="rounded-xl text-2xl font-bold py-2 px-[21px] bg-adamant-app-input w-full"
-            placeholder="0.0"
-          />
+
+          <TokenInput userAddress="0xfirst token input" />
         </div>
         <div className="flex flex-col gap-2">
           <InputLabel label="You Receive" caseType="uppercase" />
-          <input
-            className="rounded-xl text-2xl font-bold py-2 px-[21px] bg-adamant-app-input w-full"
-            placeholder="0.0"
-          />
+          <TokenInput userAddress="0xsecond token input" />
         </div>
         <div className="flex justify-between normal-case">
           <div className="flex items-center space-x-4">

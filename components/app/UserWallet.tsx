@@ -1,8 +1,8 @@
-import ImageWithPlaceholder from "./ImageWithPlaceholder";
-import addressTo3Colors from "@/utils/ImageWithPlaceholder/addressTo3Colors";
-import { HexString } from "@/types";
-import stringToHex from "@/utils/ImageWithPlaceholder/stringToHex";
+// UserWallet.tsx
+import React from "react";
 import { RxCaretDown } from "react-icons/rx";
+import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
+import { HexString } from "@/types";
 
 interface UserWalletProps {
   isConnected: boolean;
@@ -12,30 +12,22 @@ interface UserWalletProps {
   onConnect: () => void;
 }
 
-function UserWallet({
+const UserWallet: React.FC<UserWalletProps> = ({
   isConnected,
   userAddress,
   balanceSCRT,
   balanceADMT,
   onConnect,
-}: UserWalletProps) {
+}) => {
   const truncatedAddress =
     userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
-  const hexAddress = stringToHex(userAddress);
-  const colorsString = addressTo3Colors(hexAddress);
-  const placeholderUrl = `https://api.dicebear.com/6.x/shapes/svg?seed=${hexAddress}&height=24&width=24&${colorsString}`;
+
   return (
     <div className="flex items-center gap-4">
       {isConnected ? (
         <>
           <div className="relative">
-            <ImageWithPlaceholder
-              imageUrl={placeholderUrl}
-              placeholderUrl={placeholderUrl}
-              index={1}
-              length={2}
-              alt="Avatar"
-            />
+            <PlaceholderFromHexAddress userAddress={userAddress} size={48} />
           </div>
           <div>
             <div className="hidden md:flex font-medium items-center gap-2">
@@ -54,6 +46,6 @@ function UserWallet({
       )}
     </div>
   );
-}
+};
 
 export default UserWallet;

@@ -7,6 +7,7 @@ interface ImageWithPlaceholderProps {
   index: number;
   length: number;
   alt: string;
+  size: number; // Size in pixels
 }
 
 function ImageWithPlaceholder({
@@ -15,6 +16,7 @@ function ImageWithPlaceholder({
   index,
   length,
   alt,
+  size,
 }: ImageWithPlaceholderProps) {
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl);
 
@@ -24,6 +26,9 @@ function ImageWithPlaceholder({
   const handleError = () => {
     setCurrentImageUrl(placeholderUrl);
   };
+  const defaultSize = 48;
+  const pixelSize = size || defaultSize;
+  const stringifiedSizeWithPx = `${pixelSize}px`;
 
   return (
     <div
@@ -31,8 +36,8 @@ function ImageWithPlaceholder({
         marginLeft,
         zIndex,
         position: "relative",
-        width: "48px",
-        height: "48px",
+        width: stringifiedSizeWithPx,
+        height: stringifiedSizeWithPx,
       }}
       className="rounded-circle"
     >
@@ -41,8 +46,8 @@ function ImageWithPlaceholder({
         alt={alt}
         onError={handleError}
         className="rounded-circle object-cover rounded-full"
-        height={48}
-        width={48}
+        height={pixelSize} // Dynamic size
+        width={pixelSize} // Dynamic size
       />
     </div>
   );
