@@ -1,6 +1,18 @@
-export default function InputLabel({ label }: { label: string }) {
+import cn from "classnames";
+
+type InputLabelProps = {
+  label: string;
+  caseType: "uppercase" | "normal-case";
+};
+
+export default function InputLabel({ label, caseType }: InputLabelProps) {
   return (
-    <label className="block text-sm leading-6 font-medium text-white text-[13px] uppercase">
+    <label
+      className={cn(
+        "block text-sm leading-6 font-medium text-white brightness-50 text-[13px],",
+        caseType === "uppercase" ? "uppercase" : "normal-case"
+      )}
+    >
       {label}
     </label>
   );

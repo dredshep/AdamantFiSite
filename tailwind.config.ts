@@ -20,6 +20,7 @@ const config = {
       colors: {
         adamant: {
           accentText: "#A78E5A",
+          accentBg: "#a88f5b",
           dark: "#8A754A",
           contrastDark: "#3F331D",
           gradientBright: "#A68C57",
@@ -30,6 +31,10 @@ const config = {
             buttonDark: "#100F20",
             buttonLight: "#151426",
             border: "#30364E",
+          },
+          app: {
+            box: "#30364e",
+            input: "#181b27",
           },
         },
       },
