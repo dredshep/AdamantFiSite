@@ -3,7 +3,6 @@ import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFro
 import { HexString } from "@/types";
 
 const tokens = [
-  // Placeholder data with userAddress added
   {
     userAddress: "0x6545454465153231231231...",
     name: "SCRT",
@@ -22,7 +21,6 @@ const tokens = [
     tvl: "$200K",
     volume: "$101K",
   },
-  // Add more tokens as needed
 ];
 
 export default function TokensPage() {
