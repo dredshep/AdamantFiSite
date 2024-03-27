@@ -1,6 +1,6 @@
 import { Jura } from "next/font/google";
-import AppLayout from "../../components/compositions/AppLayout";
-import RawAttempt from "@/components/organisms/SwapForm/RawAttempt";
+import AppLayout from "../../components/app/compositions/AppLayout";
+import RawAttempt from "@/components/app/organisms/SwapForm/RawAttempt";
 
 const jura = Jura({ subsets: ["latin"] });
 
