@@ -5,9 +5,13 @@ import { HexString } from "@/types";
 
 interface TokenInputProps {
   userAddress: HexString;
+  maxable?: boolean; // Optional boolean prop to control the display of the MAX button
 }
 
-const TokenInput: React.FC<TokenInputProps> = ({ userAddress }) => {
+const TokenInput: React.FC<TokenInputProps> = ({
+  userAddress,
+  maxable = false,
+}) => {
   return (
     <div className="flex">
       <input
@@ -17,9 +21,11 @@ const TokenInput: React.FC<TokenInputProps> = ({ userAddress }) => {
       <div className="flex items-center px-4 bg-adamant-app-input text-sm font-bold text-gray-500">
         0.0
       </div>
-      <button className="bg-adamant-app-input text-sm font-bold text-white px-4">
-        MAX
-      </button>
+      {maxable && ( // Conditionally render the MAX button
+        <button className="bg-adamant-app-input text-sm font-bold text-white px-4">
+          MAX
+        </button>
+      )}
       <div className="flex gap-3 items-center rounded-r-xl text-sm font-bold py-3 px-4 bg-adamant-app-selectTrigger min-w-48">
         <PlaceholderFromHexAddress userAddress={userAddress} size={24} />
         SCRT

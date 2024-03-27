@@ -12,7 +12,7 @@ export default function RawAttempt() {
         <div className="flex flex-col gap-2">
           <InputLabel label="You Pay" caseType="uppercase" />
 
-          <TokenInput userAddress="0xfirst token input" />
+          <TokenInput userAddress="0xfirst token input" maxable />
         </div>
         <div className="flex flex-col gap-2">
           <InputLabel label="You Receive" caseType="uppercase" />
