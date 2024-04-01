@@ -1,6 +1,11 @@
 import { useRouter } from "next/router";
 import AppLayout from "@/components/app/compositions/AppLayout";
 import React from "react";
+import VegaChart from "@/components/app/atoms/ResponsiveVegaChart";
+import chartSpec from "@/utils/dummyData/lineChart.json";
+import values from "@/utils/dummyData/lineChartValues.json";
+import ResponsiveVegaChart from "@/components/app/atoms/ResponsiveVegaChart";
+import { VisualizationSpec } from "react-vega";
 
 // Mock token details data
 const tokenDetails = {
@@ -41,6 +46,13 @@ const TokenPage = () => {
         <div className="max-w-4xl mx-auto mt-12">
           {/* Breadcrumb */}
           <div className="mb-8">Tokens &gt; {details.name}</div>
+          <div>
+            <h1>Chart time</h1>
+            <ResponsiveVegaChart
+              spec={chartSpec as VisualizationSpec}
+              values={values}
+            />
+          </div>
 
           {/* Statistics Box */}
           <div className="mb-8">

@@ -1,9 +1,28 @@
-import ImageWithPlaceholder from "@/components/app/ImageWithPlaceholder";
 import InputLabel from "@/components/app/atoms/InputLabel";
-import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
 import TokenInput from "@/components/app/molecules/TokenInput";
-import Image from "next/image";
-import { RxCaretDown } from "react-icons/rx";
+
+import React from "react";
+import cn from "classnames";
+
+interface SwapButtonProps {
+  disabled?: boolean;
+}
+
+const SwapButton: React.FC<SwapButtonProps> = ({ disabled = false }) => {
+  return (
+    <button
+      className={cn({
+        "bg-adamant-accentBg hover:brightness-125 transition-all hover:saturate-150 active:saturate-200 active:brightness-150":
+          !disabled,
+        "bg-adamant-app-buttonDisabled": disabled,
+        "text-lg rounded-b-xl text-black py-3 font-bold w-full": true,
+      })}
+      disabled={disabled}
+    >
+      SWAP
+    </button>
+  );
+};
 
 export default function RawAttempt() {
   return (
@@ -35,10 +54,7 @@ export default function RawAttempt() {
           </div>
         </div>
       </div>
-      {/* SWAP button w accent bg, stuck to bottom, full w without padding*/}
-      <button className="bg-adamant-accentBg text-lg rounded-b-xl text-black py-3 font-bold w-full">
-        SWAP
-      </button>
+      <SwapButton disabled={false} />
     </div>
   );
 }

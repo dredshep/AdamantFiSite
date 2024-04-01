@@ -1,0 +1,49 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "A smooth line chart with area fill for cryptocurrency data",
+  "background": "#0b0b16",
+  "data": {
+    "values": []
+  },
+  "mark": {
+    "type": "area",
+    "line": {
+      "color": "#3254a2"
+    },
+    "color": {
+      "gradient": "linear",
+      "stops": [
+        { "offset": 0, "color": "#0c0f16" },
+        { "offset": 1, "color": "#0b0b16" }
+      ]
+    },
+    "interpolate": "monotone"
+  },
+  "encoding": {
+    "x": {
+      "field": "time",
+      "type": "ordinal",
+      "axis": {
+        "title": null,
+        "labelColor": "#898989",
+        "tickColor": "#898989",
+        "domain": false
+      }
+    },
+    "y": {
+      "field": "value",
+      "type": "quantitative",
+      "axis": {
+        "title": null,
+        "format": "$,.2f",
+        "labelColor": "#898989",
+        "tickColor": "#898989",
+        "grid": false,
+        "orient": "right"
+      }
+    }
+  },
+  "config": {
+    "view": { "stroke": "transparent" }
+  }
+}

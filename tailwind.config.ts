@@ -36,6 +36,7 @@ const config = {
             box: "#30364e",
             input: "#181b27",
             selectTrigger: "#242732",
+            buttonDisabled: "#888ea6",
           },
         },
       },
