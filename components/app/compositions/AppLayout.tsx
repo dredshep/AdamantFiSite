@@ -1,4 +1,3 @@
-// _layout.tsx
 import React, { ReactNode } from "react";
 import Head from "next/head";
 import { Jura } from "next/font/google";

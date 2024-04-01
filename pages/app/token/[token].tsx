@@ -1,4 +1,3 @@
-// pages/tokens/[token].tsx
 import { useRouter } from "next/router";
 import AppLayout from "@/components/app/compositions/AppLayout";
 import React from "react";
