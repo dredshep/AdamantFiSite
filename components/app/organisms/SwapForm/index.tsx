@@ -1,104 +1,76 @@
-import * as Form from "@radix-ui/react-form";
-import { ComboboxForm } from "./formExample";
+import React from "react";
+import InputLabel from "@/components/app/atoms/InputLabel";
+import TokenInput from "@/components/app/molecules/TokenInput";
+import SwapButton from "@/components/app/atoms/SwapButton";
+import { Token } from "@/types";
 
-// export default function SwapForm() {
-//   return (
-//     <div>
-//       <Form.Root className="flex flex-col gap-4">
-//         <Form.Field name="from" defaultValue="SCRT">
-//           <div className="flex flex-col gap-2">
-//             <Form.Label className="uppercase font-medium">You pay</Form.Label>
-//             <Form.Message className="text-red-500" match="valueMissing">
-//               Please enter an amount
-//             </Form.Message>
-//             <Form.Message className="text-red-500" match="patternMismatch">
-//               Please enter a valid amount
-//             </Form.Message>
-//             <Form.Control asChild className="flex gap-2">
-//               <input type="number" min="0" step="0.01" className="w-24" />
-//               {/* <select className="w-24">
-//                 <option>SCRT</option>
-//                 <option>ADMT</option>
-//               </select> */}
-//             </Form.Control>
-//           </div>
-//         </Form.Field>
-//         <Form.Field name="to" defaultValue="ADMT">
-//           <div className="flex flex-col gap-2">
-//             <Form.Label className="uppercase font-medium">You get</Form.Label>
-//             <Form.Message className="text-red-500" match="valueMissing">
-//               Please enter an amount
-//             </Form.Message>
-//             <Form.Message className="text-red-500" match="patternMismatch">
-//               Please enter a valid amount
-//             </Form.Message>
-//             <Form.Control asChild className="flex gap-2">
-//               <input type="number" min="0" step="0.01" className="w-24" />
-//               {/* <select className="w-24">
-//                 <option>SCRT</option>
-//                 <option>ADMT</option>
-//               </select> */}
-//             </Form.Control>
-//           </div>
-//         </Form.Field>
-//         <Form.Submit className="bg-black text-white py-2 rounded-lg">
-//           Swap
-//         </Form.Submit>
-//       </Form.Root>
-//     </div>
-//   );
-// }
-// import React from "react";
-// import * as Form from "@radix-ui/react-form";
-// // import './styles.css';
+// Props type definition
+interface SwapFormLayoutProps {
+  tokens: Token[];
+  payToken: Token;
+  receiveToken: Token;
+  payAmount: string;
+  receiveAmount: string;
+  setPayToken: React.Dispatch<React.SetStateAction<Token>>;
+  setReceiveToken: React.Dispatch<React.SetStateAction<Token>>;
+  setPayAmount: React.Dispatch<React.SetStateAction<string>>;
+  setReceiveAmount: React.Dispatch<React.SetStateAction<string>>;
+  handleSwapClick: () => void;
+}
 
-// const FormDemo = () => (
-//   <Form.Root className="flex flex-col gap-4">
-//     <Form.Field name="from" defaultValue="SCRT">
-//       <div
-//         style={{
-//           display: "flex",
-//           alignItems: "baseline",
-//           justifyContent: "space-between",
-//         }}
-//       >
-//         <Form.Label className="uppercase font-medium">Email</Form.Label>
-//         <Form.Message className="text-red-500" match="valueMissing">
-//           Please enter an amount
-//         </Form.Message>
-//         <Form.Message className="text-red-500" match="patternMismatch">
-//           Please enter a valid amount
-//         </Form.Message>
-//       </div>
-//       <Form.Control asChild>
-//         <input type="number" min="0" step="0.01" className="w-24" required />
-//       </Form.Control>
-//     </Form.Field>
-//     <Form.Field name="to" defaultValue="ADMT">
-//       <div
-//         style={{
-//           display: "flex",
-//           alignItems: "baseline",
-//           justifyContent: "space-between",
-//         }}
-//       >
-//         <Form.Label className="uppercase font-medium">Question</Form.Label>
-//         <Form.Message className="FormMessage" match="valueMissing">
-//           Please enter a question
-//         </Form.Message>
-//       </div>
-//       <Form.Control asChild>
-//         <textarea className="Textarea" required />
-//       </Form.Control>
-//     </Form.Field>
-//     <Form.Submit asChild>
-//       <button className="Button" style={{ marginTop: 10 }}>
-//         Post question
-//       </button>
-//     </Form.Submit>
-//   </Form.Root>
-// );
+const SwapForm: React.FC<SwapFormLayoutProps> = ({
+  tokens,
+  payToken,
+  receiveToken,
+  payAmount,
+  receiveAmount,
+  setPayToken,
+  setReceiveToken,
+  setPayAmount,
+  setReceiveAmount,
+  handleSwapClick,
+}) => (
+  <div className="flex flex-col gap-6 pt-8">
+    <div className="flex flex-col gap-6 px-8">
+      <div className="flex flex-col gap-2">
+        <InputLabel label="You Pay" caseType="uppercase" />
+        <TokenInput
+          maxable
+          tokens={tokens}
+          selectedToken={payToken}
+          setSelectedToken={setPayToken}
+          amount={payAmount}
+          setAmount={setPayAmount}
+          balance={100}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <InputLabel label="You Receive" caseType="uppercase" />
+        <TokenInput
+          tokens={tokens}
+          selectedToken={receiveToken}
+          setSelectedToken={setReceiveToken}
+          amount={receiveAmount}
+          setAmount={setReceiveAmount}
+          balance={100}
+        />
+      </div>
+      {/* Consider moving Slippage and Est. gas inputs to their own components if they have specific logic */}
+      <div className="flex justify-between normal-case">
+        <InputLabel label="Slippage" caseType="normal-case" />
+        <input
+          className="rounded-xl text-sm font-bold py-2 px-4 bg-adamant-app-input w-20"
+          placeholder="0.5%"
+        />
+        <InputLabel label="Est. gas:" caseType="normal-case" />
+        <input
+          className="rounded-xl text-sm font-bold py-2 px-4 bg-adamant-app-input w-20"
+          placeholder="0.0"
+        />
+      </div>
+    </div>
+    <SwapButton disabled={false} onClick={handleSwapClick} />
+  </div>
+);
 
-// export default FormDemo;
-
-export default ComboboxForm;
+export default SwapForm;
