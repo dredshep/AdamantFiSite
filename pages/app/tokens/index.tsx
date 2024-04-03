@@ -1,11 +1,11 @@
 import AppLayout from "@/components/app/compositions/AppLayout";
-import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
+import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
 import { SecretString } from "@/types";
 import Link from "next/link";
 
 const tokens = [
   {
-    userAddress: "0x6545454465153231231231",
+    userAddress: "secret16545454465153231231231",
     name: "SCRT",
     network: "Secret Network",
     price: "$0.10",
@@ -14,7 +14,7 @@ const tokens = [
     volume: "$48K",
   },
   {
-    userAddress: "0xacd6a516c51a651da65c165d1",
+    userAddress: "secret1acd6a516c51a651da65c165d1",
     name: "ADMT",
     network: "Secret Network",
     price: "$0.20",
@@ -53,8 +53,8 @@ export default function TokensPage() {
               href={`/app/token/${token.userAddress}`}
             >
               <div className="flex-1 flex items-center min-w-60">
-                <PlaceholderFromHexAddress
-                  userAddress={token.userAddress as SecretString}
+                <PlaceholderImageFromSeed
+                  seed={token.userAddress as SecretString}
                   size={24}
                 />
                 <div className="ml-3">

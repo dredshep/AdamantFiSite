@@ -1,7 +1,7 @@
 // UserWallet.tsx
 import React from "react";
 import { RxCaretDown } from "react-icons/rx";
-import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
+import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
 import { SecretString } from "@/types";
 
 interface UserWalletProps {
@@ -27,7 +27,7 @@ const UserWallet: React.FC<UserWalletProps> = ({
       {isConnected ? (
         <>
           <div className="relative">
-            <PlaceholderFromHexAddress userAddress={userAddress} size={48} />
+            <PlaceholderImageFromSeed seed={userAddress} size={48} />
           </div>
           <div>
             <div className="hidden md:flex font-medium items-center gap-2">

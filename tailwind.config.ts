@@ -34,6 +34,7 @@ const config = {
           },
           app: {
             box: "#30364e",
+            boxHighlight: "#444a5f",
             input: "#181b27",
             selectTrigger: "#242732",
             buttonDisabled: "#888ea6",

@@ -1,6 +1,3 @@
-export type SecretString = `secret1${string}`;
-
-export interface Token {
-  symbol: string;
-  address: SecretString;
-}
+export * from "@/types/store";
+export * from "@/types/Token";
+export * from "@/types/SecretString";

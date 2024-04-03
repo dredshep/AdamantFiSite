@@ -1,6 +1,6 @@
 import React from "react";
 import InputLabel from "@/components/app/atoms/InputLabel";
-import TokenInput from "@/components/app/molecules/TokenInput";
+import TokenInput from "@/components/app/organisms/SwapForm/TokenInput";
 import SwapButton from "@/components/app/atoms/SwapButton";
 import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
 import DynamicField from "@/components/app/molecules/DynamicField";

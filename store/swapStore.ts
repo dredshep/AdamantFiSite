@@ -1,46 +1,26 @@
 import { create } from "zustand";
-import { Token } from "@/types";
-
-interface TokenInputState {
-  token: Token;
-  amount: string;
-}
-
-// Extending TokenInputs to hold identifiers for gas and slippage
-export interface TokenInputs {
-  "swap.pay": TokenInputState;
-  "swap.receive": TokenInputState;
-}
-
-// New structure for shared settings like gas and slippage across forms
-interface SharedSettings {
-  slippage: number;
-  gas: number;
-}
-
-export interface StoreState {
-  tokenInputs: TokenInputs;
-  sharedSettings: SharedSettings; // Shared settings for transactions
-  setTokenInputProperty: <T extends keyof TokenInputState>(
-    inputIdentifier: keyof TokenInputs,
-    property: T,
-    value: TokenInputState[T]
-  ) => void;
-  // Generalizing setters for shared settings
-  setSharedSetting: <T extends keyof SharedSettings>(
-    setting: T,
-    value: SharedSettings[T]
-  ) => void;
-}
+import {
+  SharedSettings,
+  StoreState,
+  Token,
+  TokenInputState,
+  TokenInputs,
+} from "@/types";
 
 export const useStore = create<StoreState>((set) => ({
   tokenInputs: {
     "swap.pay": {
-      token: { symbol: "sSCRT", address: "secret1k0jnty" },
+      token: {
+        symbol: "sSCRT",
+        address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+      },
       amount: "",
     },
     "swap.receive": {
-      token: { symbol: "SEFI", address: "secret15l9" },
+      token: {
+        symbol: "SEFI",
+        address: "secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt",
+      },
       amount: "",
     },
   },
@@ -71,4 +51,6 @@ export const useStore = create<StoreState>((set) => ({
       ...state,
       sharedSettings: { ...state.sharedSettings, [setting]: value },
     })),
+  swappableTokens: [], // Add this line to initialize the swappable tokens list
+  setSwappableTokens: (tokens) => set({ swappableTokens: tokens }), // Method to update the list
 }));
