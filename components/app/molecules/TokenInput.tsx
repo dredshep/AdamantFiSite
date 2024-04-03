@@ -1,35 +1,35 @@
 import React, { useState } from "react";
+import { TokenInputs, useStore } from "@/store/swapStore"; // Adjust the import path as necessary
 import PlaceholderFromHexAddress from "./PlaceholderFromHexAddress";
 import { RxCaretDown } from "react-icons/rx";
-import { HexString, Token } from "@/types";
+import { Token } from "@/types";
 
 interface TokenInputProps {
+  inputIdentifier: keyof TokenInputs; // This prop specifies which token input state to interact with (e.g., "swap.pay")
   maxable?: boolean;
-  tokens: Token[];
-  selectedToken: Token;
-  setSelectedToken: React.Dispatch<React.SetStateAction<Token>>;
-  balance: number; // Assuming balance is passed as a prop
-  amount: string;
-  setAmount: React.Dispatch<React.SetStateAction<string>>;
+  balance: number; // Assuming balance is still passed as a prop
 }
 
+const tokens = [
+  { symbol: "sSCRT", address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek" },
+  { symbol: "SEFI", address: "secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt" },
+  { symbol: "sAAVE", address: "secret1yxwnyk8htvvq25x2z87yj0r5tqpev452fk6h5h" },
+] as Token[];
+
 const TokenInput: React.FC<TokenInputProps> = ({
+  inputIdentifier,
   maxable = false,
-  tokens,
-  selectedToken,
-  setSelectedToken,
   balance,
-  amount,
-  setAmount,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // const [amount, setAmount] = useState<string>("");
+  const { tokenInputs, setTokenInputProperty } = useStore();
 
-  const handleTokenSelect = (token: Token) => {
-    setSelectedToken(token);
+  // Extracting the specific token input state based on the inputIdentifier
+  const { token, amount } = tokenInputs[inputIdentifier];
+
+  const handleTokenSelect = (selectedToken: Token) => {
+    setTokenInputProperty(inputIdentifier, "token", selectedToken);
     setIsModalOpen(false);
-    // Optionally reset amount on token change
-    // setAmount("");
   };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,14 +37,14 @@ const TokenInput: React.FC<TokenInputProps> = ({
     const numValue = parseFloat(value);
 
     if (!isNaN(numValue) && numValue >= 0 && numValue <= balance) {
-      setAmount(value);
+      setTokenInputProperty(inputIdentifier, "amount", value);
     } else if (value === "") {
-      setAmount("");
+      setTokenInputProperty(inputIdentifier, "amount", "");
     }
   };
 
   const handleMax = () => {
-    setAmount(balance.toString());
+    setTokenInputProperty(inputIdentifier, "amount", balance.toString());
   };
 
   return (
@@ -57,7 +57,6 @@ const TokenInput: React.FC<TokenInputProps> = ({
           onChange={handleChange}
         />
         <div className="flex items-center px-4 bg-adamant-app-input text-sm font-bold text-gray-500">
-          {/* Display the current balance */}
           {balance.toFixed(2)}
         </div>
         {maxable && (
@@ -72,11 +71,8 @@ const TokenInput: React.FC<TokenInputProps> = ({
           className="flex gap-3 items-center rounded-r-xl text-sm font-bold py-3 px-4 bg-adamant-app-selectTrigger min-w-48 cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         >
-          <PlaceholderFromHexAddress
-            userAddress={selectedToken.address}
-            size={24}
-          />
-          {selectedToken.symbol}
+          <PlaceholderFromHexAddress userAddress={token.address} size={24} />
+          {token.symbol}
           <RxCaretDown className="text-white h-5 w-5 ml-auto" />
         </div>
       </div>

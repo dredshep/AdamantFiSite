@@ -4,7 +4,7 @@ import React from "react";
 
 // Mock pool details data
 const poolDetails = {
-  "0x6545454465153231231231": {
+  secret16545454465153231231231: {
     name: "SCRT",
     network: "Secret Network",
     totalVolumeLocked: "$500K",
@@ -13,7 +13,7 @@ const poolDetails = {
     dailyVolume: "$50K",
     about: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
   },
-  "0xacd6a516c51a651da65c165d1": {
+  secret1acd6a516c51a651da65c165d1: {
     name: "ADMT",
     network: "Secret Network",
     totalVolumeLocked: "$200K",
@@ -23,7 +23,7 @@ const poolDetails = {
     about:
       "Pellentesque habitant morbi tristique senectus et netus et malesuada.",
   },
-};
+} as const;
 
 export default function PoolPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function PoolPage() {
   const details = poolDetails[pool as keyof typeof poolDetails];
 
   if (!details) {
-    return <p>Pool not found</p>; // Or any other error handling
+    return <p>Pool not found</p>; // TODO: Not Found page
   }
 
   return (

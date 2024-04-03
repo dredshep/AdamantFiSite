@@ -38,3 +38,113 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+
+```
+AdamantFiSite
+├─ .eslintrc.json
+├─ .git
+├─ .gitignore
+├─ .next
+├─ README.md
+├─ bun.lockb
+├─ components
+│  ├─ CoolBox.tsx
+│  ├─ Footer.tsx
+│  ├─ InfoBox.tsx
+│  ├─ SVG
+│  │  └─ logo.tsx
+│  ├─ app
+│  │  ├─ ImageWithPlaceholder
+│  │  │  └─ index.tsx
+│  │  ├─ UserWallet.tsx
+│  │  ├─ atoms
+│  │  │  ├─ InputLabel.tsx
+│  │  │  ├─ LeftCryptoInput.tsx
+│  │  │  ├─ ResponsiveVegaChart.tsx
+│  │  │  ├─ Swap
+│  │  │  │  └─ AmountInput.tsx
+│  │  │  ├─ SwapButton.tsx
+│  │  │  └─ TokenDropdownHeader.tsx
+│  │  ├─ compositions
+│  │  │  └─ AppLayout.tsx
+│  │  ├─ molecules
+│  │  │  ├─ PlaceholderFromHexAddress.tsx
+│  │  │  └─ TokenInput.tsx
+│  │  └─ organisms
+│  │     ├─ Navbar.tsx
+│  │     └─ SwapForm
+│  │        ├─ RawAttempt.tsx
+│  │        ├─ formExample.tsx
+│  │        └─ index.tsx
+│  └─ ui
+│     ├─ button.tsx
+│     ├─ command.tsx
+│     ├─ dialog.tsx
+│     ├─ form.tsx
+│     ├─ label.tsx
+│     ├─ popover.tsx
+│     ├─ toast.tsx
+│     ├─ toaster.tsx
+│     └─ use-toast.ts
+├─ components.json
+├─ dev-server.js
+├─ lib
+│  └─ utils.ts
+├─ next.config.mjs
+├─ node_modules
+├─ package-lock.json
+├─ package.json
+├─ pages
+│  ├─ _app.tsx
+│  ├─ _document.tsx
+│  ├─ app
+│  │  ├─ index.tsx
+│  │  ├─ pool
+│  │  │  └─ [pool].tsx
+│  │  ├─ pools
+│  │  │  └─ index.tsx
+│  │  ├─ token
+│  │  │  └─ [token].tsx
+│  │  └─ tokens
+│  │     └─ index.tsx
+│  └─ index.tsx
+├─ postcss.config.js
+├─ public
+│  ├─ Adamant-bg-dark.png
+│  ├─ android-chrome-192x192.png
+│  ├─ android-chrome-512x512.png
+│  ├─ apple-touch-icon.png
+│  ├─ browserconfig.xml
+│  ├─ favicon-16x16.png
+│  ├─ favicon-32x32.png
+│  ├─ favicon.ico
+│  ├─ icons
+│  │  └─ coolBox
+│  │     ├─ 1.svg
+│  │     ├─ 2.svg
+│  │     └─ 3.svg
+│  ├─ images
+│  │  ├─ Adamant-bg-dark.png
+│  │  └─ Adamant-bg-light.png
+│  ├─ mstile-144x144.png
+│  ├─ mstile-150x150.png
+│  ├─ mstile-310x150.png
+│  ├─ mstile-310x310.png
+│  ├─ mstile-70x70.png
+│  ├─ safari-pinned-tab.svg
+│  └─ site.webmanifest
+├─ styles
+│  └─ globals.css
+├─ tailwind.config.ts
+├─ tsconfig.json
+├─ types
+│  └─ index.ts
+└─ utils
+   ├─ ImageWithPlaceholder
+   │  ├─ addressTo3Colors.tsx
+   │  └─ stringToHex.tsx
+   └─ dummyData
+      ├─ lineChart.json
+      ├─ lineChartValues.json
+      └─ sspairs.json
+```

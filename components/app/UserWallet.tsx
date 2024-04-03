@@ -2,11 +2,11 @@
 import React from "react";
 import { RxCaretDown } from "react-icons/rx";
 import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
-import { HexString } from "@/types";
+import { SecretString } from "@/types";
 
 interface UserWalletProps {
   isConnected: boolean;
-  userAddress: HexString;
+  userAddress: SecretString;
   balanceSCRT: number;
   balanceADMT: number;
   onConnect: () => void;

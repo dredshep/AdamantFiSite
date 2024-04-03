@@ -3,10 +3,10 @@ import React from "react";
 import ImageWithPlaceholder from "@/components/app/ImageWithPlaceholder";
 import addressTo3Colors from "@/utils/ImageWithPlaceholder/addressTo3Colors";
 import stringToHex from "@/utils/ImageWithPlaceholder/stringToHex";
-import { HexString } from "@/types";
+import { SecretString } from "@/types";
 
 interface PlaceholderFromHexAddressProps {
-  userAddress: HexString;
+  userAddress: SecretString;
   size?: number; // Changed to a single number for consistency
 }
 

@@ -1,11 +1,11 @@
 import AppLayout from "@/components/app/compositions/AppLayout";
 import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
-import { HexString } from "@/types";
+import { SecretString } from "@/types";
 import Link from "next/link";
 
 const tokens = [
   {
-    userAddress: "0x6545454465153231231231",
+    userAddress: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
     name: "SCRT",
     network: "Secret Network",
     price: "$0.10",
@@ -14,7 +14,7 @@ const tokens = [
     volume: "$48K",
   },
   {
-    userAddress: "0xacd6a516c51a651da65c165d1",
+    userAddress: "secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt",
     name: "ADMT",
     network: "Secret Network",
     price: "$0.20",
@@ -54,7 +54,7 @@ export default function PoolsPage() {
             >
               <div className="flex-1 flex items-center min-w-60">
                 <PlaceholderFromHexAddress
-                  userAddress={pool.userAddress as HexString}
+                  userAddress={pool.userAddress as SecretString}
                   size={24}
                 />
                 <div className="ml-3">

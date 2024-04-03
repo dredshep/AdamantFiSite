@@ -1,6 +1,6 @@
 import AppLayout from "@/components/app/compositions/AppLayout";
 import PlaceholderFromHexAddress from "@/components/app/molecules/PlaceholderFromHexAddress";
-import { HexString } from "@/types";
+import { SecretString } from "@/types";
 import Link from "next/link";
 
 const tokens = [
@@ -54,7 +54,7 @@ export default function TokensPage() {
             >
               <div className="flex-1 flex items-center min-w-60">
                 <PlaceholderFromHexAddress
-                  userAddress={token.userAddress as HexString}
+                  userAddress={token.userAddress as SecretString}
                   size={24}
                 />
                 <div className="ml-3">

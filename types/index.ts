@@ -1,6 +1,6 @@
-export type HexString = `0x${string}`;
+export type SecretString = `secret1${string}`;
 
 export interface Token {
   symbol: string;
-  address: HexString;
+  address: SecretString;
 }

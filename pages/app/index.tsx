@@ -37,8 +37,6 @@ export default function Swap() {
           <div className="bg-adamant-app-box leading-none rounded-xl text-xl uppercase mt-2">
             <RawAttempt />
           </div>
-          {/* <Footer />
-      </div> */}
         </div>
       </AppLayout>
     </div>

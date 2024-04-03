@@ -9,7 +9,7 @@ import { VisualizationSpec } from "react-vega";
 
 // Mock token details data
 const tokenDetails = {
-  "0x6545454465153231231231": {
+  secret16545454465153231231231: {
     name: "SCRT",
     network: "Secret Network",
     totalVolumeLocked: "$500K",
@@ -18,7 +18,7 @@ const tokenDetails = {
     dailyVolume: "$50K",
     about: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
   },
-  "0xacd6a516c51a651da65c165d1": {
+  secret1acd6a516c51a651da65c165d1: {
     name: "ADMT",
     network: "Secret Network",
     totalVolumeLocked: "$200K",
@@ -37,7 +37,7 @@ const TokenPage = () => {
   const details = tokenDetails[token as keyof typeof tokenDetails];
 
   if (!details) {
-    return <p>Token not found</p>; // Or any other error handling
+    return <p>Token not found</p>; // TODO: Not Found page
   }
 
   return (

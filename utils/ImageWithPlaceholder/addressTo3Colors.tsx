@@ -1,6 +1,6 @@
-import { HexString } from "@/types";
+import { SecretString } from "@/types";
 
-export default function addressTo3Colors(address: HexString): string {
+export default function addressTo3Colors(address: SecretString): string {
   const hexColors = address.slice(2);
   const color1 = hexColors.slice(0, 6);
   const color2 = hexColors.slice(6, 12);
