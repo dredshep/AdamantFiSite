@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaPencilAlt, FaCheck } from "react-icons/fa"; // Importing check icon
-import { StoreState, useStore } from "@/store/swapStore"; // Adjust the import path as necessary
+import { useStore } from "@/store/swapStore"; // Adjust the import path as necessary
+import { StoreState } from "@/types";
 
 interface DynamicFieldProps {
   fieldIdentifier: keyof StoreState["sharedSettings"];
