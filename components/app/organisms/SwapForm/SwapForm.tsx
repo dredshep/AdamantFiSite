@@ -3,8 +3,9 @@ import InputLabel from "@/components/app/atoms/InputLabel";
 import TokenInput from "@/components/app/molecules/TokenInput";
 import SwapButton from "@/components/app/atoms/SwapButton";
 import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
+import DynamicField from "@/components/app/molecules/DynamicField";
 
-const SwapFormWithState: React.FC = () => {
+const SwapForm: React.FC = () => {
   // You might want to fetch or calculate balances dynamically, as an example here
   const balancePay = 100; // Example balance for pay
   const balanceReceive = 100; // Example balance for receive
@@ -32,16 +33,14 @@ const SwapFormWithState: React.FC = () => {
         </div>
         {/* Implement inputs for slippage and estimated gas if they're managed by the store or elsewhere */}
         <div className="flex justify-between normal-case">
-          <InputLabel label="Slippage" caseType="normal-case" />
-          <input
-            className="rounded-xl text-sm font-bold py-2 px-4 bg-adamant-app-input w-20"
-            placeholder="0.5%"
-          />
-          <InputLabel label="Est. gas:" caseType="normal-case" />
-          <input
-            className="rounded-xl text-sm font-bold py-2 px-4 bg-adamant-app-input w-20"
-            placeholder="0.0"
-          />
+          <div className="flex justify-between normal-case gap-2">
+            <InputLabel label="Slippage" caseType="normal-case" />
+            <DynamicField fieldIdentifier="slippage" />
+          </div>
+          <div className="flex justify-between normal-case gap-2">
+            <InputLabel label="Est. gas:" caseType="normal-case" />
+            <DynamicField fieldIdentifier="gas" />
+          </div>
         </div>
       </div>
       <SwapButton disabled={false} onClick={handleSwapClick} />
@@ -49,4 +48,4 @@ const SwapFormWithState: React.FC = () => {
   );
 };
 
-export default SwapFormWithState;
+export default SwapForm;

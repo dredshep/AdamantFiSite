@@ -58,7 +58,7 @@ const Navbar: React.FC = () => {
       </div>
       <UserWallet
         isConnected={true}
-        userAddress="0x1234567890abcdef"
+        userAddress="secret1234567890abcdef"
         balanceSCRT={0}
         balanceADMT={0}
         onConnect={() => console.log("connect")}

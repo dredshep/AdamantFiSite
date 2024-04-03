@@ -6,22 +6,31 @@ interface TokenInputState {
   amount: string;
 }
 
+// Extending TokenInputs to hold identifiers for gas and slippage
 export interface TokenInputs {
   "swap.pay": TokenInputState;
   "swap.receive": TokenInputState;
 }
 
-interface StoreState {
-  tokenInputs: TokenInputs;
+// New structure for shared settings like gas and slippage across forms
+interface SharedSettings {
   slippage: number;
   gas: number;
+}
+
+export interface StoreState {
+  tokenInputs: TokenInputs;
+  sharedSettings: SharedSettings; // Shared settings for transactions
   setTokenInputProperty: <T extends keyof TokenInputState>(
     inputIdentifier: keyof TokenInputs,
     property: T,
     value: TokenInputState[T]
   ) => void;
-  setSlippage: (slippage: number) => void;
-  setGas: (gas: number) => void;
+  // Generalizing setters for shared settings
+  setSharedSetting: <T extends keyof SharedSettings>(
+    setting: T,
+    value: SharedSettings[T]
+  ) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -35,8 +44,10 @@ export const useStore = create<StoreState>((set) => ({
       amount: "",
     },
   },
-  slippage: 0.5,
-  gas: 0,
+  sharedSettings: {
+    slippage: 0.5,
+    gas: 0,
+  },
   setTokenInputProperty: <T extends keyof TokenInputState>(
     inputIdentifier: keyof TokenInputs,
     property: T,
@@ -52,16 +63,12 @@ export const useStore = create<StoreState>((set) => ({
         },
       },
     })),
-  setSlippage: (slippage: number) => set({ slippage }),
-  setGas: (gas: number) => set({ gas }),
+  setSharedSetting: <T extends keyof SharedSettings>(
+    setting: T,
+    value: SharedSettings[T]
+  ) =>
+    set((state) => ({
+      ...state,
+      sharedSettings: { ...state.sharedSettings, [setting]: value },
+    })),
 }));
-
-// const adjustTokenExample = (inputIdentifier: keyof TokenInputs, token: Token) => {
-//   const store = useStore();
-//   store.setTokenInputProperty(inputIdentifier, 'token', token);
-// };
-
-// const adjustAmountExample = (inputIdentifier: keyof TokenInputs, amount: string) => {
-//   const store = useStore();
-//   store.setTokenInputProperty(inputIdentifier, 'amount', amount);
-// };
