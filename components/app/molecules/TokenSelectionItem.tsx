@@ -23,7 +23,7 @@ const TokenSelectionItem: React.FC<TokenSelectionItemProps> = ({
           <span className="font-bold">{token.symbol}</span>
           <span className="text-gray-500 text-xs font-medium">{network}</span>
         </div>
-        <span className="font-medium">{balance}</span>
+        <span className="font-bold">{balance}</span>
       </div>
     </Dialog.Close>
   );

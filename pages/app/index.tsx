@@ -1,6 +1,6 @@
 import { Jura } from "next/font/google";
 import AppLayout from "../../components/app/compositions/AppLayout";
-import RawAttempt from "@/components/app/organisms/SwapForm/RawAttempt";
+import SwapForm from "@/components/app/organisms/SwapForm/SwapForm";
 
 const jura = Jura({ subsets: ["latin"] });
 
@@ -15,7 +15,6 @@ export default function Swap() {
       }
     >
       <AppLayout>
-        {/* container div simply setting max width and perhaps other settings for content only */}
         <div className="max-w-xl mx-auto mt-28">
           <div className="flex gap-4 justify-between leading-6 px-5">
             <div className="flex gap-4">
@@ -35,7 +34,7 @@ export default function Swap() {
             <div>+ Add liquidity for SRCT/SHD</div>
           </div>
           <div className="bg-adamant-app-box leading-none rounded-xl text-xl uppercase mt-2">
-            <RawAttempt />
+            <SwapForm />
           </div>
         </div>
       </AppLayout>

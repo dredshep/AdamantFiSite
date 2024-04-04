@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import {
+  SecretString,
   SharedSettings,
   StoreState,
-  Token,
   TokenInputState,
   TokenInputs,
 } from "@/types";
+import updateState from "@/store/utils/updateState";
 
 export const useStore = create<StoreState>((set) => ({
   tokenInputs: {
@@ -28,29 +29,44 @@ export const useStore = create<StoreState>((set) => ({
     slippage: 0.5,
     gas: 0,
   },
+  wallet: {
+    address: null,
+    SCRTBalance: "0",
+    ADMTBalance: "0",
+  },
+  swappableTokens: [],
+  chainId: "secret-4",
+  connectionRefused: false,
   setTokenInputProperty: <T extends keyof TokenInputState>(
     inputIdentifier: keyof TokenInputs,
     property: T,
     value: TokenInputState[T]
   ) =>
-    set((state) => ({
-      ...state,
-      tokenInputs: {
-        ...state.tokenInputs,
-        [inputIdentifier]: {
-          ...state.tokenInputs[inputIdentifier],
-          [property]: value,
-        },
-      },
-    })),
+    set((state) =>
+      updateState(state, "tokenInputs", inputIdentifier, {
+        token: state.tokenInputs[inputIdentifier].token,
+        amount: state.tokenInputs[inputIdentifier].amount,
+        [property]: value,
+      })
+    ),
+
   setSharedSetting: <T extends keyof SharedSettings>(
     setting: T,
     value: SharedSettings[T]
-  ) =>
-    set((state) => ({
-      ...state,
-      sharedSettings: { ...state.sharedSettings, [setting]: value },
-    })),
-  swappableTokens: [], // Add this line to initialize the swappable tokens list
-  setSwappableTokens: (tokens) => set({ swappableTokens: tokens }), // Method to update the list
+  ) => set((state) => updateState(state, "sharedSettings", setting, value)),
+
+  connectWallet: (address: SecretString) =>
+    set((state) => updateState(state, "wallet", "address", address)),
+
+  disconnectWallet: () =>
+    set((state) => updateState(state, "wallet", "address", null)),
+
+  updateBalance: (tokenSymbol: "SCRT" | "ADMT", balance: string) =>
+    set((state) =>
+      updateState(state, "wallet", `${tokenSymbol}Balance`, balance)
+    ),
+
+  setSwappableTokens: (tokens) => set({ swappableTokens: tokens }),
+  setChainId: (chainId) => set({ chainId }),
+  setConnectionRefused: (refused) => set({ connectionRefused: refused }),
 }));
