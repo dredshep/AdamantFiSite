@@ -16,6 +16,7 @@ const keplrConnect = async () => {
       if (accounts && accounts.length > 0) {
         const { address } = accounts[0];
         useStore.getState().connectWallet(address);
+        console.log("Connected to Keplr.");
       }
     } catch (error) {
       console.error("Error connecting to Keplr:", error);

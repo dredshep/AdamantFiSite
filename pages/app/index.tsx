@@ -1,12 +1,17 @@
 import { Jura } from "next/font/google";
 import AppLayout from "../../components/app/compositions/AppLayout";
 import SwapForm from "@/components/app/organisms/SwapForm/SwapForm";
+import { useStore } from "@/store/swapStore";
+import { useEffect } from "react";
 
 const jura = Jura({ subsets: ["latin"] });
 
 // Then render infoBoxes where you need it in your component tree.
 
 export default function Swap() {
+  const { tokenInputs } = useStore();
+  const receiveToken = tokenInputs["swap.receive"].token;
+  const payToken = tokenInputs["swap.pay"].token;
   return (
     <div
       className={
@@ -31,7 +36,10 @@ export default function Swap() {
               </div>
               <div className="brightness-50 font-medium">SEND</div>
             </div>
-            <div>+ Add liquidity for SRCT/SHD</div>
+            {/* add liq for token 1 and token 2 selected */}
+            <div key={payToken.address + receiveToken.address}>
+              + Add liquidity for {payToken.symbol} and {receiveToken.symbol}
+            </div>
           </div>
           <div className="bg-adamant-app-box leading-none rounded-xl text-xl uppercase mt-2">
             <SwapForm />
