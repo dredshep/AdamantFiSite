@@ -24,6 +24,7 @@ const PlaceholderImageFromSeed: React.FC<PlaceholderImageFromSeedProps> = ({
       length={2}
       alt="Avatar"
       size={size}
+      key={seed}
     />
   );
 };
