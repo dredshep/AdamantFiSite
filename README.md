@@ -1,6 +1,6 @@
 # Adamant Finance Site
 
-Adamant Finance is a secure and privacy-focused DeFi platform built on the Secret Network. It provides users with the ability to swap tokens, provide liquidity, stake, and earn rewards with enhanced privacy features.
+Adamant Finance is a fully open source secure and privacy-focused DeFi platform built on the Secret Network. It provides users with the ability to swap tokens, provide liquidity, stake, and earn rewards with enhanced privacy features.
 
 ## Features
 
