@@ -94,3 +94,7 @@ If you're interested in contributing, have feature requests, or need technical s
 Additionally, join the [Secret Network discussion forum](https://forum.scrt.network/) for governance-related discussions, community proposals, and more. Your participation, support, and feedback are what drive us forward.
 
 Thank you for being an essential part of Adamant Finance. Together, we're forging a path towards a more secure, private, and inclusive DeFi ecosystem.
+
+# TODO
+
+- make toasts. Idea: https://codesandbox.io/p/sandbox/radix-toast-stack-dpfx5f?file=%2Fsrc%2FToast.jsx%3A103%2C6-103%2C18
