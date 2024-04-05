@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Logo from "@/components/SVG/logo";
-import UserWallet from "@/components/app/UserWallet";
+import UserWallet from "@/components/app/organisms/UserWallet";
 
 const Navbar: React.FC = () => {
   const router = useRouter();

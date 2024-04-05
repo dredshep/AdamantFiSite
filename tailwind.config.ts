@@ -27,6 +27,7 @@ const config = {
           gradientDark: "#B59D6B",
           box: {
             dark: "#0C0C20",
+            veryDark: "#0B0B16",
             light: "#0D0C22",
             buttonDark: "#100F20",
             buttonLight: "#151426",

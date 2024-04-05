@@ -1,12 +1,12 @@
 // UserWallet.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { RxCaretDown } from "react-icons/rx";
 import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
-import { SecretString } from "@/types";
-import useKeplrConnect from "@/utils/hooks/useKeplrConnect";
 import keplrConnect from "@/utils/wallet/keplrConnect";
 import { useStore } from "@/store/swapStore";
 import keplrDisconnect from "@/utils/wallet/keplrDisconnect";
+import { useModalStore } from "@/store/modalStore";
+import WalletModal from "./WalletModal";
 
 interface UserWalletProps {
   // isConnected: boolean;
@@ -25,6 +25,8 @@ const UserWallet: React.FC<UserWalletProps> = (
     // onConnect,
   }
 ) => {
+  const { connectionRefused } = useStore();
+  const { openWalletModal, isWalletModalOpen } = useModalStore();
   const {
     wallet: { address: userAddress, ADMTBalance, SCRTBalance },
   } = useStore();
@@ -32,13 +34,20 @@ const UserWallet: React.FC<UserWalletProps> = (
     userAddress === null
       ? ""
       : userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
-  // useKeplrConnect();
   const isConnected = userAddress !== null;
+  useEffect(() => {
+    if (!connectionRefused) {
+      keplrConnect();
+    }
+  }, [connectionRefused]);
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4 select-none cursor-pointer">
       {isConnected ? (
-        <>
+        <div
+          className="flex gap-4 hover:bg-white hover:bg-opacity-5 px-6 py-3 rounded-lg transition-all duration-100"
+          onClick={() => isConnected && openWalletModal()}
+        >
           <div className="relative" onClick={() => keplrDisconnect()}>
             <PlaceholderImageFromSeed seed={userAddress} size={48} />
           </div>
@@ -51,7 +60,8 @@ const UserWallet: React.FC<UserWalletProps> = (
               {SCRTBalance} SCRT / {ADMTBalance} ADMT
             </div>
           </div>
-        </>
+          <WalletModal />
+        </div>
       ) : (
         <button
           onClick={() => keplrConnect()}
