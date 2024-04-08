@@ -30,4 +30,4 @@ export interface SwappableToken {
   priceVsNativeToken: string;
 }
 
-type Token = NativeToken | SwappableToken;
+export type Token = NativeToken | SwappableToken;

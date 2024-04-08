@@ -1,8 +1,5 @@
 import { Token } from "@/types/Token";
 import { NextApiRequest, NextApiResponse } from "next";
-import { SecretString } from "./SecretString";
-
-import { SecretString } from "./SecretString";
 
 export default function getSwappableTokens(
   req: NextApiRequest,
