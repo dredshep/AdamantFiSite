@@ -1,5 +1,6 @@
 import { Token } from "@/types/Token";
 import { NextApiRequest, NextApiResponse } from "next";
+import { SecretString } from "./SecretString";
 
 export default function getSwappableTokens(
   req: NextApiRequest,
@@ -45,9 +46,6 @@ export default function getSwappableTokens(
       protocol: "protocol3",
       network: "network3",
       decimals: 18,
-      iconUrl: "iconUrl3",
-      name: "name3",
-      description: "description3",
       usdPrice: "usdPrice3",
       priceVsNativeToken: "priceVsNativeToken3",
     },
