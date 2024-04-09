@@ -48,7 +48,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
           <InputBalanceAffordance balance={balance} />
           {maxable && <MaxButton onClick={handleMax} />}
           <Dialog.Trigger asChild>
-            <div className="flex gap-3 items-center rounded-r-xl text-sm font-bold py-3 px-4 bg-adamant-app-selectTrigger min-w-48 cursor-pointer">
+            <div className="flex gap-3 items-center rounded-r-xl text-sm font-bold py-3 px-4 bg-adamant-app-selectTrigger min-w-48 cursor-pointer hover:bg-adamant-app-boxHighlight transition-colors duration-75">
               <PlaceholderImageFromSeed seed={token.address} size={24} />
               {token.symbol}
               <RxCaretDown className="text-white h-5 w-5 ml-auto" />

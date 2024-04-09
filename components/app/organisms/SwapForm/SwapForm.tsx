@@ -19,15 +19,22 @@ const SwapForm: React.FC = () => {
   const receiveToken = useTokenStore(
     (state) => state.tokens?.[receiveDetails.tokenAddress]
   );
+  const slippage = useStore((state) => state.sharedSettings.slippage);
+  const gas = useStore((state) => state.sharedSettings.gas);
 
   const handleSwapClick = () => {
-    alert(
-      `Swapping ${payDetails.amount} ${
-        payToken?.symbol ?? "payToken-undefined"
-      } for ${receiveDetails.amount} ${
-        receiveToken?.symbol ?? "receiveToken-undefined"
-      }`
-    );
+    const alertMessage = `Swapping Details:
+    
+  Pay Token: ${payToken?.symbol ?? "payToken-undefined"}
+  Pay Amount: ${payDetails.amount}
+
+  Receive Token: ${receiveToken?.symbol ?? "receiveToken-undefined"}
+  Receive Amount: ${receiveDetails.amount}
+
+  Slippage: ${slippage}
+  Gas: ${gas}`;
+
+    alert(alertMessage);
   };
 
   return (
