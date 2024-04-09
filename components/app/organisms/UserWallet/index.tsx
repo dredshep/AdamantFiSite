@@ -7,6 +7,7 @@ import { useStore } from "@/store/swapStore";
 import keplrDisconnect from "@/utils/wallet/keplrDisconnect";
 import { useModalStore } from "@/store/modalStore";
 import WalletModal from "./WalletModal";
+import { useWalletStore } from "@/store/walletStore";
 
 interface UserWalletProps {
   // isConnected: boolean;
@@ -27,14 +28,10 @@ const UserWallet: React.FC<UserWalletProps> = (
 ) => {
   const { connectionRefused } = useStore();
   const { isWalletModalOpen, openWalletModal } = useModalStore();
-  const {
-    wallet: { address: userAddress, ADMTBalance, SCRTBalance },
-  } = useStore();
+  const { address, ADMTBalance, SCRTBalance } = useWalletStore();
   const truncatedAddress =
-    userAddress === null
-      ? ""
-      : userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
-  const isConnected = userAddress !== null;
+    address === null ? "" : address.slice(0, 6) + "..." + address.slice(-4);
+  const isConnected = address !== null;
   useEffect(() => {
     if (!connectionRefused) {
       keplrConnect();
@@ -50,7 +47,7 @@ const UserWallet: React.FC<UserWalletProps> = (
             onClick={() => isConnected && openWalletModal()}
           >
             <div className="relative" onClick={() => keplrDisconnect()}>
-              <PlaceholderImageFromSeed seed={userAddress} size={48} />
+              <PlaceholderImageFromSeed seed={address} size={48} />
             </div>
             <div>
               <div className="hidden md:flex font-medium items-center gap-2">

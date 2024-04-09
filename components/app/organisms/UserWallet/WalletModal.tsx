@@ -23,6 +23,8 @@ const WalletModal: React.FC = () => {
       toast.success("Address copied to clipboard!");
     });
   };
+  const truncatedAddress =
+    address === null ? "" : address.slice(0, 6) + "..." + address.slice(-4);
 
   // Placeholder function for settings modal
   const openSettingsModal = () => {
@@ -31,37 +33,43 @@ const WalletModal: React.FC = () => {
   };
 
   return (
-    <div className="bg-adamant-box-veryDark rounded-lg shadow-md p-6 absolute top-2 right-2 w-[312px] h-[calc(100vh-16px)] z-10">
-      <div className="flex items-center justify-between mb-4">
-        <PlaceholderImageFromSeed
-          seed={address || "secret1 no address"}
-          size={48}
-        />
-        <div className="flex-grow mx-3">
-          <p className="font-bold">{address || "secret1 no address"}</p>
+    <div className="bg-adamant-box-veryDark rounded-lg shadow-md absolute top-2 right-2 w-[312px] h-[calc(100vh-16px)] z-10">
+      <div className="flex items-center justify-between mb-4 p-6">
+        <div className="flex items-center">
+          <PlaceholderImageFromSeed
+            seed={address || "secret1 no address"}
+            size={48}
+          />
+          <div className="mx-3">
+            <p className="font-bold">
+              {truncatedAddress || "secret1 no address"}
+            </p>
+          </div>
+          <RiFileCopyLine
+            className="text-gray-500 p-1 w-6 h-6 rounded-full hover:bg-opacity-10 duration-150 transition-all hover:bg-white cursor-pointer text-base"
+            onClick={copyAddressToClipboard}
+          />
+          <RiSettings3Line
+            className="text-gray-500 p-1 w-6 h-6 rounded-full hover:bg-opacity-10 duration-150 transition-all hover:bg-white cursor-pointer"
+            onClick={openSettingsModal}
+          />
         </div>
-        <RiFileCopyLine
-          className="text-gray-600 cursor-pointer"
-          onClick={copyAddressToClipboard}
-        />
-        <RiSettings3Line
-          className="text-gray-600 cursor-pointer ml-2"
-          onClick={openSettingsModal}
-        />
         <RiArrowUpSLine
-          className="text-gray-600 cursor-pointer ml-2"
+          className="text-gray-500 p-1 w-7 h-7 rounded-full hover:bg-opacity-10 duration-150 transition-all hover:bg-white cursor-pointer text-xl mb-0.5"
           onClick={closeWalletModal}
         />
       </div>
-      <div className="text-center my-8">
-        <p className="text-lg font-semibold">Your Balance</p>
-        <p className="text-4xl font-bold">${balance}</p>
+      <div className="my-8 px-6">
+        <p className="text-lg font-semibold text-gray-500">Your balance</p>
+        <p className="text-4xl font-bold top-1">${balance}</p>
       </div>
-      <button className="w-full py-3 rounded-lg bg-adamant-button-accent text-white font-bold my-4">
-        Get Tokens
-      </button>
+      <div className="px-6">
+        <button className="w-full py-3 rounded-xl bg-adamant-accentBg text-black font-bold my-4 uppercase">
+          Get Tokens
+        </button>
+      </div>
       <div>
-        <p className="text-lg font-semibold mb-2">Tokens</p>
+        <p className="text-lg font-semibold mb-2 ml-6">Tokens</p>
         {tokens?.map((token, index) => (
           <div
             key={index}

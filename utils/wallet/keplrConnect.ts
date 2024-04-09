@@ -1,4 +1,5 @@
 import { useStore } from "@/store/swapStore";
+import { useWalletStore } from "@/store/walletStore";
 
 type CustomWindow = typeof window & {
   keplr: any;
@@ -15,7 +16,7 @@ const keplrConnect = async () => {
 
       if (accounts && accounts.length > 0) {
         const { address } = accounts[0];
-        useStore.getState().connectWallet(address);
+        useWalletStore.getState().connectWallet(address);
         console.log("Connected to Keplr.");
       }
     } catch (error) {
