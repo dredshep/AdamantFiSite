@@ -6,6 +6,8 @@ interface TokenStoreState {
   setToken: (address: string, token: Token) => void;
   initializeTokens: (tokens: Record<string, Token>) => void;
   listAllTokens: () => Token[] | null;
+  getTokenByAddress: (address: string) => Token | null;
+  getTokenBySymbol: (symbol: string) => Token | null;
 }
 
 export const useTokenStore = create<TokenStoreState>((set, get) => ({
@@ -34,5 +36,17 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
   listAllTokens: () => {
     const { tokens } = get();
     return tokens ? Object.values(tokens) : null;
+  },
+
+  getTokenByAddress: (address) => {
+    const { tokens } = get();
+    return tokens ? tokens[address] : null;
+  },
+
+  getTokenBySymbol: (symbol) => {
+    const { tokens } = get();
+    return tokens
+      ? Object.values(tokens).find((token) => token.symbol === symbol) || null
+      : null;
   },
 }));

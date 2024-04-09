@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { FaPencilAlt, FaCheck } from "react-icons/fa"; // Importing check icon
 import { useStore } from "@/store/swapStore"; // Adjust the import path as necessary
 import { StoreState } from "@/types";
+import { Pencil, PencilLine } from "lucide-react";
+import { Pencil1Icon, Pencil2Icon } from "@radix-ui/react-icons";
+import { RiPencilFill } from "react-icons/ri";
 
 interface DynamicFieldProps {
   fieldIdentifier: keyof StoreState["sharedSettings"];
@@ -46,14 +49,14 @@ const DynamicField: React.FC<DynamicFieldProps> = ({ fieldIdentifier }) => {
             type="text"
             value={inputValue}
             onChange={handleInputChange}
-            className={`rounded-l-xl h-6 text-sm font-bold py-2 px-4 box-border bg-adamant-app-input w-16 selection:bg-adamant-dark outline-transparent ${
+            className={`rounded-l-md h-6 text-sm font-bold py-2 px-4 box-border bg-adamant-app-input outline-none hover:bg-adamant-app-selectTrigger focus:bg-adamant-app-selectTrigger w-16 selection:bg-adamant-dark outline-transparent ${
               !isValid ? "border-2 border-red-500 " : ""
             }`}
             autoFocus
           />
           <button
             onClick={handleSave}
-            className="bg-adamant-dark h-6 w-6 flex items-center justify-center rounded-r-xl text-white outline-none"
+            className="bg-adamant-dark h-6 w-6 flex items-center justify-center rounded-r-md text-white outline-none"
             disabled={!isValid}
           >
             <FaCheck className="text-xs" />
@@ -64,9 +67,9 @@ const DynamicField: React.FC<DynamicFieldProps> = ({ fieldIdentifier }) => {
           <span className="text-sm selection:bg-white selection:text-blue-800">
             {fieldValue}
           </span>
-          <FaPencilAlt
+          <RiPencilFill
             onClick={handleEdit}
-            className="cursor-pointer text-xs ml-2"
+            className="cursor-pointer text-2xl transition-all duration-150 rounded-full hover:bg-white hover:bg-opacity-15 p-1 ml-2"
           />
         </>
       )}

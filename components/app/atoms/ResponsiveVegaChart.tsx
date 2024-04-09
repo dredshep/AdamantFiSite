@@ -45,7 +45,7 @@ const ResponsiveVegaChart = ({
       ref={containerRef}
       style={{ width: "100%", maxWidth: "800px", height: "auto" }}
     >
-      <VegaLite spec={responsiveSpec} />
+      <VegaLite spec={responsiveSpec} actions={false} />
     </div>
   );
 };

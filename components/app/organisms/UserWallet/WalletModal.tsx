@@ -13,10 +13,11 @@ import { useModalStore } from "@/store/modalStore";
 const WalletModal: React.FC = () => {
   const { isWalletModalOpen, closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
-  const { listAllTokens } = useTokenStore();
+  const { listAllTokens, getTokenByAddress } = useTokenStore();
   const tokens = listAllTokens();
-  const balance = tokens?.filter((token) => token.symbol === "ADMT")?.[0]
-    ?.balance;
+  const balance =
+    getTokenByAddress("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek")
+      ?.balance || "N/A";
   const copyAddressToClipboard = () => {
     if (!address) return;
     navigator.clipboard.writeText(address).then(() => {
@@ -69,7 +70,9 @@ const WalletModal: React.FC = () => {
         </button>
       </div>
       <div>
-        <p className="text-lg font-semibold mb-2 ml-6">Tokens</p>
+        <p className="text-sm font-semibold mb-2 ml-6 uppercase text-gray-500">
+          Tokens
+        </p>
         {tokens?.map((token, index) => (
           <div
             key={index}

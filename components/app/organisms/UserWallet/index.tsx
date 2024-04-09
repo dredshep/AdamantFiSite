@@ -43,7 +43,7 @@ const UserWallet: React.FC<UserWalletProps> = (
       {isConnected ? (
         <>
           <div
-            className="flex gap-4 hover:bg-white hover:bg-opacity-5 px-6 py-3 rounded-lg transition-all duration-100"
+            className="flex gap-4 hover:bg-white hover:bg-opacity-5 px-6 py-3 rounded-lg transition-all duration-100 cursor-pointer"
             onClick={() => isConnected && openWalletModal()}
           >
             <div className="relative" onClick={() => keplrDisconnect()}>

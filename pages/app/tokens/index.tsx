@@ -37,7 +37,7 @@ export default function TokensPage() {
             />
           </div>
           {/* Table Header */}
-          <div className="flex text-xs text-gray-500 uppercase bg-adamant-app-box dark:bg-gray-700 dark:text-gray-400 py-3 px-6">
+          <div className="flex text-xs text-gray-500 font-bold uppercase bg-adamant-app-box dark:bg-gray-700 dark:text-gray-400 py-3 px-6">
             <div className="flex-1 min-w-60">Token</div>
             <div className="flex-1">Price</div>
             <div className="flex-1">Change</div>
