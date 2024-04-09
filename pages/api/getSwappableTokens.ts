@@ -1,6 +1,5 @@
 import { Token } from "@/types/Token";
 import { NextApiRequest, NextApiResponse } from "next";
-import { SecretString } from "./SecretString";
 
 export default function getSwappableTokens(
   req: NextApiRequest,
@@ -10,7 +9,7 @@ export default function getSwappableTokens(
     {
       symbol: "sSCRT",
       address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
-      isNativeToken: true,
+      isNativeToken: false,
       balance: "1000",
       viewingKey: "viewingKey1",
       protocol: "protocol1",
@@ -40,12 +39,15 @@ export default function getSwappableTokens(
     {
       symbol: "sAAVE",
       address: "secret1yxwnyk8htvvq25x2z87yj0r5tqpev452fk6h5h",
-      isNativeToken: true,
+      isNativeToken: false,
       balance: "3000",
       viewingKey: "viewingKey3",
       protocol: "protocol3",
       network: "network3",
       decimals: 18,
+      iconUrl: "iconUrl3",
+      name: "name3",
+      description: "description3",
       usdPrice: "usdPrice3",
       priceVsNativeToken: "priceVsNativeToken3",
     },
