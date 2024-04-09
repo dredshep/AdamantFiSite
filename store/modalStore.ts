@@ -6,8 +6,8 @@ interface ModalStoreState {
   closeWalletModal: () => void;
 }
 
-export const useModalStore = create<ModalStoreState>((set) => ({
+export const useModalStore = create<ModalStoreState>((set, get) => ({
   isWalletModalOpen: false,
-  openWalletModal: () => set({ isWalletModalOpen: true }),
-  closeWalletModal: () => set({ isWalletModalOpen: false }),
+  openWalletModal: () => set(() => ({ isWalletModalOpen: true })),
+  closeWalletModal: () => set(() => ({ isWalletModalOpen: false })),
 }));

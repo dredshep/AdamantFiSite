@@ -11,7 +11,7 @@ import { useTokenStore } from "@/store/tokenStore";
 import { useModalStore } from "@/store/modalStore";
 
 const WalletModal: React.FC = () => {
-  const { closeWalletModal } = useModalStore();
+  const { isWalletModalOpen, closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
   const { listAllTokens } = useTokenStore();
   const tokens = listAllTokens();
@@ -30,10 +30,6 @@ const WalletModal: React.FC = () => {
     console.log("Open settings modal");
   };
 
-  const hideWalletModal = () => {
-    closeWalletModal();
-  };
-
   return (
     <div className="bg-adamant-box-veryDark rounded-lg shadow-md p-6 absolute top-2 right-2 w-[312px] h-[calc(100vh-16px)] z-10">
       <div className="flex items-center justify-between mb-4">
@@ -42,7 +38,7 @@ const WalletModal: React.FC = () => {
           size={48}
         />
         <div className="flex-grow mx-3">
-          <p className="font-bold">{address}</p>
+          <p className="font-bold">{address || "secret1 no address"}</p>
         </div>
         <RiFileCopyLine
           className="text-gray-600 cursor-pointer"
@@ -54,7 +50,7 @@ const WalletModal: React.FC = () => {
         />
         <RiArrowUpSLine
           className="text-gray-600 cursor-pointer ml-2"
-          onClick={hideWalletModal}
+          onClick={closeWalletModal}
         />
       </div>
       <div className="text-center my-8">

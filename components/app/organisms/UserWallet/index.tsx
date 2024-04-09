@@ -26,7 +26,7 @@ const UserWallet: React.FC<UserWalletProps> = (
   }
 ) => {
   const { connectionRefused } = useStore();
-  const { openWalletModal, isWalletModalOpen } = useModalStore();
+  const { isWalletModalOpen, openWalletModal } = useModalStore();
   const {
     wallet: { address: userAddress, ADMTBalance, SCRTBalance },
   } = useStore();
@@ -42,30 +42,32 @@ const UserWallet: React.FC<UserWalletProps> = (
   }, [connectionRefused]);
 
   return (
-    <div className="flex items-center gap-4 select-none cursor-pointer">
+    <div className="flex items-center gap-4 select-none">
       {isConnected ? (
-        <div
-          className="flex gap-4 hover:bg-white hover:bg-opacity-5 px-6 py-3 rounded-lg transition-all duration-100"
-          onClick={() => isConnected && openWalletModal()}
-        >
-          <div className="relative" onClick={() => keplrDisconnect()}>
-            <PlaceholderImageFromSeed seed={userAddress} size={48} />
-          </div>
-          <div>
-            <div className="hidden md:flex font-medium items-center gap-2">
-              {truncatedAddress}
-              <RxCaretDown className="text-white h-5 w-5" />
+        <>
+          <div
+            className="flex gap-4 hover:bg-white hover:bg-opacity-5 px-6 py-3 rounded-lg transition-all duration-100"
+            onClick={() => isConnected && openWalletModal()}
+          >
+            <div className="relative" onClick={() => keplrDisconnect()}>
+              <PlaceholderImageFromSeed seed={userAddress} size={48} />
             </div>
-            <div className="hidden md:block font-normal opacity-50">
-              {SCRTBalance} SCRT / {ADMTBalance} ADMT
+            <div>
+              <div className="hidden md:flex font-medium items-center gap-2">
+                {truncatedAddress}
+                <RxCaretDown className="text-white h-5 w-5" />
+              </div>
+              <div className="hidden md:block font-normal opacity-50">
+                {SCRTBalance} SCRT / {ADMTBalance} ADMT
+              </div>
             </div>
           </div>
-          <WalletModal />
-        </div>
+          {isWalletModalOpen && <WalletModal />}
+        </>
       ) : (
         <button
           onClick={() => keplrConnect()}
-          className="text-black bg-white px-8 pt-2 pb-2 rounded-lg font-bold leading-6 fle hover:bg-adamant-accentBg transition-all ease-in-out"
+          className="cursor-pointer text-black bg-white px-8 pt-2 pb-2 rounded-lg font-bold leading-6 fle hover:bg-adamant-accentBg transition-all ease-in-out"
         >
           CONNECT
         </button>
