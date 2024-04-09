@@ -1,6 +1,6 @@
-import { Token } from "../Token";
+import { SecretString } from "../SecretString";
 
 export interface TokenInputState {
-  token: Token;
+  tokenAddress: SecretString;
   amount: string;
 }

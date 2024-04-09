@@ -15,7 +15,7 @@ const WalletModal: React.FC = () => {
   const { address } = useWalletStore();
   const { listAllTokens } = useTokenStore();
   const tokens = listAllTokens();
-  const balance = tokens.filter((token) => token.symbol === "ADMT")?.[0]
+  const balance = tokens?.filter((token) => token.symbol === "ADMT")?.[0]
     ?.balance;
   const copyAddressToClipboard = () => {
     if (!address) return;
@@ -66,7 +66,7 @@ const WalletModal: React.FC = () => {
       </button>
       <div>
         <p className="text-lg font-semibold mb-2">Tokens</p>
-        {tokens.map((token, index) => (
+        {tokens?.map((token, index) => (
           <div
             key={index}
             className="flex justify-between items-center cursor-pointer hover:bg-adamant-app-boxHighlight py-2 rounded-xl mx-2 px-6"
@@ -80,7 +80,12 @@ const WalletModal: React.FC = () => {
             </div>
             <span className="font-bold">{token.balance}</span>
           </div>
-        ))}
+        )) || (
+          <p>
+            Token store not correctly initialized. Check your internet
+            connection or availability of the API server.
+          </p>
+        )}
       </div>
     </div>
   );

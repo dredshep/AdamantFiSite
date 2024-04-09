@@ -2,7 +2,7 @@ import { Token } from "@/types/Token";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default function getSwappableTokens(
-  req: NextApiRequest,
+  _: NextApiRequest,
   res: NextApiResponse
 ) {
   const dummyTokens: Token[] = [

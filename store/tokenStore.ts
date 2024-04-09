@@ -2,14 +2,14 @@ import { create } from "zustand";
 import { Token } from "@/types";
 
 interface TokenStoreState {
-  tokens: Record<string, Token>;
+  tokens: Record<string, Token> | null;
   setToken: (address: string, token: Token) => void;
   initializeTokens: (tokens: Record<string, Token>) => void;
-  listAllTokens: () => Token[];
+  listAllTokens: () => Token[] | null;
 }
 
 export const useTokenStore = create<TokenStoreState>((set, get) => ({
-  tokens: {},
+  tokens: null,
 
   setToken: (address, token) => {
     if (address !== token.address) {
@@ -33,6 +33,6 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
 
   listAllTokens: () => {
     const { tokens } = get();
-    return Object.values(tokens);
+    return tokens ? Object.values(tokens) : null;
   },
 }));

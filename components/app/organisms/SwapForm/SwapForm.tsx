@@ -4,19 +4,29 @@ import TokenInput from "@/components/app/organisms/SwapForm/TokenInput";
 import SwapButton from "@/components/app/atoms/SwapButton";
 import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
 import DynamicField from "@/components/app/molecules/DynamicField";
+import { useTokenStore } from "@/store/tokenStore";
 
 const SwapForm: React.FC = () => {
   // You might want to fetch or calculate balances dynamically, as an example here
   const balancePay = 100; // Example balance for pay
   const balanceReceive = 100; // Example balance for receive
+  const { tokenInputs } = useStore.getState();
+  const payDetails = tokenInputs["swap.pay"];
+  const payToken = useTokenStore(
+    (state) => state.tokens?.[payDetails.tokenAddress]
+  );
+  const receiveDetails = tokenInputs["swap.receive"];
+  const receiveToken = useTokenStore(
+    (state) => state.tokens?.[receiveDetails.tokenAddress]
+  );
 
   const handleSwapClick = () => {
-    const { tokenInputs } = useStore.getState();
-    const payDetails = tokenInputs["swap.pay"];
-    const receiveDetails = tokenInputs["swap.receive"];
-
     alert(
-      `Swapping ${payDetails.amount} ${payDetails.token.symbol} for ${receiveDetails.amount} ${receiveDetails.token.symbol}`
+      `Swapping ${payDetails.amount} ${
+        payToken?.symbol ?? "payToken-undefined"
+      } for ${receiveDetails.amount} ${
+        receiveToken?.symbol ?? "receiveToken-undefined"
+      }`
     );
   };
 

@@ -10,7 +10,7 @@ export interface StoreState {
   sharedSettings: SharedSettings;
   wallet: WalletState;
   chainId: string;
-  swappableTokens: Token[];
+  swappableTokens: Token[] | null;
   connectionRefused: boolean;
   setTokenInputProperty: <T extends keyof TokenInputState>(
     inputIdentifier: keyof TokenInputs,

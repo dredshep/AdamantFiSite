@@ -22,7 +22,11 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   const tokens = useStore((state) => state.swappableTokens);
 
   const handleTokenSelect = (selectedToken: Token) => {
-    setTokenInputProperty(inputIdentifier, "token", selectedToken);
+    setTokenInputProperty(
+      inputIdentifier,
+      "tokenAddress",
+      selectedToken.address
+    );
     onClose();
   };
 
@@ -56,7 +60,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
           style={{ scrollbarWidth: "none" }}
         >
           {tokens
-            .filter((token) =>
+            ?.filter((token) =>
               token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .map((token, index) => (
@@ -69,7 +73,8 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                 balance="0.00" // Assuming balance is 0.00
               />
               // {/* </Dialog.Close> */}
-            ))}
+            )) ||
+            "No swappable tokens available. Check your internet connection."}
         </div>
       </Dialog.Content>
     </>
