@@ -26,7 +26,7 @@ const tokens = [
 
 export default function TokensPage() {
   return (
-    <div className="bg-cover min-h-screen pb-20 text-white">
+    <div className="bg-cover min-h-screen text-white">
       <AppLayout>
         <div className="max-w-4xl mx-auto mt-12">
           <div className="flex justify-center mb-8">

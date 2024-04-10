@@ -42,7 +42,7 @@ const TokenPage = () => {
 
   return (
     <AppLayout>
-      <div className="bg-cover min-h-screen pb-20 text-white">
+      <div className="bg-cover min-h-screen text-white">
         <div className="max-w-4xl mx-auto mt-12">
           {/* Breadcrumb */}
           <div className="mb-8">Tokens &gt; {details.name}</div>

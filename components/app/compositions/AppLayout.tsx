@@ -13,8 +13,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div
       className={
-        jura.className +
-        " bg-tubeshapes-light bg-cover min-h-screen pb-20 text-white"
+        jura.className + " bg-tubeshapes-light bg-cover min-h-screen text-white"
       }
     >
       <Head>

@@ -67,8 +67,7 @@ export default function Home() {
   return (
     <div
       className={
-        jura.className +
-        " bg-tubeshapes-dark bg-cover min-h-screen pb-20 text-white"
+        jura.className + " bg-tubeshapes-dark bg-cover min-h-screen text-white"
       }
     >
       <Head>
