@@ -1,38 +1,28 @@
 import { useRouter } from "next/router";
 import AppLayout from "@/components/app/compositions/AppLayout";
-import React from "react";
-
-// Mock pool details data
-const poolDetails = {
-  secret16545454465153231231231: {
-    name: "SCRT",
-    network: "Secret Network",
-    totalVolumeLocked: "$500K",
-    marketCap: "$1M",
-    fdv: "$2M",
-    dailyVolume: "$50K",
-    about: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-  },
-  secret1acd6a516c51a651da65c165d1: {
-    name: "ADMT",
-    network: "Secret Network",
-    totalVolumeLocked: "$200K",
-    marketCap: "$800K",
-    fdv: "$1.5M",
-    dailyVolume: "$20K",
-    about:
-      "Pellentesque habitant morbi tristique senectus et netus et malesuada.",
-  },
-} as const;
+import React, { useEffect, useState } from "react";
+import { TablePool } from "@/types";
+import { getTablePools } from "@/utils/apis/getTablePools";
 
 export default function PoolPage() {
   const router = useRouter();
   const { pool } = router.query;
 
-  const details = poolDetails[pool as keyof typeof poolDetails];
+  // const details = poolDetails[pool as keyof typeof poolDetails];
+
+  const [pools, setPools] = useState<TablePool[]>([]);
+  useEffect(() => {
+    getTablePools().then(setPools);
+  }, []);
+
+  const details = pools.find((p) => p.userAddress === pool);
 
   if (!details) {
-    return <p>Pool not found</p>; // TODO: Not Found page
+    return (
+      <AppLayout>
+        <p className="bg-cover min-h-screen text-white">Pool not found</p>
+      </AppLayout>
+    ); // TODO: Not Found page
   }
 
   return (
@@ -49,7 +39,7 @@ export default function PoolPage() {
               <tbody>
                 <tr>
                   <td>Total Volume Locked</td>
-                  <td>{details.totalVolumeLocked}</td>
+                  <td>{details.tvl}</td>
                 </tr>
                 <tr>
                   <td>Market Cap</td>

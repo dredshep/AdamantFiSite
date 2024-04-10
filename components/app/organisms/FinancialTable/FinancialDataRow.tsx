@@ -6,9 +6,9 @@ type CellContent = string | React.ReactNode;
 
 interface FinancialDataCell {
   content: CellContent;
-  minWidth?: string; // Allow specifying a minimum width for flexibility
+  minWidth?: string;
   modifier?: "positive" | "negative";
-  bold?: boolean; // Corrected from true to boolean
+  bold?: boolean;
 }
 
 interface FinancialDataRowProps {
@@ -26,11 +26,10 @@ const FinancialDataRow: React.FC<FinancialDataRowProps> = ({ cells }) => {
             { "text-green-500": cell.modifier === "positive" },
             { "text-red-500": cell.modifier === "negative" },
             { "font-bold": cell.bold },
-            { "rounded-b-2.5": index === cells.length - 1 }
+            { "rounded-b-[10px]": index === cells.length - 1 }
           )}
           style={{ minWidth: cell.minWidth }}
         >
-          {/* Render content directly, allowing for both strings and React components */}
           {cell.content}
         </div>
       ))}

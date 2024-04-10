@@ -6,4 +6,9 @@ export type TablePool = {
   change: string;
   tvl: string;
   volume: string;
+
+  marketCap: string;
+  fdv: string;
+  dailyVolume: string;
+  about: string;
 };
