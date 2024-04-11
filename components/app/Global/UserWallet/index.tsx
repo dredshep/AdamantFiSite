@@ -1,7 +1,7 @@
 // UserWallet.tsx
 import React, { useEffect } from "react";
 import { RxCaretDown } from "react-icons/rx";
-import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
+import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import keplrConnect from "@/utils/wallet/keplrConnect";
 import { useStore } from "@/store/swapStore";
 import keplrDisconnect from "@/utils/wallet/keplrDisconnect";

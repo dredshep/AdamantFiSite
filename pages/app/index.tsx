@@ -1,6 +1,6 @@
 import { Jura } from "next/font/google";
-import AppLayout from "../../components/app/compositions/AppLayout";
-import SwapForm from "@/components/app/organisms/SwapForm/SwapForm";
+import AppLayout from "../../components/app/Global/AppLayout";
+import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import { useStore } from "@/store/swapStore";
 import { useEffect } from "react";
 import { useTokenStore } from "@/store/tokenStore";

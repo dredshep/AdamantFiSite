@@ -1,9 +1,9 @@
 import React from "react";
-import InputLabel from "@/components/app/atoms/InputLabel";
-import TokenInput from "@/components/app/organisms/SwapForm/TokenInput";
-import SwapButton from "@/components/app/atoms/SwapButton";
+import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
+import TokenInput from "@/components/app/Shared/Forms/Input/TokenInput";
+import SwapButton from "@/components/app/Pages/Swap/SwapButton";
 import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
-import DynamicField from "@/components/app/molecules/DynamicField";
+import DynamicField from "@/components/app/Shared/Forms/Input/DynamicField";
 import { useTokenStore } from "@/store/tokenStore";
 
 const SwapForm: React.FC = () => {

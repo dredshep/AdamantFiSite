@@ -1,10 +1,9 @@
 import { useRouter } from "next/router";
-import AppLayout from "@/components/app/compositions/AppLayout";
+import AppLayout from "@/components/app/Global/AppLayout";
 import React from "react";
-import VegaChart from "@/components/app/atoms/ResponsiveVegaChart";
 import chartSpec from "@/utils/dummyData/lineChart.json";
 import values from "@/utils/dummyData/lineChartValues.json";
-import ResponsiveVegaChart from "@/components/app/atoms/ResponsiveVegaChart";
+import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
 import { VisualizationSpec } from "react-vega";
 
 // Mock token details data

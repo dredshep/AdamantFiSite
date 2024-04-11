@@ -1,12 +1,12 @@
-import TokenDisplay from "@/components/app/atoms/TokenDisplay";
-import AppLayout from "@/components/app/compositions/AppLayout";
+import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
+import AppLayout from "@/components/app/Global/AppLayout";
 import { SecretString, TableToken } from "@/types";
 import Link from "next/link";
 import {
   TableHeaders,
   FinancialDataRow,
   FinancialTableSearchBar,
-} from "@/components/app/organisms/FinancialTable";
+} from "@/components/app/Shared/Tables/FinancialTable";
 import { useEffect, useState } from "react";
 import { getTableTokens } from "@/utils/apis/getTableTokens";
 

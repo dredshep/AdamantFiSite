@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 import Head from "next/head";
 import { Jura } from "next/font/google";
-import Navbar from "@/components/app/organisms/Navbar";
+import Navbar from "@/components/app/Global/Navbar";
 
 const jura = Jura({ subsets: ["latin"] });
 

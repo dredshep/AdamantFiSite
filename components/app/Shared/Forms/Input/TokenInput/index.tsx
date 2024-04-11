@@ -1,12 +1,12 @@
 import React from "react";
 import { useStore } from "@/store/swapStore";
-import PlaceholderImageFromSeed from "../../molecules/PlaceholderImageFromSeed";
+import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import { RxCaretDown } from "react-icons/rx";
 import { Token, TokenInputs } from "@/types";
-import TokenSelectionModal from "./TokenSelectionModalRadix";
-import MaxButton from "../../atoms/Swap/MaxButton";
-import TokenInputBaseInput from "../../atoms/Swap/TokenInputBaseInput";
-import InputBalanceAffordance from "../../atoms/Swap/TokenInput/InputBalanceAffordance";
+import TokenSelectionModal from "@/components/app/Shared/Forms/Select/TokenSelectionModal";
+import TokenInputBaseInput from "@/components/app/Shared/Forms/Input/TokenInputBaseInput";
+import MaxButton from "@/components/app/Shared/Forms/Input/TokenInput/MaxButton";
+import InputBalanceAffordance from "./InputBalanceAffordance";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useTokenStore } from "@/store/tokenStore";
 

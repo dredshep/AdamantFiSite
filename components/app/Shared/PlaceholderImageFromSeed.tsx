@@ -1,5 +1,5 @@
 import React from "react";
-import ImageWithPlaceholder from "@/components/app/ImageWithPlaceholder";
+import ImageWithPlaceholder from "@/components/app/Shared/ImageWithPlaceholder";
 import { SecretString } from "@/types";
 import generateHexColorsFromSeed from "@/utils/ImageWithPlaceholder/generateHexColorsFromSeed";
 

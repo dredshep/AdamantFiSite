@@ -1,6 +1,6 @@
 import React from "react";
 import { SecretString } from "@/types";
-import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
+import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 
 interface TokenDisplayProps {
   seed: SecretString;

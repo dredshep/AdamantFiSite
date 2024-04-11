@@ -1,8 +1,8 @@
 import { Jura } from "next/font/google";
 import Logo from "@/components/SVG/logo";
-import CoolBox from "@/components/CoolBox";
-import InfoBox from "@/components/InfoBox";
-import Footer from "@/components/Footer";
+import CoolBox from "@/components/site/CoolBox";
+import InfoBox from "@/components/site/InfoBox";
+import Footer from "@/components/site/Footer";
 import Head from "next/head";
 import Link from "next/link";
 

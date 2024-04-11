@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Cross1Icon } from "@radix-ui/react-icons"; // Assuming usage of Radix Icons for the X icon
-import TokenSelectionItem from "@/components/app/molecules/TokenSelectionItem";
-import TokenSelectionSearchBar from "@/components/app/atoms/Swap/TokenSelectionModal/TokenSelectionSearchBar";
+import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelectionItem";
+import TokenSelectionSearchBar from "@/components/app/Pages/Swap/TokenSelectionModal/TokenSelectionSearchBar";
 import { useStore } from "@/store/swapStore";
 import { Token, TokenInputs } from "@/types";
 

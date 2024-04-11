@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useStore } from "@/store/swapStore";
 import { Token, TokenInputs } from "@/types";
 import { X } from "lucide-react";
-import TokenSelectionItem from "@/components/app/molecules/TokenSelectionItem";
-import TokenSelectionSearchBar from "../../atoms/Swap/TokenSelectionModal/TokenSelectionSearchBar";
+import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelectionItem";
+import TokenSelectionSearchBar from "../../../Pages/Swap/TokenSelectionModal/TokenSelectionSearchBar";
 
 interface TokenSelectionModalProps {
   isOpen: boolean;

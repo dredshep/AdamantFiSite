@@ -1,5 +1,5 @@
 import { Token } from "@/types";
-import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
+import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import * as Dialog from "@radix-ui/react-dialog";
 
 interface TokenSelectionItemProps {

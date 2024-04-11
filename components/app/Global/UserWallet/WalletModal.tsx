@@ -1,6 +1,6 @@
 import React from "react";
 import { useWalletStore } from "@/store/walletStore";
-import PlaceholderImageFromSeed from "@/components/app/molecules/PlaceholderImageFromSeed";
+import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import {
   RiSettings3Line,
   RiArrowUpSLine,
