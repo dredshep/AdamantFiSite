@@ -2,7 +2,7 @@ import React from "react";
 import { useStore } from "@/store/swapStore";
 import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import { RxCaretDown } from "react-icons/rx";
-import { Token, TokenInputs } from "@/types";
+import { TokenInputs } from "@/types";
 import TokenSelectionModal from "@/components/app/Shared/Forms/Select/TokenSelectionModal";
 import TokenInputBaseInput from "@/components/app/Shared/Forms/Input/TokenInputBaseInput";
 import MaxButton from "@/components/app/Shared/Forms/Input/TokenInput/MaxButton";

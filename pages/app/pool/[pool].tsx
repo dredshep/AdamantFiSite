@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { TablePool } from "@/types";
 import { getTablePools } from "@/utils/apis/getTablePools";
 import { CaretRightIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
+import { Breadcrumb } from "@/components/app/Breadcrumb";
 
 export default function PoolPage() {
   const router = useRouter();
@@ -21,7 +23,16 @@ export default function PoolPage() {
   if (!details) {
     return (
       <AppLayout>
-        <p className="bg-cover min-h-screen text-white">Pool not found</p>
+        <div className="flex flex-col gap-2 w-full items-center pt-10">
+          <div className="text-lg font-semibold">Pool not found</div>
+          {/* backlink to return */}
+          <Link
+            href="/app/pools"
+            className="text-black bg-white p-4 py-2 rounded-xl text-xl font-bold"
+          >
+            Back to Pools
+          </Link>
+        </div>
       </AppLayout>
     ); // TODO: Not Found page
   }
@@ -29,12 +40,11 @@ export default function PoolPage() {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto mt-12">
-        {/* Breadcrumb */}
-        <div className="flex items-center mb-8 gap-1 text-base">
-          <div className="text-gray-500">Pools</div>
-          <CaretRightIcon className="w-4 h-4 text-gray-500 mt-0.5" />
-          <div className="font-bold">{details.name}</div>
-        </div>
+        <Breadcrumb
+          linkPath="/app/pools"
+          linkText="Pools"
+          currentText={details.name}
+        />
 
         {/* Statistics Box */}
         <div className="mb-8">

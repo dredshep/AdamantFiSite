@@ -36,38 +36,40 @@ export default function PoolsPage() {
             { title: "Graph" },
           ]}
         />
-        {tokens.map((pool, index) => (
-          <Link
-            key={index}
-            className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
-            href={`/app/pool/${pool.userAddress}`}
-          >
-            <FinancialDataRow
-              cells={[
-                {
-                  content: (
-                    <TokenDisplay
-                      seed={pool.userAddress as SecretString}
-                      name={pool.name}
-                      network={pool.network}
-                    />
-                  ),
-                  minWidth: "240px",
-                },
-                { content: pool.price, bold: true },
-                {
-                  content: pool.change,
-                  modifier: pool.change.startsWith("-")
-                    ? "negative"
-                    : "positive",
-                },
-                { content: pool.tvl },
-                { content: pool.volume },
-                { content: "Graph Placeholder" },
-              ]}
-            />
-          </Link>
-        ))}
+        <div className="rounded-b-[10px] overflow-hidden">
+          {tokens.map((pool, index) => (
+            <Link
+              key={index}
+              className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
+              href={`/app/pool/${pool.userAddress}`}
+            >
+              <FinancialDataRow
+                cells={[
+                  {
+                    content: (
+                      <TokenDisplay
+                        seed={pool.userAddress as SecretString}
+                        name={pool.name}
+                        network={pool.network}
+                      />
+                    ),
+                    minWidth: "240px",
+                  },
+                  { content: pool.price, bold: true },
+                  {
+                    content: pool.change,
+                    modifier: pool.change.startsWith("-")
+                      ? "negative"
+                      : "positive",
+                  },
+                  { content: pool.tvl },
+                  { content: pool.volume },
+                  { content: "Graph Placeholder" },
+                ]}
+              />
+            </Link>
+          ))}
+        </div>
       </div>
     </AppLayout>
   );
