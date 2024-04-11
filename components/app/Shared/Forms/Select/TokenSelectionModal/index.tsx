@@ -3,7 +3,7 @@ import { useStore } from "@/store/swapStore";
 import { Token, TokenInputs } from "@/types";
 import { X } from "lucide-react";
 import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelectionItem";
-import TokenSelectionSearchBar from "../../../Pages/Swap/TokenSelectionModal/TokenSelectionSearchBar";
+import TokenSelectionSearchBar from "./TokenSelectionSearchBar";
 
 interface TokenSelectionModalProps {
   isOpen: boolean;
