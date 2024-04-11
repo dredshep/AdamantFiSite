@@ -7,7 +7,7 @@ interface TableHeaderProps {
 
 const TableHeaders: React.FC<TableHeaderProps> = ({ headers }) => {
   return (
-    <div className="flex text-xs text-gray-500 uppercase bg-adamant-app-box dark:bg-gray-700 dark:text-gray-400 py-3 px-6">
+    <div className="flex text-xs text-gray-500 uppercase bg-adamant-app-box dark:bg-gray-700 dark:text-gray-400 py-3 px-6 rounded-t-[10px]">
       {headers.map((header, index) => (
         <div
           key={index}

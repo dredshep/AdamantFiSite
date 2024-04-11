@@ -39,7 +39,7 @@ export default function TokensPage() {
         {tokens.map((token, index) => (
           <Link
             key={index}
-            className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
+            className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6 rounded-b-[10px]"
             href={`/app/token/${token.userAddress}`}
           >
             <FinancialDataRow

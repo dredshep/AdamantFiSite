@@ -25,8 +25,7 @@ const FinancialDataRow: React.FC<FinancialDataRowProps> = ({ cells }) => {
             "flex-1",
             { "text-green-500": cell.modifier === "positive" },
             { "text-red-500": cell.modifier === "negative" },
-            { "font-bold": cell.bold },
-            { "rounded-b-[10px]": index === cells.length - 1 }
+            { "font-bold": cell.bold }
           )}
           style={{ minWidth: cell.minWidth }}
         >
