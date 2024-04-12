@@ -5,6 +5,7 @@ import SwapButton from "@/components/app/Pages/Swap/SwapButton";
 import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
 import DynamicField from "@/components/app/Shared/Forms/Input/DynamicField";
 import { useTokenStore } from "@/store/tokenStore";
+import FormButton from "@/components/app/Shared/Forms/FormButton";
 
 const SwapForm: React.FC = () => {
   // You might want to fetch or calculate balances dynamically, as an example here
@@ -60,9 +61,8 @@ const SwapForm: React.FC = () => {
           </div>
         </div>
       </div>
-      <SwapButton disabled={false} onClick={handleSwapClick} />
+      <FormButton onClick={handleSwapClick} text="Swap" />
     </div>
   );
 };
-
 export default SwapForm;

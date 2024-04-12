@@ -1,5 +1,5 @@
 import { Jura } from "next/font/google";
-import AppLayout from "../../components/app/Global/AppLayout";
+import AppLayout from "@/components/app/Global/AppLayout";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import { useStore } from "@/store/swapStore";
 import { useEffect } from "react";
@@ -29,6 +29,7 @@ export default function Swap() {
               <div className="font-bold flex flex-col relative">
                 SWAP
                 <div className="relative">
+                  {/* "is-selected" triangle to mark that SWAP is the active tab */}
                   <div
                     className="w-0 h-0 absolute left-3
   border-l-[8px] border-l-transparent
