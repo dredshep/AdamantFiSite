@@ -36,38 +36,40 @@ export default function TokensPage() {
             { title: "Graph" },
           ]}
         />
-        {tokens.map((token, index) => (
-          <Link
-            key={index}
-            className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6 rounded-b-[10px]"
-            href={`/app/token/${token.userAddress}`}
-          >
-            <FinancialDataRow
-              cells={[
-                {
-                  content: (
-                    <TokenDisplay
-                      seed={token.userAddress as SecretString}
-                      name={token.name}
-                      network={token.network}
-                    />
-                  ),
-                  minWidth: "240px",
-                },
-                { content: token.price, bold: true },
-                {
-                  content: token.change,
-                  modifier: token.change.startsWith("-")
-                    ? "negative"
-                    : "positive",
-                },
-                { content: token.tvl },
-                { content: token.volume },
-                { content: "Graph Placeholder" }, // This would be replaced with an actual graph component or representation
-              ]}
-            />
-          </Link>
-        ))}
+        <div className="rounded-b-[10px] overflow-hidden">
+          {tokens.map((token, index) => (
+            <Link
+              key={index}
+              className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
+              href={`/app/token/${token.userAddress}`}
+            >
+              <FinancialDataRow
+                cells={[
+                  {
+                    content: (
+                      <TokenDisplay
+                        seed={token.userAddress as SecretString}
+                        name={token.name}
+                        network={token.network}
+                      />
+                    ),
+                    minWidth: "240px",
+                  },
+                  { content: token.price, bold: true },
+                  {
+                    content: token.change,
+                    modifier: token.change.startsWith("-")
+                      ? "negative"
+                      : "positive",
+                  },
+                  { content: token.tvl },
+                  { content: token.volume },
+                  { content: "Graph Placeholder" }, // This would be replaced with an actual graph component or representation
+                ]}
+              />
+            </Link>
+          ))}
+        </div>
       </div>
     </AppLayout>
   );

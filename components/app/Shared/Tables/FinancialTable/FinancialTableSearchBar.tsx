@@ -22,13 +22,13 @@ const FinancialTableSearchBar: React.FC<FinancialTableSearchBarProps> = ({
 
   return (
     <div className="flex items-center bg-adamant-box-dark rounded-xl w-full group">
-      <FaSearch className="ml-4 text-gray-500 group-hover:text-gray-300 transition-colors duration-200 ease-in-out" />
+      <FaSearch className="mx-4 text-gray-500 group-hover:text-gray-300 transition-colors duration-200 ease-in-out" />
       <input
         type="text"
         placeholder={placeholder}
         value={searchTerm}
         onChange={handleSearchChange}
-        className="w-full px-4 py-2 bg-adamant-box-dark rounded-xl pl-10 text-white placeholder-gray-400 outline-none hover:brightness-125 transition-all duration-200"
+        className="w-full py-2 bg-adamant-box-dark rounded-xl pl-6 text-white placeholder-gray-400 outline-none hover:brightness-125 transition-all duration-200"
       />
     </div>
   );
