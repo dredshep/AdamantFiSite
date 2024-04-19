@@ -17,7 +17,7 @@ To run the Adamant Finance site locally, you need to have Node.js installed on y
 
 ```bash
 git clone https://github.com/dredshep/AdamantFiSite.git
-cd adamantfi-site
+cd AdamantFiSite
 ```
 
 2. **Install Dependencies**
