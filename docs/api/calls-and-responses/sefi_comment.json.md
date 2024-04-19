@@ -33,7 +33,7 @@ interface CurrencyInfo {
 }
 ```
 
-### Example Response Component
+### Example Response
 
 ```json
 {
@@ -44,6 +44,42 @@ interface CurrencyInfo {
   "ALTER/USD": {
     "price": 0.10274,
     "__comment__": "Secret Finance datafeed v1.1 ALTER: 2022-08-02 14:02:02 UTC"
+  },
+  "ATOM/USD": {
+    "price": 10.01,
+    "__comment__": "Secret Finance datafeed v1.1 COSMOS: 2022-08-02 14:02:02 UTC"
+  },
+  "BUTT/USD": {
+    "price": 0.03083892,
+    "__comment__": "Secret Finance datafeed v1.1 BUTTCOIN-2: 2022-08-02 14:02:02 UTC"
+  },
+  "XMR/USD": {
+    "price": 156.71,
+    "__comment__": "Secret Finance datafeed v1.1 MONERO: 2022-08-02 14:02:02 UTC"
+  },
+  "OSMO/USD": {
+    "price": 1.009,
+    "__comment__": "Secret Finance datafeed v1.1 OSMOSIS: 2022-08-02 14:02:02 UTC"
+  },
+  "RENBTC/USD": {
+    "price": 22819,
+    "__comment__": "Secret Finance datafeed v1.1 RENBTC: 2022-08-02 14:02:02 UTC"
+  },
+  "SCRT/USD": {
+    "price": 1.058,
+    "__comment__": "Secret Finance datafeed v1.1 SECRET: 2022-08-02 14:02:02 UTC"
+  },
+  "DVPN/USD": {
+    "price": 0.00083773,
+    "__comment__": "Secret Finance datafeed v1.1 SENTINEL: 2022-08-02 14:02:02 UTC"
+  },
+  "LUNA/USD": {
+    "price": 9.822e-5,
+    "__comment__": "Secret Finance datafeed v1.1 TERRA-LUNA: 2022-08-02 14:02:02 UTC"
+  },
+  "SEFI/USDT": {
+    "price": 0.00087374,
+    "__comment__": "Secret Finance datafeed v1.1 SEFI/USDT: 2022-08-02 14:02:02 UTC"
   }
 }
 ```
