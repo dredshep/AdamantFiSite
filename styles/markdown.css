@@ -1,0 +1,68 @@
+/* styles/markdown.css */
+body {
+  background-color: #0c0c20; /* very dark box color */
+  color: #a78e5a; /* accent text color */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #a78e5a; /* accent text color */
+  font-weight: bold;
+}
+
+p {
+  color: #b59d6b; /* gradient dark color */
+  line-height: 1.6;
+}
+
+a {
+  color: #a68c57; /* gradient bright color */
+  text-decoration: underline;
+}
+
+ul,
+ol {
+  padding-left: 20px;
+  color: #a78e5a; /* accent text color */
+}
+
+blockquote {
+  border-left: 4px solid #30364e; /* box color */
+  padding-left: 16px;
+  color: #888ea6; /* button disabled color */
+  background-color: #0b0b16; /* very dark box color */
+  margin: 1em 0;
+}
+
+code {
+  background-color: #181b27; /* input color */
+  padding: 2px 4px;
+  color: #30364e; /* box color */
+  border-radius: 4px;
+}
+
+pre {
+  background-color: #242732; /* select trigger color */
+  padding: 1em;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid #30364e; /* box color */
+  padding: 8px;
+  text-align: left;
+}
+
+hr {
+  border-top: 1px solid #30364e;
+}

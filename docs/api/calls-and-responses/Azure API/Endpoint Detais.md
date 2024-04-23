@@ -38,7 +38,7 @@ Below is the documentation for each API endpoint, detailing the path parameters 
 - **Method**: GET
 - **Description**: Retrieves detailed information about a specific reward pool.
 - **Path Parameters**:
-  - `:pool` - The identifier for the reward pool to fetch details.
+  - `:pool` - The identifier (`pool_address`) for the reward pool to fetch details.
 
 ### SecretSwap
 
