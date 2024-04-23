@@ -1,98 +1,112 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-import { useState } from "react";
-import { useRouter } from "next/router";
-import { marked } from "marked";
+import MarkdownStyledLayout from "@/components/doc/MarkdownStyledLayout";
 
-type Docs = Array<{
-  title: string;
-  slug: string;
-  content: string;
-}>;
-
-function getAllDocs(directory: string, basePath = "") {
-  const files = fs.readdirSync(directory);
-  const docs: Docs = files.map((file) => {
-    const fullPath = path.join(directory, file);
-    const fileStats = fs.statSync(fullPath);
-
-    if (fileStats.isDirectory()) {
-      return getAllDocs(fullPath, `${basePath}/${file}`);
-    } else {
-      const content = fs.readFileSync(fullPath, "utf8");
-      const meta = matter(content);
-      return {
-        ...meta.data,
-        slug: `${basePath}/${file.replace(/\.md$/, "")}`,
-        content: meta.content,
-      };
-    }
-  }) as Docs;
-  return docs.flat();
-}
-
-export async function getStaticProps() {
-  const docsDirectory = path.join(process.cwd(), "docs");
-  const docs = getAllDocs(docsDirectory).filter((doc) => doc !== undefined);
-
-  return {
-    props: {
-      docs,
-    },
-  };
-}
-
-export default function Documentation({ docs }: { docs: Docs }) {
-  const [selectedDoc, setSelectedDoc] = useState<Docs["0"] | undefined>(
-    docs[0]
-  );
-  const router = useRouter();
-
-  const handleDocClick = (doc: Docs["0"]) => {
-    setSelectedDoc(doc);
-    const docPath = `/docs${doc.slug}`; // Ensure this path is correctly formed
-    router.push(docPath, undefined, { shallow: true });
-  };
-
-  const getHtmlContent = (markdownContent: string) => {
-    return { __html: marked(markdownContent) };
-  };
-
-  // Debugging: Log the docs array to see what we have
-  console.log(docs);
-
+export default function DocPage() {
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      <div style={{ width: "20%", overflowY: "auto" }}>
-        <ul className="p-4 flex flex-col gap-2">
-          {docs.length > 0 ? (
-            docs.map((doc) => (
-              <li
-                key={doc.slug}
-                onClick={() => handleDocClick(doc)}
-                className="bg-gray-200 hover:bg-gray-300 cursor-pointer p-2 rounded-md"
-              >
-                {doc.slug.split("/").pop()?.replace(/-/g, " ")}
-              </li>
-            ))
-          ) : (
-            <li>No documents found</li>
-          )}
-        </ul>
-      </div>
-      <div style={{ width: "80%", padding: "20px", overflowY: "auto" }}>
-        {selectedDoc ? (
-          <>
-            <h1>{selectedDoc.title}</h1>
-            <div
-              dangerouslySetInnerHTML={getHtmlContent(selectedDoc.content)}
-            />
-          </>
-        ) : (
-          <h1>Select a document</h1>
-        )}
-      </div>
-    </div>
+    <MarkdownStyledLayout>
+      <h1 id="welcome-to-adamant-finance-documentation">
+        Welcome to Adamant Finance Documentation
+      </h1>
+      <p>
+        Welcome to the central hub for all Adamant Finance technical
+        documentation. Whether you are a developer, a stakeholder, or just
+        curious about the inner workings of Adamant Finance, you&#39;ll find
+        detailed documentation on our APIs, implementation procedures, and more.
+      </p>
+      <h2 id="what-you-will-find-here">What You Will Find Here</h2>
+      <h3 id="api-documentation">API Documentation</h3>
+      <p>
+        Dive into the specifics of our API, exploring endpoints, responses, and
+        detailed use cases. Our API documentation is structured to give you
+        insights into how to integrate and utilize our systems efficiently.
+      </p>
+      <ul>
+        <li>
+          <a href="./api/calls-and-responses/Azure%20API/Overview">
+            Azure API Overview
+          </a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/Azure%20API/Endpoint%20Detais">
+            Endpoint Details
+          </a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/Azure%20API/Response%20Interfaces">
+            Response Interfaces
+          </a>
+        </li>
+      </ul>
+      <p>Explore other API resources:</p>
+      <ul>
+        <li>
+          <a href="./api/calls-and-responses/24hr">24hr Volume</a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/config_mainnet.json">
+            Config Mainnet
+          </a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/rewards">Rewards</a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/secret_tokens">Secret Tokens</a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/sefi_comment.json">Sefi Comment</a>
+        </li>
+        <li>
+          <a href="./api/calls-and-responses/tokens">Tokens</a>
+        </li>
+      </ul>
+      <h3 id="standard-operating-procedures-sop-">
+        Standard Operating Procedures (SOP)
+      </h3>
+      <p>
+        For those looking to understand our operational frameworks and
+        procedures:
+      </p>
+      <ul>
+        <li>
+          <a href="./SOP/Generating%20Typescript%20interfaces%20from%20JSON">
+            Generating TypeScript Interfaces from JSON
+          </a>
+        </li>
+        <li>
+          <a href="./SOP/Setting%20up%20json-to-ts%20cli">
+            Setting up JSON-to-TS CLI
+          </a>
+        </li>
+      </ul>
+      <h3 id="miscellaneous-resources">Miscellaneous Resources</h3>
+      <ul>
+        <li>
+          <a href="./SecretSwap%20icons">SecretSwap Icons</a>
+        </li>
+      </ul>
+      <h2 id="getting-started">Getting Started</h2>
+      <p>
+        To get started with our documentation, we recommend reading the{" "}
+        <a href="./api/calls-and-responses/Azure%20API/Overview">
+          Azure API Overview
+        </a>{" "}
+        as it provides a comprehensive introduction to the capabilities and
+        design of our financial APIs.
+      </p>
+      <p>
+        Feel free to navigate through the sections using the links provided in
+        each document. Each section is designed to be standalone, allowing you
+        to jump directly to the information you need.
+      </p>
+      <h2 id="feedback">Feedback</h2>
+      <p>
+        Your feedback is important to us. If you have comments or questions,
+        please feel free to reach out to us at{" "}
+        <a href="mailto:support@adamantfi.com">support@adamantfi.com</a>. We are
+        committed to continuously improving our documentation to better serve
+        your needs.
+      </p>
+      <p>Thank you for choosing Adamant Finance. Happy exploring!</p>
+    </MarkdownStyledLayout>
   );
 }
