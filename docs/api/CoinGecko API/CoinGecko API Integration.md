@@ -10,9 +10,11 @@ To use the CoinGecko API, you must first obtain an API key, which will allow you
 
 ### Steps to Obtain an API Key:
 
-1. Register for an account at CoinGecko by visiting the [registration page](https://www.coingecko.com/en/api/documentation).
-2. Once registered, navigate to the API section available at [CoinGecko API Access](https://www.coingecko.com/account/api_access).
-3. Follow the prompts to generate a new API key.
+1. Register for an account at CoinGecko by visiting the [registration page](https://www.coingecko.com/).
+2. Verify your email address to complete the registration process.
+3. Once verified, you'll be logged in. Go to the [pricing page](https://www.coingecko.com/en/api/pricing) to get started.
+4. Click "Create a Demo Account" to create your API key, and fill in your details.
+5. This will redirect you to the [developer dashboard](https://www.coingecko.com/en/developers/dashboard). Get your API key there. ("Add New Key" button, it's bright and green).
 
 ## Configuring the API Key in Your Project
 
@@ -20,12 +22,13 @@ For security reasons, the API key should not be hardcoded directly into the proj
 
 ### Storing the API Key:
 
-1. Open your project's `.env` file located at the root of your project directory.
+1. Open your project's `.env.local` file located at the root of your project directory.
 2. Add the CoinGecko API key to this file with a clear and specific variable name:
    ```plaintext
-   # .env file
+   # .env.local file
    COINGECKO_API_KEY='your_api_key_here'
    ```
+3. If in doubt regarding `.env.local`, refer to the [Next.js documentation](https://nextjs.org/docs/pages/building-your-application/configuring/environment-variables). In short, `NEXT_PUBLIC_` variables are available in the client-side JavaScript code, and otherwise they are available in the server-side JavaScript code.
 
 ### Accessing the API Key in Your Application:
 
@@ -52,7 +55,7 @@ fetch(
 
 ## Best Practices and Security Considerations
 
-- **Never commit your `.env` file to version control**. Ensure it is listed in your `.gitignore` file.
+- **Never commit your `.env.local` file to version control**. Ensure it is listed in your `.gitignore` file.
 - Monitor the usage of your API key to avoid exceeding the rate limits imposed by CoinGecko.
 - Regularly rotate your API key to enhance security.
 
