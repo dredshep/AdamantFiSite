@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import DocumentList from "@/components/doc/DocumentList";
-import DocumentDisplay from "@/components/doc/DocumentDisplay";
+import DocumentList from "@/components/docs/DocumentList";
+import DocumentDisplay from "@/components/docs/DocumentDisplay";
 import { Docs, Doc, getAllDocs, getDocBySlug } from "@/utils/docs/docUtils"; // Ensure these imports are correct
 import fs from "fs";
 import path from "path";
@@ -28,6 +28,11 @@ export default function DocPage({ docs }: { docs: Docs }) {
   const documentSlug = decodeURIComponent(
     Array.isArray(slug) ? slug.join("/") : slug || ""
   );
+  console.log({
+    documentSlug,
+    slug,
+    docs,
+  });
   const selectedDoc = getDocBySlug(docs, documentSlug);
 
   useEffect(() => {

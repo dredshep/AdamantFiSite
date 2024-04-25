@@ -1,6 +1,7 @@
 import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import Link from "next/link";
 
 export type Doc = {
   title: string;
@@ -9,6 +10,27 @@ export type Doc = {
 };
 
 export type Docs = Doc[];
+
+// Set up a custom renderer
+const renderer = new marked.Renderer();
+
+const originalLinkRenderer = renderer.link.bind(renderer);
+renderer.link = (href, title, text) => {
+  if (href.startsWith("/")) {
+    // Use a placeholder that's unlikely to occur in normal text
+    return `@@LINK@@${href}@@${text}@@LINK@@`;
+  } else {
+    return originalLinkRenderer(href, title, text);
+  }
+};
+marked.setOptions({
+  renderer,
+});
+
+// Function to convert Markdown content to HTML
+export const getHtmlContent = (markdownContent: string) => ({
+  __html: marked(markdownContent),
+});
 
 // Recursively read all markdown files
 export function getAllDocs(
@@ -48,8 +70,20 @@ export function getDocBySlug(
   const slugPath = `/${Array.isArray(slug) ? slug.join("/") : slug}`;
   return docs.find((doc) => doc.slug === slugPath);
 }
-
-// Function to convert Markdown content to HTML
-export const getHtmlContent = (markdownContent: string) => ({
-  __html: marked(markdownContent),
-});
+// Replace placeholders with Link components in your React component
+export const replaceLinkPlaceholders = (htmlString: string) => {
+  const parts = htmlString.split("@@LINK@@");
+  const processed = parts.map((part, index) => {
+    if (index % 2 === 1) {
+      // Odd indices are link parts
+      const [href, text] = part.split("@@");
+      return (
+        <Link key={index} href={href}>
+          {text}
+        </Link>
+      );
+    }
+    return part;
+  });
+  return processed;
+};

@@ -10,6 +10,7 @@ export type DocumentListProps = {
 };
 
 const DocumentList = ({ docs, currentSlug }: DocumentListProps) => {
+  console.log({ docs, currentSlug });
   return (
     <div style={{ width: "20%", overflowY: "auto" }}>
       <ul className="flex flex-col gap-2 p-4 bg-adamant-app-box min-h-screen text-white">
