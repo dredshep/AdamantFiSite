@@ -1,4 +1,3 @@
-import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
@@ -12,14 +11,18 @@ export type Doc = {
 export type Docs = Doc[];
 
 // Recursively read all markdown files
-export function getAllDocs(directory: string, basePath = ""): Docs {
+export function getAllDocs(
+  fs: typeof import("fs"),
+  directory: string,
+  basePath = ""
+): Docs {
   const files = fs.readdirSync(directory);
   return files.flatMap((file) => {
     const fullPath = path.join(directory, file);
     const fileStats = fs.statSync(fullPath);
 
     if (fileStats.isDirectory()) {
-      return getAllDocs(fullPath, `${basePath}/${file}`);
+      return getAllDocs(fs, fullPath, `${basePath}/${file}`);
     } else {
       const content = fs.readFileSync(fullPath, "utf8");
       const meta = matter(content);

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "remote:add": "git remote add origin https://github.com/AdamantFi/AdamantFiSite.git && git remote add personal https://github.com/dredshep/AdamantFiSite.git",
+    "push": "git push origin main && git push personal main"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
