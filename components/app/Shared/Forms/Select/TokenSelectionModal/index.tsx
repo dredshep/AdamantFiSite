@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useStore } from "@/store/swapStore";
 import { Token, TokenInputs } from "@/types";
 import { X } from "lucide-react";
@@ -29,6 +29,10 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     );
     onClose();
   };
+
+  useEffect(() => {
+    console.log({ isOpen });
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
