@@ -43,7 +43,7 @@ const TokensPage: React.FC<TokensPageProps> = ({ tokens }) => {
           headers={[
             { title: "Token", minWidth: "240px" },
             { title: "Price" },
-            { title: "CoinGecko Price" },
+            { title: "CoinGecko Symbol" },
             { title: "Network" },
           ]}
         />

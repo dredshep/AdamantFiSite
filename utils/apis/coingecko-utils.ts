@@ -19,7 +19,8 @@ export async function fetchFromCoinGecko(endpoint: string) {
     );
   }
 
-  const url = `${baseUrl}${endpoint}&api_key=${apiKey}`;
+  const url = `${baseUrl}${endpoint}`;
+  console.log(url);
   const options = {
     method: "GET",
     headers: {
@@ -30,7 +31,9 @@ export async function fetchFromCoinGecko(endpoint: string) {
 
   const response = await fetch(url, options);
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(
+      `HTTP error! status: ${response.status}, error: ${response.statusText}`
+    );
   }
   return await response.json();
 }

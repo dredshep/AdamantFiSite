@@ -14,7 +14,7 @@ Below is the documentation for each API endpoint, detailing the path parameters 
 - **Method**: GET
 - **Description**: Fetches details for a specific token.
 - **Path Parameters**:
-  - `:token` - Token identifier (`scrt_coin`) used to retrieve detailed information about a specific token.
+  - `:token` - Token identifier (`src_coin`) used to retrieve detailed information about a specific token.
 
 ### Secret Tokens
 
@@ -81,6 +81,8 @@ Below is the documentation for each API endpoint, detailing the path parameters 
 - **Description**: Retrieves the average network cashback rate.
 
 #### 2. Post New Cashback Burn Rate
+
+in the Azure token list. The function should also include a check to ensure that the symbol is unique within the list of tokens.
 
 - **Path**: `/cashback/network_avg_rate/:rate`
 - **Method**: POST
