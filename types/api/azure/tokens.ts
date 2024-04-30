@@ -1,6 +1,9 @@
 // api paths:
 // - https://api-bridge-mainnet.azurewebsites.net/tokens
 // - https://api-bridge-mainnet.azurewebsites.net/tokens/:token
+
+// - https://bridge-bsc-mainnet.azurewebsites.net/tokens/?page=0&size=1000
+// - https://bridge-bsc-mainnet.azurewebsites.net/tokens/:token
 export interface AzureTokensToken {
   src_network: string;
   src_coin: string;
