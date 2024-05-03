@@ -29,7 +29,7 @@ export interface AzureTokensDisplayProps {
   label: string;
   hidden?: boolean;
   proxy?: boolean;
-  usage?: string[];
+  usage?: "BRIDGE" | "SWAP" | "LPSTAKING";
 }
 
 export interface AzureTokensResponse {
