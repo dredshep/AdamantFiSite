@@ -14,7 +14,12 @@ export default function TokensPage() {
   const [tokens, setTokens] = useState<TableToken[]>([]);
 
   useEffect(() => {
-    getTableTokens().then(setTokens);
+    async function main() {
+      const tableTokens = await getTableTokens();
+      console.log({ tableTokens });
+      setTokens(tableTokens);
+    }
+    main();
   }, []);
 
   return (
@@ -37,7 +42,7 @@ export default function TokensPage() {
           ]}
         />
         <div className="rounded-b-[10px] overflow-hidden">
-          {tokens.map((token, index) => (
+          {tokens?.map((token, index) => (
             <Link
               key={index}
               className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"

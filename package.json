@@ -34,6 +34,7 @@
     "react-icons": "^5.0.1",
     "react-toastify": "^10.0.5",
     "react-vega": "^7.6.0",
+    "secretjs": "^1.12.5",
     "seedrandom": "^3.0.5",
     "styled-components": "^6.1.8",
     "tailwind-merge": "^2.2.2",
