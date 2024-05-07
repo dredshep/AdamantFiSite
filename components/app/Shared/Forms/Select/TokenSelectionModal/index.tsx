@@ -52,7 +52,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
           YOUR TOKENS
         </div>
         <div
-          className="flex flex-col gap-2 overflow-y-auto max-h-64 mt-4"
+          className="flex flex-col gap-2 overflow-y-auto max-h-96 mt-4"
           style={{ scrollbarWidth: "none" }}
         >
           {tokens

@@ -17,7 +17,7 @@ export interface NativeToken {
 export interface SwappableToken {
   symbol: string;
   address: SecretString;
-  isNativeToken: false;
+  isNativeToken: boolean;
   balance?: string;
   viewingKey: string;
   protocol: string;

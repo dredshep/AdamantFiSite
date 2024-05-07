@@ -20,3 +20,5 @@ export default async function getCoingeckoPrice(
     res.status(500).json({ error: error.message });
   }
 }
+
+// http://localhost:3000/api/getCoingeckoPrice?symbol=bitcoin

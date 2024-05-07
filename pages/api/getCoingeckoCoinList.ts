@@ -12,3 +12,5 @@ export default async function getCoingeckoCoinList(
     res.status(500).json({ error: error.message });
   }
 }
+
+// http://localhost:3000/api/getCoingeckoCoinList

@@ -1,9 +1,10 @@
 import { Token } from "@/types";
-import getUrl from "@/utils/apis/getUrl";
 
-// Utils to fetch swappable tokens
-export const getSwappableTokens = async () => {
-  const response = await fetch(getUrl("/api/getSwappableTokens"));
-  const data: Token[] = await response.json();
-  return data;
+import { transformToSwappableToken } from "./transformAzureTokenIntoSwappableToken";
+import { AzureTokensResponse } from "@/types/api/azure";
+
+export const getSwappableTokens = async (): Promise<Token[]> => {
+  const response = await fetch("/api/tokens");
+  const data = (await response.json()) as AzureTokensResponse;
+  return transformToSwappableToken(data.tokens);
 };
