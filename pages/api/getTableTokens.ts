@@ -7,7 +7,7 @@ import { TableToken, Token } from "@/types";
 // Define your transformation function
 const transformTokensToTableFormat = (tokens: Token[]): TableToken[] => {
   return tokens.map((token) => ({
-    userAddress: token.address,
+    address: token.address,
     name: token.name ?? "Unknown Token",
     network: token.network ?? "Unknown Network",
     price: token.usdPrice ?? "N/A",

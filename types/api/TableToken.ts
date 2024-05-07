@@ -1,5 +1,5 @@
 export type TableToken = {
-  userAddress: string;
+  address: string;
   name: string;
   network: string;
   price: string;

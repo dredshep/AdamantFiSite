@@ -2,9 +2,10 @@ import { Token } from "@/types";
 
 import { transformToSwappableToken } from "./transformAzureTokenIntoSwappableToken";
 import { AzureTokensResponse } from "@/types/api/azure";
+import getUrl from "./getUrl";
 
 export const getSwappableTokens = async (): Promise<Token[]> => {
-  const response = await fetch("/api/tokens");
+  const response = await fetch(getUrl("/api/tokens"));
   const data = (await response.json()) as AzureTokensResponse;
   return transformToSwappableToken(data.tokens);
 };

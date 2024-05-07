@@ -46,14 +46,14 @@ export default function TokensPage() {
             <Link
               key={index}
               className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
-              href={`/app/token/${token.userAddress}`}
+              href={`/app/token/${token.address}`}
             >
               <FinancialDataRow
                 cells={[
                   {
                     content: (
                       <TokenDisplay
-                        seed={token.userAddress as SecretString}
+                        seed={token.address as SecretString}
                         name={token.name}
                         network={token.network}
                       />
