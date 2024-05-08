@@ -47,7 +47,6 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
         />
-        {/* Recent tokens and tokens list will go here */}
         <div className="text-gray-500 font-medium text-sm mt-4 px-6">
           YOUR TOKENS
         </div>

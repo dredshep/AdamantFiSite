@@ -11,7 +11,7 @@ import updateState from "@/store/utils/updateState";
 export const useStore = create<StoreState>((set) => ({
   tokenInputs: {
     "swap.pay": {
-      tokenAddress: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+      tokenAddress: "secret1zxt48uqzquvjsp2a7suzxlyd9n3jfpdw4k5zve",
       amount: "",
     },
     "swap.receive": {
