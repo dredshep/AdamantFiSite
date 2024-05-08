@@ -1,28 +1,37 @@
+// @/api/getTableTokens.ts
+
 import { NextApiRequest, NextApiResponse } from "next";
+import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { TableToken, Token } from "@/types";
 
-const getTableTokens = (req: NextApiRequest, res: NextApiResponse) => {
-  const tokens = [
-    {
-      userAddress: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
-      name: "SCRT",
-      network: "Secret Network",
-      price: "$0.10",
-      change: "-5%",
-      tvl: "$100K",
-      volume: "$48K",
-    },
-    {
-      userAddress: "secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt",
-      name: "ADMT",
-      network: "Secret Network",
-      price: "$0.20",
-      change: "10%",
-      tvl: "$200K",
-      volume: "$101K",
-    },
-  ];
+// Define your transformation function
+const transformTokensToTableFormat = (tokens: Token[]): TableToken[] => {
+  return tokens.map((token) => ({
+    address: token.address,
+    name: token.name ?? "Unknown Token",
+    network: token.network ?? "Unknown Network",
+    price: token.usdPrice ?? "N/A",
+    change: "0%", // Assuming you will compute this based on some other data
+    tvl: "N/A", // You might need additional data for Total Volume Locked
+    volume: "N/A", // You might need additional data for Volume
+  }));
+};
 
-  res.status(200).json(tokens);
+// API Route that uses the transformation
+const getTableTokens = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    const swappableTokens = await getSwappableTokens(); // Fetch the tokens from the other API
+    const tableTokens = transformTokensToTableFormat(swappableTokens); // Transform them to table format
+    res.status(200).json(tableTokens);
+  } catch (error) {
+    console.error(
+      "@pages/api/getTableTokens.ts: Failed to fetch tokens",
+      error
+    );
+    res
+      .status(500)
+      .json({ error: "@pages/api/getTableTokens.ts: Failed to fetch tokens" });
+  }
 };
 
 export default getTableTokens;

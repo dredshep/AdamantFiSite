@@ -1,42 +1,62 @@
 import { useRouter } from "next/router";
 import AppLayout from "@/components/app/Global/AppLayout";
-import React from "react";
+import React, { useEffect } from "react";
 import chartSpec from "@/utils/dummyData/lineChart.json";
 import values from "@/utils/dummyData/lineChartValues.json";
 import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
 import { VisualizationSpec } from "react-vega";
+import { Token } from "@/types";
+import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
 
 // Mock token details data
-const tokenDetails = {
-  secret16545454465153231231231: {
-    name: "SCRT",
-    network: "Secret Network",
-    totalVolumeLocked: "$500K",
-    marketCap: "$1M",
-    fdv: "$2M",
-    dailyVolume: "$50K",
-    about: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-  },
-  secret1acd6a516c51a651da65c165d1: {
-    name: "ADMT",
-    network: "Secret Network",
-    totalVolumeLocked: "$200K",
-    marketCap: "$800K",
-    fdv: "$1.5M",
-    dailyVolume: "$20K",
-    about:
-      "Pellentesque habitant morbi tristique senectus et netus et malesuada.",
-  },
-};
+// const tokenDetails = {
+//   secret16545454465153231231231: {
+//     name: "SCRT",
+//     network: "Secret Network",
+//     totalVolumeLocked: "$500K",
+//     marketCap: "$1M",
+//     fdv: "$2M",
+//     dailyVolume: "$50K",
+//     about: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+//   },
+//   secret1acd6a516c51a651da65c165d1: {
+//     name: "ADMT",
+//     network: "Secret Network",
+//     totalVolumeLocked: "$200K",
+//     marketCap: "$800K",
+//     fdv: "$1.5M",
+//     dailyVolume: "$20K",
+//     about:
+//       "Pellentesque habitant morbi tristique senectus et netus et malesuada.",
+//   },
+// };
 
 const TokenPage = () => {
   const router = useRouter();
   const { token } = router.query;
+  const [tokenDetails, setTokenDetails] = React.useState<Token[]>([]);
+  useEffect(() => {
+    getSwappableTokens().then((data) => {
+      setTokenDetails(data);
+    });
+  }, []);
 
-  const details = tokenDetails[token as keyof typeof tokenDetails];
+  const rawDetails = tokenDetails.find((t) => t.address === token);
+
+  const details = rawDetails
+    ? {
+        name: rawDetails.name,
+        network: rawDetails.network ?? "Unknown",
+        totalVolumeLocked: rawDetails.balance ?? "N/A",
+        marketCap: rawDetails.balance ?? "N/A",
+        fdv: rawDetails.balance ?? "N/A",
+        dailyVolume: rawDetails.balance ?? "N/A",
+        about: rawDetails.description ?? "No description available.",
+      }
+    : null;
 
   if (!details) {
-    return <p>Token not found</p>; // TODO: Not Found page
+    return <p>Token not found</p>; // TODO: Better Not Found page
   }
 
   return (
