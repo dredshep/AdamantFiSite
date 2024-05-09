@@ -1,6 +1,8 @@
 import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
 import AppLayout from "@/components/app/Global/AppLayout";
-import { SecretString, TableToken } from "@/types";
+import RegisterTokenButton from "@/components/app/Shared/Buttons/RegisterTokenButton";
+import SyncViewingKeyButton from "@/components/app/Shared/Buttons/SyncViewingKeyButton";
+import { TableToken } from "@/types";
 import Link from "next/link";
 import {
   TableHeaders,
@@ -12,9 +14,6 @@ import { getTableTokens } from "@/utils/apis/getTableTokens";
 
 export default function TokensPage() {
   const [tokens, setTokens] = useState<TableToken[]>([]);
-  const [viewingKeys, setViewingKeys] = useState<{ [address: string]: string }>(
-    {}
-  );
   const chainId = "secret-4"; // Use the correct chain ID for your network
 
   useEffect(() => {
@@ -23,46 +22,26 @@ export default function TokensPage() {
       console.log({ tableTokens });
       setTokens(tableTokens);
 
-      // Load viewing keys from local storage
-      const storedKeys = JSON.parse(
-        localStorage.getItem("viewingKeys") || "{}"
-      );
-      setViewingKeys(storedKeys);
-
-      if (!(window as unknown as { keplr: any }).keplr) {
+      if (!window.keplr) {
         alert("Keplr extension not installed");
         return;
       }
       // Ensure Keplr is enabled for the page
-      await (window as unknown as { keplr: any }).keplr.enable(chainId);
+      await window.keplr.enable(chainId);
     }
     main();
   }, []);
 
-  const handleSyncViewingKey = async (tokenAddress: string) => {
-    try {
-      if (!(window as unknown as { keplr: any }).keplr) {
-        alert("Keplr extension not installed");
-        return;
-      }
-      const viewingKey = await (
-        window as unknown as { keplr: any }
-      ).keplr.getSecret20ViewingKey(chainId, tokenAddress);
-      console.log("Retrieved Viewing Key:", viewingKey);
-      const updatedKeys = { ...viewingKeys, [tokenAddress]: viewingKey };
-      setViewingKeys(updatedKeys);
-      localStorage.setItem("viewingKeys", JSON.stringify(updatedKeys));
-    } catch (error) {
-      console.error("Error fetching viewing key:", error);
-      alert(
-        "Failed to fetch the viewing key. Make sure the token is registered in Keplr."
-      );
-    }
-  };
-
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto mt-12">
+        <h2 className="text-lg font-bold mb-4">Token Management</h2>
+        <p className="mb-8 text-gray-600">
+          Below you can manage SNIP-20 tokens. Use the &quot;Sync Key&quot;
+          button to synchronize the viewing key for each token with your Keplr
+          wallet, or use the &quot;Register Token&quot; button to add the token
+          to your Keplr wallet.
+        </p>
         <div className="flex justify-between mb-8">
           <FinancialTableSearchBar
             placeholder="Search token or paste address"
@@ -81,7 +60,7 @@ export default function TokensPage() {
           ]}
         />
         <div className="rounded-b-[10px] overflow-hidden">
-          {tokens?.map((token, index) => (
+          {tokens.map((token, index) => (
             <div
               key={index}
               className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
@@ -92,7 +71,7 @@ export default function TokensPage() {
                     {
                       content: (
                         <TokenDisplay
-                          seed={token.address as SecretString}
+                          seed={token.address}
                           name={token.name}
                           network={token.network}
                         />
@@ -108,16 +87,14 @@ export default function TokensPage() {
                     },
                     { content: token.tvl },
                     { content: token.volume },
-                    { content: "Graph Placeholder" }, // This would be replaced with an actual graph component or representation
+                    { content: "Graph Placeholder" },
                   ]}
                 />
               </Link>
-              <button
-                onClick={() => handleSyncViewingKey(token.address)}
-                className="ml-auto bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Sync Key
-              </button>
+              <div className="flex items-center space-x-4">
+                <SyncViewingKeyButton tokenAddress={token.address} />
+                <RegisterTokenButton tokenAddress={token.address} />
+              </div>
             </div>
           ))}
         </div>

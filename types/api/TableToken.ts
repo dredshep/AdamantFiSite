@@ -1,5 +1,7 @@
+import { SecretString } from "../SecretString";
+
 export type TableToken = {
-  address: string;
+  address: SecretString;
   name: string;
   network: string;
   price: string;
