@@ -82,3 +82,11 @@ interface Key {
 }
 
 export type { ExperimentalKeplrType, AccountData, EnigmaUtils, ChainInfo, Key };
+
+declare global {
+  interface Window {
+    keplr?: ExperimentalKeplrType;
+    // getOfflineSigner(chainId: string): OfflineSigner;
+    // getEnigmaUtils(): EnigmaUtils;
+  }
+}
