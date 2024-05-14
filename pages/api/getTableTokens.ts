@@ -8,7 +8,7 @@ import { TableToken, Token } from "@/types";
 const transformTokensToTableFormat = (tokens: Token[]): TableToken[] => {
   return tokens.map((token) => ({
     address: token.address,
-    name: token.name ?? "Unknown Token",
+    name: token.symbol ?? "Unknown Token",
     network: token.network ?? "Unknown Network",
     price: token.usdPrice ?? "N/A",
     change: "0%", // Assuming you will compute this based on some other data
@@ -25,12 +25,12 @@ const getTableTokens = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(200).json(tableTokens);
   } catch (error) {
     console.error(
-      "@pages/api/getTableTokens.ts: Failed to fetch tokens",
+      "@/pages/api/getTableTokens.ts: Failed to fetch tokens",
       error
     );
     res
       .status(500)
-      .json({ error: "@pages/api/getTableTokens.ts: Failed to fetch tokens" });
+      .json({ error: "@/pages/api/getTableTokens.ts: Failed to fetch tokens" });
   }
 };
 

@@ -14,7 +14,7 @@ import { getTableTokens } from "@/utils/apis/getTableTokens";
 
 export default function TokensPage() {
   const [tokens, setTokens] = useState<TableToken[]>([]);
-  const chainId = "secret-4"; // Use the correct chain ID for your network
+  const chainId = "secret-4";
 
   useEffect(() => {
     async function main() {
@@ -26,7 +26,6 @@ export default function TokensPage() {
         alert("Keplr extension not installed");
         return;
       }
-      // Ensure Keplr is enabled for the page
       await window.keplr.enable(chainId);
     }
     main();
@@ -51,12 +50,7 @@ export default function TokensPage() {
         <TableHeaders
           headers={[
             { title: "Token", minWidth: "240px" },
-            { title: "Price" },
-            { title: "Change" },
-            { title: "TVL" },
-            { title: "Volume" },
-            { title: "Graph" },
-            { title: "Actions" },
+            { title: "Actions", align: "end" },
           ]}
         />
         <div className="rounded-b-[10px] overflow-hidden">
@@ -65,7 +59,7 @@ export default function TokensPage() {
               key={index}
               className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
             >
-              <Link href={`/app/token/${token.address}`} className="flex-grow">
+              <Link href={`/app/token/${token.address}`} className="flex-1">
                 <FinancialDataRow
                   cells={[
                     {
@@ -78,20 +72,10 @@ export default function TokensPage() {
                       ),
                       minWidth: "240px",
                     },
-                    { content: token.price, bold: true },
-                    {
-                      content: token.change,
-                      modifier: token.change.startsWith("-")
-                        ? "negative"
-                        : "positive",
-                    },
-                    { content: token.tvl },
-                    { content: token.volume },
-                    { content: "Graph Placeholder" },
                   ]}
                 />
               </Link>
-              <div className="flex items-center space-x-4">
+              <div className="flex space-x-4 justify-end">
                 <SyncViewingKeyButton tokenAddress={token.address} />
                 <RegisterTokenButton tokenAddress={token.address} />
               </div>

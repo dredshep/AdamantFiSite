@@ -5,9 +5,9 @@ import {
   AzureTokensToken,
   AzureTokensDisplayProps,
 } from "@/types/api/azure/tokens";
-import { SwappableToken, Token } from "@/types/Token"; // Assuming Token type is defined in a separate file
+import { SwappableToken } from "@/types/Token"; // Assuming Token type is defined in a separate file
 
-export function transformToSwappableToken(
+export function transformAzureTokenIntoSwappableToken(
   tokens: AzureTokensToken[]
 ): SwappableToken[] {
   return tokens.map((token) => {

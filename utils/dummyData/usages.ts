@@ -1355,6 +1355,11 @@ type AsUniqueArray<A extends ReadonlyArray<any>> = {
     : Invalid<[A[I], "is repeated"]>;
 };
 
+type UniqueUsageArray = AsUniqueArray<Usage[]>;
+
+const testVar: UniqueUsageArray = ["BRIDGE", "LPSTAKING", "SWAP"]; // OK
+const testVar2: UniqueUsageArray = ["SWAP", "BRIDGE", "SWAP"]; // Error: 'SWAP' is repeated
+
 function asUniqueArray<A extends ReadonlyArray<Usage>>(
   a: A & AsUniqueArray<A>
 ): A {

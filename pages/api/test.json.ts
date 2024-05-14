@@ -10,7 +10,6 @@ import {
   SecretToken,
   AzureSecretTokensResponse,
 } from "@/types/api/azure/secret_tokens";
-export type LocalTokensResponse = (AzureTokensToken | SecretToken)[];
 
 export default async function handleRawApiRequest(
   _: NextApiRequest,
@@ -22,6 +21,8 @@ export default async function handleRawApiRequest(
   const apiUrl3 = "https://api-bridge-mainnet.azurewebsites.net/secret_tokens/";
 
   try {
+    // Fetch data from the raw API endpoint
+    // const tokens = await fetchAndTransform<AzureTokensToken[]>(apiUrl);
     const tokens1 = await fetchAndTransform<AzureTokensResponse>(apiUrl1);
     const tokens2 = await fetchAndTransform<AzureTokensResponse>(apiUrl2);
     const tokens3 = await fetchAndTransform<AzureSecretTokensResponse>(apiUrl3);

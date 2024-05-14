@@ -1,9 +1,8 @@
-// api path: https://api-bridge-mainnet.azurewebsites.net/secret_tokens
-export interface SecretTokensResponse {
-  tokens: SecretTokensToken[];
+export interface AzureSecretTokensResponse {
+  tokens: SecretToken[];
 }
 
-export interface SecretTokensToken {
+export interface SecretToken {
   name: string;
   address: string;
   decimals: number;
@@ -11,11 +10,12 @@ export interface SecretTokensToken {
   usage: string[];
   price: string;
   id: string;
-  display_props: SecretTokensDisplayProps;
+  display_props: DisplayProps;
+  _id: string;
   dst_address?: string;
 }
 
-export interface SecretTokensDisplayProps {
+export interface DisplayProps {
   image: string;
   symbol: string;
   label: string;
