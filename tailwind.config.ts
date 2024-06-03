@@ -13,6 +13,16 @@ const config = {
       },
     },
     extend: {
+      screens: {
+        xs: "375px",
+        sm: "640px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1280px",
+        "2xl": "1440px",
+        "3xl": "1920px",
+        "4xl": "2560px",
+      },
       backgroundImage: {
         "tubeshapes-dark": "url('/images/Adamant-bg-dark.png')",
         "tubeshapes-light": "url('/images/Adamant-bg-light.png')",

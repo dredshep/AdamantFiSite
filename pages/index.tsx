@@ -9,7 +9,7 @@ import Link from "next/link";
 const jura = Jura({ subsets: ["latin"] });
 
 const coolBoxes = (
-  <div className="flex gap-8">
+  <div className="flex flex-wrap gap-8">
     <CoolBox
       icon="/icons/coolBox/1.svg" // Replace with your actual icon path
       mainText="Exchange tokens without trace"
@@ -43,7 +43,7 @@ const coolBoxes = (
   </div>
 );
 const infoBoxes = (
-  <div className="flex gap-4 w-full">
+  <div className="flex flex-wrap gap-4 w-full">
     {" "}
     {/* Adjust this gap if necessary */}
     <InfoBox
@@ -87,19 +87,19 @@ export default function Home() {
         <div className="flex items-center space-x-11 uppercase text-base font-medium">
           <Link
             href="#"
-            className="text-white border-b-2 border-[#8A754A] pb-2 px-2"
+            className="hidden lg:block text-white border-b-2 border-[#8A754A] pb-2 px-2"
           >
             Products
           </Link>
           <Link
             href="https://github.com/dredshep/AdamantFiSite"
-            className="text-white brightness-50 pb-2 px-2"
+            className="hidden lg:block text-white brightness-50 pb-2 px-2"
           >
             Developers
           </Link>
           <Link
             href="https://forum.scrt.network/"
-            className="text-white brightness-50 pb-2 px-2"
+            className="hidden lg:block text-white brightness-50 pb-2 px-2"
           >
             Governance
           </Link>
@@ -107,12 +107,12 @@ export default function Home() {
             href="/app"
             className="text-black uppercase bg-white px-4 py-2 rounded-lg text-base font-bold"
           >
-            Launch App
+            Launch <span className="hidden sm:inline-block">App</span>
           </Link>
         </div>
       </div>
       {/* container div simply setting max width and perhaps other settings for content only */}
-      <div className="max-w-[1176px] mx-auto">
+      <div className="max-w-[1176px] mx-auto px-10">
         <div className="mt-32">
           <div className="flex flex-col items-center gap-6">
             <div className="text-4xl font-bold tracking-wider">

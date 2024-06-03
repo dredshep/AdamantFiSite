@@ -17,8 +17,9 @@ function InfoBox({
   return (
     <div
       className={cn(
-        "border-opacity-50 border rounded-2xl flex flex-col justify-between py-8 px-8 flex-1",
-        "text-white border-adamant-box-border border-2" // adjust your width and border color here
+        "border-opacity-50 border rounded-2xl flex flex-col justify-between p-6 sm:p-8 flex-1",
+        "text-white border-adamant-box-border border-2", // adjust your width and border color here
+        "min-w-80"
       )}
     >
       <h1 className="text-2xl font-bold leading-8">{title}</h1>
