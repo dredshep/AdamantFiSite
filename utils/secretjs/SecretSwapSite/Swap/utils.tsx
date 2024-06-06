@@ -2,8 +2,6 @@ import BigNumber from "bignumber.js";
 import { humanizeBalance } from "@/utils/secretjs/SecretSwapSite/utils";
 import { TxResponse } from "secretjs";
 
-// }
-
 export function compareNormalize(
   number1: BigNumber.Value,
   number2: { amount: BigNumber.Value; decimals: number }
