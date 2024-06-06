@@ -2,7 +2,7 @@ import { SecretString } from "@/types";
 import { create } from "zustand";
 
 type State = {
-  config: Record<string, string | undefined>;
+  config: Record<string, SecretString>;
   isMaintenance: boolean;
   priceData: Record<string, unknown>;
   setIsMaintenance: (isMaintenance: boolean) => void;
@@ -28,7 +28,7 @@ const requiredEnvVars = [
   "ETH_EXPLORER_URL",
 ];
 
-function getConfig(): Record<string, SecretString | undefined> {
+function getConfig(): Record<string, SecretString> {
   // use semantic variable names
   const { config, missingVars } = requiredEnvVars.reduce(
     (acc, key) => {
@@ -46,7 +46,7 @@ function getConfig(): Record<string, SecretString | undefined> {
       };
     },
     {
-      config: {} as Record<string, SecretString | undefined>,
+      config: {} as Record<string, SecretString>,
       missingVars: [] as string[],
     },
   );

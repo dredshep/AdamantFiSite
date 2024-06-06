@@ -6,7 +6,7 @@ import {
 import { humanizeBalance } from "@/utils/secretjs/SecretSwapSite/utils";
 import { storeTxResultLocally } from "@/utils/secretjs/SecretSwapSite/Swap/utils";
 import { TxResponse } from "secretjs";
-import extractValueFromLogs from "./blockchain-bridge/scrt/utils/extractValueFromLogs";
+import extractValueFromLogs from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils/extractValueFromLogs";
 
 export function storeResult(
   result: TxResponse,
