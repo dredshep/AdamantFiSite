@@ -1,98 +1,7 @@
 import BigNumber from "bignumber.js";
-// import { UserStoreEx } from 'stores/UserStore';
-// import React from 'react';
-// import Style from 'style-it';
 import { humanizeBalance } from "@/utils/secretjs/SecretSwapSite/utils";
-import { ExecuteResult } from "secretjs";
+import { TxResponse } from "secretjs";
 
-// export const ERROR_WRONG_VIEWING_KEY = 'Viewing Key Error';
-
-// export async function getNativeBalance(walletAddress: string, secretjs: CosmWasmClient) {
-//   return secretjs.getAccount(walletAddress).then(account => {
-//     try {
-//       const scrt_account = account.balance.find((acc) => acc.denom === 'uscrt');
-//       return new BigNumber(scrt_account.amount);
-//     } catch (error) {
-//       return new BigNumber(0);
-//     }
-//   });
-// }
-
-// export const unlockJsx = (props: { onClick: any }) =>
-//   Style.it(
-//     `.view-token-button {
-//       cursor: pointer;
-//       border-radius: 30px;
-//       padding: 0 0.25rem;
-//       margin: 0;
-//       border: none;
-//     }
-
-//     .view-token-button:hover {
-//       background: #cb9b5150;
-//     }`,
-//     <span role="img" aria-label={'view'} className="view-token-button" onClick={props.onClick}>
-//       🔍 View Balance
-//     </span>,
-//   );
-
-// export const wrongViewingKey = <strong style={{ color: 'red' }}>Wrong Viewing Key</strong>;
-
-// export async function getTokenBalance(
-//   walletAddress: string,
-//   tokenAddress: string,
-//   viewingKey: string,
-//   userStore: UserStoreEx,
-// ): Promise<BigNumber | JSX.Element> {
-//   if (!viewingKey) {
-//     return unlockJsx({
-//       onClick: async e => {
-//         await userStore.keplrWallet.suggestToken(userStore.chainId, tokenAddress);
-//         // TODO trigger balance refresh if this was an "advanced set" that didn't
-//         // result in an on-chain transaction
-//         await userStore.updateScrtBalance();
-//       },
-//     });
-//   }
-
-//   // todo: replace this with the function from blockchain-bridge/scrt/snip20
-//   const result = await userStore.secretjs.queryContractSmart(tokenAddress, {
-//     balance: {
-//       address: walletAddress,
-//       key: viewingKey,
-//     },
-//   });
-
-//   if (viewingKey && 'viewing_key_error' in result) {
-//     // TODO handle this
-//     return (
-//       <strong
-//         style={{
-//           marginLeft: '0.2em',
-//           color: 'red',
-//         }}
-//       >
-//         {ERROR_WRONG_VIEWING_KEY}
-//       </strong>
-//     );
-//   }
-
-//   try {
-//     return new BigNumber(result.balance.amount);
-//   } catch (error) {
-//     console.log(
-//       `Got an error while trying to query token ${tokenAddress} balance for address ${walletAddress}:`,
-//       result,
-//       error,
-//     );
-//     return unlockJsx({
-//       onClick: async e => {
-//         await userStore.keplrWallet.suggestToken(userStore.chainId, tokenAddress);
-//         // TODO trigger balance refresh if this was an "advanced set" that didn't
-//         // result in an on-chain transaction
-//       },
-//     });
-//   }
 // }
 
 export function compareNormalize(
@@ -105,13 +14,13 @@ export function compareNormalize(
   ).isLessThan(new BigNumber(number1));
 }
 
-export function storeTxResultLocally(txResult: ExecuteResult) {
+export function storeTxResultLocally(txResult: TxResponse) {
   if (!localStorage || !localStorage.setItem || !txResult.transactionHash) {
     return;
   }
   const result = {
-    data: new TextDecoder().decode(txResult.data),
-    logs: txResult.logs,
+    data: new TextDecoder().decode(Uint8Array.from(txResult.data.flatMap((arr) => Array.from(arr)))),
+    logs: txResult.arrayLog,
   };
   localStorage.setItem(txResult.transactionHash, JSON.stringify(result));
 }
