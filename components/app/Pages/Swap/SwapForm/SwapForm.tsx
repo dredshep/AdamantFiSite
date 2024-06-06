@@ -1,8 +1,7 @@
 import React from "react";
 import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
 import TokenInput from "@/components/app/Shared/Forms/Input/TokenInput";
-import SwapButton from "@/components/app/Pages/Swap/SwapButton";
-import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
+import { useStore } from "@/store/swapStore";
 import DynamicField from "@/components/app/Shared/Forms/Input/DynamicField";
 import { useTokenStore } from "@/store/tokenStore";
 import FormButton from "@/components/app/Shared/Forms/FormButton";

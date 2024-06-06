@@ -3,7 +3,7 @@ export const sleep = (ms: number) => {
 };
 
 export const isEmptyObject = (obj: Object) => {
-  for(let i in obj) {
+  for(const i in obj) {
     return false;
   }
   return true;

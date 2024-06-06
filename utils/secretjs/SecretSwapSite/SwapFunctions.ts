@@ -182,11 +182,11 @@ function getOfferAndAskPools(
   // we could also canonicalize offer_amount & ask_amount
   // but this way is less code because we get the results normalized
 
-  let offer_pool = humanizeBalance(
+  const offer_pool = humanizeBalance(
     new BigNumber(balances[`${fromToken}-${pair.identifier()}`] as any),
     fromDecimals
   );
-  let ask_pool = humanizeBalance(
+  const ask_pool = humanizeBalance(
     new BigNumber(balances[`${toToken}-${pair.identifier()}`] as any),
     toDecimals
   );
@@ -213,7 +213,7 @@ export function getBestRoute(
   balances
 ) {
   let bestRoute: string[] = null;
-  let allRoutesOutputs: Array<RouteOutput> = [];
+  const allRoutesOutputs: Array<RouteOutput> = [];
   let bestRouteToInput,
     bestRouteToInputWithGas = new BigNumber(-Infinity);
   let bestRouteFromInput,

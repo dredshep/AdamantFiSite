@@ -1,0 +1,1188 @@
+diff --git a/.eslintrc.json b/.eslintrc.json
+index bffb357..d145ca3 100644
+--- a/.eslintrc.json
++++ b/.eslintrc.json
+@@ -1,3 +1,15 @@
+ {
+-  "extends": "next/core-web-vitals"
++  "extends": [
++    "next/core-web-vitals",
++    "plugin:@typescript-eslint/recommended"  // Add this line
++  ],
++  "parser": "@typescript-eslint/parser",  // Specify the parser
++  "plugins": [
++    "@typescript-eslint"  // Include the plugin
++  ],
++  "rules": {
++    "no-restricted-globals": ["error", "globalThis"],
++    "@typescript-eslint/no-explicit-any": "warn",
++    "@typescript-eslint/no-unused-vars": "warn"
++  }
+ }
+diff --git a/bun.lockb b/bun.lockb
+index 7ca60bc..a928acd 100755
+Binary files a/bun.lockb and b/bun.lockb differ
+diff --git a/components/app/Global/UserWallet/WalletModal.tsx b/components/app/Global/UserWallet/WalletModal.tsx
+index 9749ce8..3ce545b 100644
+--- a/components/app/Global/UserWallet/WalletModal.tsx
++++ b/components/app/Global/UserWallet/WalletModal.tsx
+@@ -11,7 +11,7 @@ import { useTokenStore } from "@/store/tokenStore";
+ import { useModalStore } from "@/store/modalStore";
+ 
+ const WalletModal: React.FC = () => {
+-  const { isWalletModalOpen, closeWalletModal } = useModalStore();
++  const { closeWalletModal } = useModalStore();
+   const { address } = useWalletStore();
+   const { listAllTokens, getTokenByAddress } = useTokenStore();
+   const tokens = listAllTokens();
+diff --git a/components/app/Pages/Swap/SwapForm/SwapForm.tsx b/components/app/Pages/Swap/SwapForm/SwapForm.tsx
+index 0e8874e..f80e2b8 100644
+--- a/components/app/Pages/Swap/SwapForm/SwapForm.tsx
++++ b/components/app/Pages/Swap/SwapForm/SwapForm.tsx
+@@ -1,8 +1,7 @@
+ import React from "react";
+ import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
+ import TokenInput from "@/components/app/Shared/Forms/Input/TokenInput";
+-import SwapButton from "@/components/app/Pages/Swap/SwapButton";
+-import { useStore } from "@/store/swapStore"; // Ensure this path matches the location of your store
++import { useStore } from "@/store/swapStore";
+ import DynamicField from "@/components/app/Shared/Forms/Input/DynamicField";
+ import { useTokenStore } from "@/store/tokenStore";
+ import FormButton from "@/components/app/Shared/Forms/FormButton";
+diff --git a/dev-server.js b/dev-server.js
+deleted file mode 100644
+index 5b8a864..0000000
+--- a/dev-server.js
++++ /dev/null
+@@ -1,13 +0,0 @@
+-const { exec } = require("child_process");
+-
+-exec(
+-  "node --trace-deprecation node_modules/.bin/next dev",
+-  (err, stdout, stderr) => {
+-    if (err) {
+-      console.error(`exec error: ${err}`);
+-      return;
+-    }
+-    console.log(`stdout: ${stdout}`);
+-    console.error(`stderr: ${stderr}`);
+-  }
+-);
+diff --git a/package.json b/package.json
+index 7ae9558..52984f6 100644
+--- a/package.json
++++ b/package.json
+@@ -23,9 +23,10 @@
+     "@radix-ui/react-toast": "^1.1.5",
+     "@radix-ui/themes": "^2.0.3",
+     "@shadeprotocol/shadejs": "^1.5.4",
+-    "@typescript-eslint/eslint-plugin": "latest",
+-    "@typescript-eslint/parser": "latest",
++    "@typescript-eslint/eslint-plugin": "^7.12.0",
++    "@typescript-eslint/parser": "^7.12.0",
+     "@typescript-eslint/typescript-estree": "^7.12.0",
++    "async-await-retry": "^2.1.0",
+     "axios": "^1.7.2",
+     "bignumber.js": "^9.1.2",
+     "class-variance-authority": "^0.7.0",
+diff --git a/utils/secretjs/SecretSwapSite/SwapFunctions.ts b/utils/secretjs/SecretSwapSite/SwapFunctions.ts
+index 960e665..ade3da2 100644
+--- a/utils/secretjs/SecretSwapSite/SwapFunctions.ts
++++ b/utils/secretjs/SecretSwapSite/SwapFunctions.ts
+@@ -182,11 +182,11 @@ function getOfferAndAskPools(
+   // we could also canonicalize offer_amount & ask_amount
+   // but this way is less code because we get the results normalized
+ 
+-  let offer_pool = humanizeBalance(
++  const offer_pool = humanizeBalance(
+     new BigNumber(balances[`${fromToken}-${pair.identifier()}`] as any),
+     fromDecimals
+   );
+-  let ask_pool = humanizeBalance(
++  const ask_pool = humanizeBalance(
+     new BigNumber(balances[`${toToken}-${pair.identifier()}`] as any),
+     toDecimals
+   );
+@@ -213,7 +213,7 @@ export function getBestRoute(
+   balances
+ ) {
+   let bestRoute: string[] = null;
+-  let allRoutesOutputs: Array<RouteOutput> = [];
++  const allRoutesOutputs: Array<RouteOutput> = [];
+   let bestRouteToInput,
+     bestRouteToInputWithGas = new BigNumber(-Infinity);
+   let bestRouteFromInput,
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethods.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethods.ts
+deleted file mode 100644
+index 0da090f..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethods.ts
++++ /dev/null
+@@ -1,52 +0,0 @@
+-import { Contract } from 'web3-eth-contract';
+-import Web3 from 'web3';
+-import { ethToWei, getGasPrice } from './helpers';
+-const BN = require('bn.js');
+-
+-export interface IEthMethodsInitParams {
+-  web3: Web3;
+-  ethManagerContract: Contract;
+-}
+-
+-export class EthMethods {
+-  private web3: Web3;
+-  private ethManagerContract: Contract;
+-
+-  constructor(params: IEthMethodsInitParams) {
+-    this.web3 = params.web3;
+-    this.ethManagerContract = params.ethManagerContract;
+-  }
+-
+-  swapEth = async (userAddr, amount, sendTxCallback?) => {
+-    // @ts-ignore
+-    const accounts = await ethereum.enable();
+-
+-    const secretAddrHex = this.web3.utils.fromAscii(userAddr);
+-    // TODO: add validation
+-
+-    const estimateGas = await this.ethManagerContract.methods.swap(secretAddrHex).estimateGas({
+-      value: ethToWei(amount),
+-      from: accounts[0],
+-    });
+-
+-    const gasLimit = Math.max(estimateGas + estimateGas * 0.3, Number(globalThis.config.ETH_GAS_LIMIT));
+-
+-    this.ethManagerContract.methods.swap(secretAddrHex).send({
+-      value: ethToWei(amount),
+-      from: accounts[0],
+-      gas: new BN(gasLimit),
+-      gasPrice: await getGasPrice(this.web3),
+-    }).on('transactionHash', function (hash) {
+-      sendTxCallback({ hash })
+-    }).then(function (receipt) {
+-      sendTxCallback({ receipt })
+-    }).catch(function (error) {
+-      sendTxCallback({ error })
+-    })
+-
+-  };
+-
+-  checkEthBalance = async addr => {
+-    return await this.web3.eth.getBalance(addr);
+-  };
+-}
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsERC20.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsERC20.ts
+deleted file mode 100644
+index 1ba56ae..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsERC20.ts
++++ /dev/null
+@@ -1,120 +0,0 @@
+-import { Contract } from 'web3-eth-contract';
+-import Web3 from 'web3';
+-import { mulDecimals } from '../../utils';
+-import { getGasPrice } from './helpers';
+-
+-const BN = require('bn.js');
+-const MAX_UINT = Web3.utils
+-  .toBN(2)
+-  .pow(Web3.utils.toBN(256))
+-  .sub(Web3.utils.toBN(1));
+-
+-export interface IEthMethodsInitParams {
+-  web3: Web3;
+-  ethManagerContract: Contract;
+-  ethManagerAddress: string;
+-}
+-
+-export class EthMethodsERC20 {
+-  private readonly web3: Web3;
+-  private ethManagerContract: Contract;
+-  private ethManagerAddress: string;
+-
+-  constructor(params: IEthMethodsInitParams) {
+-    this.web3 = params.web3;
+-    this.ethManagerContract = params.ethManagerContract;
+-    this.ethManagerAddress = params.ethManagerAddress;
+-  }
+-
+-  sendHandler = async (method: any, args: Object, callback: Function) => {
+-    method.send(args).on('transactionHash', function (hash) {
+-      callback({ hash })
+-    }).then(function (receipt) {
+-      callback({ receipt })
+-    }).catch(function (error) {
+-      callback({ error })
+-    })
+-  }
+-
+-  getAllowance = async erc20Address => {
+-    // @ts-ignore
+-    const accounts = await ethereum.enable();
+-
+-    const MyERC20Json = require('../out/MyERC20.json');
+-    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+-
+-    return await erc20Contract.methods.allowance(accounts[0], this.ethManagerAddress).call();
+-  };
+-
+-  callApprove = async (erc20Address, amount, decimals, callback) => {
+-    // @ts-ignore
+-    const accounts = await ethereum.enable();
+-
+-    const MyERC20Json = require('../out/MyERC20.json');
+-    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+-
+-    amount = Number(mulDecimals(amount, decimals));
+-
+-    const allowance = await this.getAllowance(erc20Address);
+-
+-    if (Number(allowance) < Number(amount)) {
+-      this.sendHandler(erc20Contract.methods.approve(this.ethManagerAddress, MAX_UINT), {
+-        from: accounts[0],
+-        gas: globalThis.config.ETH_GAS_LIMIT,
+-        gasPrice: await getGasPrice(this.web3),
+-        amount: amount,
+-      }, callback)
+-    }
+-  };
+-
+-  swapToken = async (erc20Address, userAddr, amount, decimals, callback) => {
+-    // @ts-ignore
+-    const accounts = await ethereum.enable();
+-
+-    const secretAddrHex = this.web3.utils.fromAscii(userAddr);
+-    // TODO: add validation
+-
+-    const estimateGas = await this.ethManagerContract.methods
+-      .swapToken(secretAddrHex, mulDecimals(amount, decimals), erc20Address)
+-      .estimateGas({ from: accounts[0] });
+-
+-    const gasLimit = Math.max(estimateGas + estimateGas * 0.3, Number(globalThis.config.ETH_GAS_LIMIT));
+-    this.sendHandler(this.ethManagerContract.methods.swapToken(secretAddrHex, mulDecimals(amount, decimals), erc20Address), {
+-      from: accounts[0],
+-      gas: new BN(gasLimit),
+-      gasPrice: await getGasPrice(this.web3),
+-    }, callback)
+-
+-  };
+-
+-  checkEthBalance = async (erc20Address, addr) => {
+-    const MyERC20Json = require('../out/MyERC20.json');
+-    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+-
+-    return await erc20Contract.methods.balanceOf(addr).call();
+-  };
+-
+-  tokenDetails = async erc20Address => {
+-    if (!this.web3.utils.isAddress(erc20Address)) {
+-      throw new Error('Invalid token address');
+-    }
+-
+-    const MyERC20Json = require('../out/MyERC20.json');
+-    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+-
+-    let name = '';
+-    let symbol = '';
+-    // maker has some weird encoding for these.. so whatever
+-    if (erc20Address === '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2') {
+-      name = 'Maker';
+-      symbol = 'MKR';
+-    } else {
+-      name = await erc20Contract.methods.name().call();
+-      symbol = await erc20Contract.methods.symbol().call();
+-    }
+-    // todo: check if all the erc20s we care about have the decimals method (it's not required by the standard)
+-    const decimals = await erc20Contract.methods.decimals().call();
+-
+-    return { name, symbol, decimals, erc20Address };
+-  };
+-}
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsSefi.tsx b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsSefi.tsx
+deleted file mode 100644
+index 1161ea4..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsSefi.tsx
++++ /dev/null
+@@ -1,60 +0,0 @@
+-import { Contract } from 'web3-eth-contract';
+-import Web3 from 'web3';
+-import { getGasPrice } from './helpers';
+-import { getEthProof } from '../../services';
+-
+-const BN = require('bn.js');
+-
+-export interface EthMethodsSefiInitParams {
+-  web3: Web3;
+-  govTokenContract: Contract;
+-  distributionContract: Contract;
+-}
+-
+-export class EthMethodsSefi {
+-  private web3: Web3;
+-  private govTokenContract: Contract;
+-  private distributionContract: Contract;
+-
+-  constructor(params: EthMethodsSefiInitParams) {
+-    this.web3 = params.web3;
+-    this.govTokenContract = params.govTokenContract;
+-    this.distributionContract = params.distributionContract;
+-  }
+-
+-  claimToken = async (sendTxCallback?) => {
+-    // @ts-ignore
+-    const accounts = await ethereum.enable();
+-
+-    ////////
+-    const accountToClaim = accounts[0]; /*'0xe342c08eB93C1886B0c277936a2cc6B6FE5C1dB3';*/
+-    ////////
+-
+-    const proof = (await getEthProof(accountToClaim)).proof;
+-    const estimateGas = await this.distributionContract.methods
+-      .claim(proof.index, proof.user, proof.amount, proof.proof)
+-      .estimateGas({
+-        from: accounts[0],
+-      });
+-
+-    const gasLimit = Math.max(estimateGas + estimateGas * 0.3, Number(globalThis.config.ETH_GAS_LIMIT));
+-
+-    return await this.distributionContract.methods.claim(proof.index, proof.user, proof.amount, proof.proof).send({
+-      from: accounts[0],
+-      gas: new BN(gasLimit),
+-      gasPrice: await getGasPrice(this.web3),
+-    });
+-  };
+-
+-  checkAvailableToClaim = async (index: Number) => {
+-    return await this.distributionContract.methods.isClaimed(index).call();
+-  };
+-
+-  checkGovBalance = async (addr: string): Promise<string> => {
+-    try {
+-      return await this.govTokenContract.methods.balanceOf(addr).call();
+-    } catch (e) {
+-      return 'Wrong Network?';
+-    }
+-  };
+-}
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/chainProps.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/chainProps.ts
+deleted file mode 100644
+index 81e667a..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/chainProps.ts
++++ /dev/null
+@@ -1,77 +0,0 @@
+-import { NETWORKS } from '../index';
+-
+-export enum chainProps {
+-  swap_direction_source,
+-  swap_direction_dst,
+-  wallet,
+-  currency_symbol,
+-  secret_currency_symbol,
+-  image_logo,
+-  destination_network_address,
+-  full_name,
+-  token_name,
+-  explorerUrl,
+-  decimals,
+-}
+-
+-const message_map: Record<chainProps, Record<NETWORKS, string>> = {
+-  [chainProps.destination_network_address]: {
+-    [NETWORKS.ETH]: 'Destination ETH Address',
+-    [NETWORKS.BSC]: 'Destination BSC Address',
+-    [NETWORKS.PLSM]: 'Destination PLSM Addresss',
+-  },
+-  [chainProps.swap_direction_source]: {
+-    [NETWORKS.ETH]: 'ETH -> Secret Network',
+-    [NETWORKS.BSC]: 'BSC -> Secret Network',
+-    [NETWORKS.PLSM]: 'PLSM -> Secret Network',
+-  },
+-  [chainProps.swap_direction_dst]: {
+-    [NETWORKS.ETH]: 'Secret Network -> ETH',
+-    [NETWORKS.BSC]: 'Secret Network -> BSC',
+-    [NETWORKS.PLSM]: 'Secret Network -> PLSM',
+-  },
+-  [chainProps.wallet]: {
+-    [NETWORKS.ETH]: '(Metamask)',
+-    [NETWORKS.BSC]: '(Metamask)',
+-    [NETWORKS.PLSM]: '(Metamask)',
+-  },
+-  [chainProps.currency_symbol]: {
+-    [NETWORKS.ETH]: 'ETH',
+-    [NETWORKS.BSC]: 'BNB',
+-    [NETWORKS.PLSM]: 'PLM',
+-  },
+-  [chainProps.secret_currency_symbol]: {
+-    [NETWORKS.ETH]: 'secretETH',
+-    [NETWORKS.BSC]: 'secretBNB',
+-    [NETWORKS.PLSM]: 'secretPLM',
+-  },
+-  [chainProps.image_logo]: {
+-    [NETWORKS.ETH]: '/static/networks/eth.svg',
+-    [NETWORKS.BSC]: '/static/networks/binance-smart-chain.svg',
+-    [NETWORKS.PLSM]: '/static/plsm.png',
+-  },
+-  [chainProps.full_name]: {
+-    [NETWORKS.ETH]: 'Ethereum',
+-    [NETWORKS.BSC]: 'Binance Smart Chain',
+-    [NETWORKS.PLSM]: 'Plasm',
+-  },
+-  [chainProps.token_name]: {
+-    [NETWORKS.ETH]: 'ERC20',
+-    [NETWORKS.BSC]: 'BEP20',
+-    [NETWORKS.PLSM]: 'Parachain',
+-  },
+-  [chainProps.explorerUrl]: {
+-    [NETWORKS.ETH]: globalThis.config.ETH_EXPLORER_URL,
+-    [NETWORKS.BSC]: globalThis.config.BSC_EXPLORER_URL,
+-    [NETWORKS.PLSM]: globalThis.config.ETH_EXPLORER_URL,
+-  },
+-  [chainProps.decimals]: {
+-    [NETWORKS.ETH]: '18',
+-    [NETWORKS.BSC]: '18',
+-    [NETWORKS.PLSM]: '18',
+-  },
+-};
+-
+-export const chainPropToString = (msg: chainProps, network: NETWORKS): string => {
+-  return message_map[msg][network];
+-};
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/getBalances.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/getBalances.ts
+deleted file mode 100644
+index 2ee3d4a..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/getBalances.ts
++++ /dev/null
+@@ -1,43 +0,0 @@
+-import { web3 } from './index';
+-
+-export const getEthBalance = (ethAddress): Promise<string> => {
+-  return new Promise((resolve, reject) => {
+-    web3.eth.getBalance(ethAddress, (err, balance) => {
+-      if (err) {
+-        reject(err);
+-      }
+-      // const rez = String(new BN(balance).div(new BN(1e18)));
+-
+-      resolve(String(Number(balance) / 1e18));
+-    });
+-  });
+-};
+-
+-// Source: https://medium.com/@piyopiyo/how-to-get-erc20-token-balance-with-web3-js-206df52f2561
+-export const getErc20Balance = async (ethAddress, tokenAddress): Promise<string> => {
+-  // The minimum ABI to get ERC20 Token balance
+-  const minimumErc20Abi = [
+-    // balanceOf
+-    {
+-      constant: true,
+-      inputs: [
+-        {
+-          name: '_owner',
+-          type: 'address',
+-        },
+-      ],
+-      name: 'balanceOf',
+-      outputs: [
+-        {
+-          name: 'balance',
+-          type: 'uint256',
+-        },
+-      ],
+-      type: 'function',
+-    },
+-  ];
+-
+-  const contract = new web3.eth.Contract(minimumErc20Abi, tokenAddress);
+-
+-  return contract.methods.balanceOf(ethAddress).call();
+-};
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/helpers.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/helpers.ts
+deleted file mode 100644
+index c8ac997..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/helpers.ts
++++ /dev/null
+@@ -1,30 +0,0 @@
+-import Web3 from 'web3';
+-import { divDecimals, mulDecimals } from '../../utils';
+-import { web3 } from './index';
+-
+-const BN = require('bn.js');
+-
+-export const getGasPrice = async (web3: Web3) => {
+-  // let gasPriceApi = 0;
+-  //
+-  // try {
+-  //   const info = await agent.get(`https://www.etherchain.org/api/gasPriceOracle`);
+-  //
+-  //   gasPriceApi = mulDecimals(info.body.standard, 8);
+-  // } catch (e) {
+-  //   console.error('Error get gas price');
+-  // }
+-
+-  return new BN(await web3.eth.getGasPrice()).mul(new BN(1));
+-};
+-
+-export const getNetworkFee = async (gas_amount: number, decimals?: number) => {
+-  const gasPrice = await getGasPrice(web3);
+-  const gasLimit = new BN(gas_amount);
+-
+-  const fee = gasLimit.mul(gasPrice);
+-
+-  return Number(divDecimals(fee, decimals || 18));
+-};
+-
+-export const ethToWei = (amount: string | number) => mulDecimals(amount, 18);
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/index.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/index.ts
+deleted file mode 100644
+index 3477c63..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/index.ts
++++ /dev/null
+@@ -1,72 +0,0 @@
+-import { EthMethods } from './EthMethods';
+-import { EthMethodsERC20 } from './EthMethodsERC20';
+-import { TOKEN } from '../../stores/interfaces';
+-import { EthMethodsSefi } from './EthMethodsSefi';
+-import { NETWORKS } from './networks';
+-
+-const Web3 = require('web3');
+-
+-// TODO Howard
+-// const web3URL = window.web3 ? window.web3.currentProvider : globalThis.config.ETH_NODE_URL;
+-const web3URL = globalThis.config.ETH_NODE_URL;
+-
+-export const web3 = new Web3(web3URL);
+-
+-const ethManagerJson = require('../out/MultiSigSwapWallet.json');
+-
+-const ethManagerContract = new web3.eth.Contract(ethManagerJson.abi, globalThis.config.ETH_MANAGER_CONTRACT);
+-const bscManagerContract = new web3.eth.Contract(ethManagerJson.abi, globalThis.config.BSC_MANAGER_CONTRACT);
+-const plmManagerContract = new web3.eth.Contract(ethManagerJson.abi, globalThis.config.PLSM_MANAGER_CONTRACT);
+-
+-export const fromScrtMethods: Record<NETWORKS, Record<TOKEN, any>> = {
+-  [NETWORKS.PLSM]: {
+-    [TOKEN.NATIVE]: new EthMethods({
+-      web3: web3,
+-      ethManagerContract: plmManagerContract,
+-    }),
+-    [TOKEN.ERC20]: new EthMethodsERC20({
+-      web3: web3,
+-      ethManagerContract: plmManagerContract,
+-      ethManagerAddress: globalThis.config.PLSM_MANAGER_CONTRACT,
+-    }),
+-    [TOKEN.S20]: null,
+-  },
+-  [NETWORKS.ETH]: {
+-    [TOKEN.NATIVE]: new EthMethods({
+-      web3: web3,
+-      ethManagerContract: ethManagerContract,
+-    }),
+-
+-    [TOKEN.ERC20]: new EthMethodsERC20({
+-      web3: web3,
+-      ethManagerContract: ethManagerContract,
+-      ethManagerAddress: globalThis.config.ETH_MANAGER_CONTRACT,
+-    }),
+-    [TOKEN.S20]: null,
+-  },
+-  [NETWORKS.BSC]: {
+-    [TOKEN.NATIVE]: new EthMethods({
+-      web3: web3,
+-      ethManagerContract: bscManagerContract,
+-    }),
+-
+-    [TOKEN.ERC20]: new EthMethodsERC20({
+-      web3: web3,
+-      ethManagerContract: bscManagerContract,
+-      ethManagerAddress: globalThis.config.BSC_MANAGER_CONTRACT,
+-    }),
+-    [TOKEN.S20]: null,
+-  },
+-};
+-
+-const sefiTokenCompiledContract = require('../out/MyERC20.json');
+-const sefiTokenContract = new web3.eth.Contract(sefiTokenCompiledContract.abi, globalThis.config.ETH_GOV_TOKEN_ADDRESS);
+-
+-const sefiDistCompiledContract = require('../out/MerkleDistributor.json');
+-const sefiDistContract = new web3.eth.Contract(sefiDistCompiledContract.abi, globalThis.config.ETH_DIST_TOKEN_ADDRESS);
+-
+-export const ethMethodsSefi = new EthMethodsSefi({
+-  web3: web3,
+-  govTokenContract: sefiTokenContract,
+-  distributionContract: sefiDistContract,
+-});
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/networks.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/networks.ts
+deleted file mode 100644
+index 6f66b1b..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/networks.ts
++++ /dev/null
+@@ -1,24 +0,0 @@
+-export enum NETWORKS {
+-  ETH = 'ETH',
+-  BSC = 'BSC',
+-  PLSM = 'PLSM',
+-}
+-
+-export const networkFromToken = (token: { src_network: string; dst_network?: string }): NETWORKS => {
+-  switch (token.src_network.toLowerCase().replace(/\s/g, '')) {
+-    case 'ethereum':
+-      return NETWORKS.ETH;
+-    case 'binancesmartchain':
+-      return NETWORKS.BSC;
+-    case 'plasm':
+-      return NETWORKS.PLSM;
+-    case 'secret':
+-      if (token?.dst_network && token?.dst_network !== 'secret') {
+-        return networkFromToken({ src_network: token.dst_network });
+-      } else {
+-        return undefined;
+-      }
+-    default:
+-      throw new Error(`Invalid network: ${token.src_network}`);
+-  }
+-};
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/proxyTokens.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/proxyTokens.ts
+deleted file mode 100644
+index 600fb26..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/eth/proxyTokens.ts
++++ /dev/null
+@@ -1,68 +0,0 @@
+-import { NETWORKS } from './networks';
+-
+-export interface PROXY_CONTRACT {
+-  contract: string;
+-  symbol: string;
+-}
+-
+-export const ProxyTokens = {
+-  WSCRT: {
+-    [NETWORKS.ETH]: {
+-      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_ETH,
+-      token: globalThis.config.SSCRT_CONTRACT,
+-      proxySymbol: 'WSCRT',
+-    },
+-    [NETWORKS.BSC]: {
+-      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_BSC,
+-      token: globalThis.config.SSCRT_CONTRACT,
+-      proxySymbol: 'WSCRT',
+-    },
+-    [NETWORKS.PLSM]: {
+-      proxy: undefined,
+-      token: undefined,
+-    },
+-  },
+-  SSCRT: {
+-    [NETWORKS.ETH]: {
+-      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_ETH,
+-      token: globalThis.config.SSCRT_CONTRACT,
+-      proxySymbol: 'WSCRT',
+-      secretSymbol: 'SSCRT',
+-    },
+-    [NETWORKS.BSC]: {
+-      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_BSC,
+-      token: globalThis.config.SSCRT_CONTRACT,
+-      proxySymbol: 'WSCRT',
+-      secretSymbol: 'SSCRT',
+-    },
+-    [NETWORKS.PLSM]: {
+-      proxy: undefined,
+-      token: undefined,
+-    },
+-  },
+-  SIENNA: {
+-    [NETWORKS.ETH]: {
+-      proxy: globalThis.config.SIENNA_PROXY_CONTRACT_ETH,
+-      token: globalThis.config.SIENNA_CONTRACT,
+-      proxySymbol: 'WSIENNA',
+-      secretSymbol: 'SIENNA',
+-    },
+-    [NETWORKS.BSC]: {
+-      proxy: globalThis.config.SIENNA_PROXY_CONTRACT_BSC,
+-      token: globalThis.config.SIENNA_CONTRACT,
+-      proxySymbol: 'WSIENNA',
+-      secretSymbol: 'SIENNA',
+-    },
+-    [NETWORKS.PLSM]: {
+-      proxy: undefined,
+-      token: undefined,
+-    },
+-  },
+-};
+-
+-export const proxyContracts: PROXY_CONTRACT[] = [
+-  { contract: globalThis.config.WSCRT_PROXY_CONTRACT_ETH, symbol: 'SSCRT' },
+-  { contract: globalThis.config.WSCRT_PROXY_CONTRACT_BSC, symbol: 'SSCRT' },
+-  { contract: globalThis.config.SIENNA_PROXY_CONTRACT_ETH, symbol: 'SIENNA' },
+-  { contract: globalThis.config.SIENNA_PROXY_CONTRACT_BSC, symbol: 'SIENNA' },
+-];
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/CustomTokens.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/CustomTokens.ts
+deleted file mode 100644
+index ed1e1fd..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/CustomTokens.ts
++++ /dev/null
+@@ -1,36 +0,0 @@
+-import { SwapToken } from '../../pages/TokenModal/types/SwapToken';
+-
+-const LOCAL_STORAGE_KEY = 'SwapLocalStorageTokensNew';
+-
+-const setLocalStorage = item => localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(item));
+-const getLocalStorage = () => JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
+-
+-class LocalStorageTokens {
+-  static store(token: SwapToken) {
+-    let tokens: SwapToken[] = LocalStorageTokens.get();
+-
+-    tokens = tokens.concat(token);
+-
+-    setLocalStorage(tokens);
+-    window.dispatchEvent(new Event('storage'));
+-  }
+-
+-  static get(): SwapToken[] {
+-    try {
+-      const result = getLocalStorage();
+-      if (Object.keys(result).length === 0) {
+-        return []
+-      } else
+-      return result;
+-    } catch {
+-      return [];
+-    }
+-  }
+-
+-  static clear() {
+-    setLocalStorage({});
+-    window.dispatchEvent(new Event('updatePairsAndTokens'));
+-  }
+-}
+-
+-export default LocalStorageTokens;
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
+index 67f26da..ac74acb 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
+@@ -1,13 +1,17 @@
+-import { SigningCosmWasmClient } from 'secretjs';
+-import { Coin, StdFee } from 'secretjs/types/types';
+-import retry from 'async-await-retry';
+-import { sleep } from '../utils';
+-import stores from 'stores';
+-import { extractError } from './utils';
++import { Coin, SigningCosmWasmClient, StdFee } from "secretjs";
++import retry from "async-await-retry";
++import { sleep } from "../utils";
++import stores from "stores";
++import { extractError } from "./utils";
+ class CustomError extends Error {
+   public txHash: string;
++
++  constructor(message?: string) {
++    super(message);
++    this.txHash = "";
++  }
+ }
+-const blacklistedTxs = ['burn'];
++const blacklistedTxs = ["burn"];
+ 
+ export class AsyncSender extends SigningCosmWasmClient {
+   asyncExecute = async (
+@@ -19,15 +23,26 @@ export class AsyncSender extends SigningCosmWasmClient {
+   ) => {
+     let tx;
+     const key = Object.keys(handleMsg)[0];
+-    if (globalThis.config.IS_MAINTENANCE === 'true' && blacklistedTxs.includes(key)) {
++    if (
++      globalThis.config.IS_MAINTENANCE === "true" &&
++      blacklistedTxs.includes(key)
++    ) {
+       stores.user.setModalOpen(true);
+-      throw new CustomError('We are working on add functionality back, please,try later.');
++      throw new CustomError(
++        "We are working on add functionality back, please,try later.",
++      );
+     }
+     try {
+-      tx = await this.execute(contractAddress, handleMsg, memo, transferAmount, fee);
++      tx = await this.execute(
++        contractAddress,
++        handleMsg,
++        memo,
++        transferAmount,
++        fee,
++      );
+     } catch (e) {
+       console.error(`failed to broadcast tx: ${e}`);
+-      throw new CustomError('Failed to broadcast transaction');
++      throw new CustomError("Failed to broadcast transaction");
+     }
+ 
+     try {
+@@ -37,7 +52,7 @@ export class AsyncSender extends SigningCosmWasmClient {
+         () => {
+           return this.restClient.txById(tx.transactionHash);
+         },
+-        null,
++        undefined,
+         { retriesMax: 5, interval: 6000 },
+       );
+ 
+@@ -52,8 +67,10 @@ export class AsyncSender extends SigningCosmWasmClient {
+       };
+     } catch (e) {
+       console.error(`failed to broadcast tx: ${e}`);
+-      if (e.toString().includes('not found (HTTP 404)')) {
+-        e = new CustomError(`Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`);
++      if ((e as Error).toString().includes("not found (HTTP 404)")) {
++        e = new CustomError(
++          `Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`,
++        );
+       }
+       // error.txHash = tx.transactionHash;
+       throw e;
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/bridge_rewards.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/bridge_rewards.ts
+deleted file mode 100644
+index 5b01c3d..0000000
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/bridge_rewards.ts
++++ /dev/null
+@@ -1,149 +0,0 @@
+-import { CosmWasmClient, ExecuteResult, SigningCosmWasmClient } from 'secretjs';
+-import { JsonObject, StdFee } from 'secretjs/types/types';
+-import { Snip20Send } from './snip20';
+-import { AsyncSender } from './asyncSender';
+-
+-interface IQueryRewards {
+-  rewards: {
+-    rewards: string;
+-  };
+-}
+-
+-interface IQueryDeposit {
+-  deposit: {
+-    deposit: string;
+-  };
+-}
+-
+-interface IQueryRewardPoolBalance {
+-  reward_pool_balance: {
+-    balance: string;
+-  };
+-}
+-
+-export const QueryRewards = async (params: {
+-  cosmJS: CosmWasmClient;
+-  contract: string;
+-  address: string;
+-  height?: string;
+-  key: string;
+-}): Promise<JsonObject> => {
+-  const { cosmJS, contract, address, height, key } = params;
+-
+-  let queryMsg = {
+-    rewards: {
+-      address,
+-      key,
+-    },
+-  };
+-
+-  if (height) {
+-    queryMsg.rewards['height'] = Number(height);
+-  }
+-
+-  const result: IQueryRewards = await cosmJS.queryContractSmart(contract, queryMsg);
+-
+-  return result.rewards.rewards;
+-};
+-
+-export const QueryDeposit = async (params: {
+-  cosmJS: CosmWasmClient;
+-  contract: string;
+-  address: string;
+-  key: string;
+-}): Promise<JsonObject> => {
+-  const { cosmJS, contract, address, key } = params;
+-
+-  let result: IQueryDeposit = await cosmJS.queryContractSmart(contract, {
+-    deposit: {
+-      address,
+-      key,
+-    },
+-  });
+-
+-  return result.deposit.deposit;
+-};
+-
+-export const QueryRewardPoolBalance = async (params: {
+-  cosmJS: SigningCosmWasmClient;
+-  contract: string;
+-}): Promise<JsonObject> => {
+-  const { cosmJS, contract } = params;
+-
+-  return await cosmJS.queryContractSmart(contract, {
+-    deposit: {},
+-  });
+-};
+-
+-export const DepositRewards = async (params: {
+-  secretjs: AsyncSender;
+-  recipient: string;
+-  address: string;
+-  amount: string;
+-  fee?: StdFee;
+-}): Promise<string> => {
+-  const tx = await Snip20Send({
+-    msg: 'eyJkZXBvc2l0Ijp7fX0K', // '{"deposit":{}}' -> base64
+-    ...params,
+-  });
+-  return 'yooyoo';
+-};
+-
+-export const Redeem = async (params: {
+-  secretjs: AsyncSender;
+-  address: string;
+-  amount: string;
+-  fee?: StdFee;
+-}): Promise<ExecuteResult> => {
+-  const { secretjs, address, amount, fee } = params;
+-
+-  let result = await secretjs.asyncExecute(
+-    address,
+-    {
+-      redeem: {
+-        amount,
+-      },
+-    },
+-    undefined,
+-    undefined,
+-    fee,
+-  );
+-
+-  if (result?.code) {
+-    throw new Error(result?.raw_log);
+-  }
+-  return result;
+-};
+-
+-export const emergencyRedeem = async (params: {
+-  secretjs: AsyncSender;
+-  address: string;
+-  fee?: StdFee;
+-}): Promise<ExecuteResult> => {
+-  const { secretjs, address, fee } = params;
+-
+-  let result = await secretjs.asyncExecute(
+-    address,
+-    {
+-      emergency_redeem: {},
+-    },
+-    undefined,
+-    undefined,
+-    fee,
+-  );
+-
+-  if (result?.code) {
+-    throw new Error(result?.raw_log);
+-  }
+-  return result;
+-};
+-
+-export const Claim = async (params: { secretjs: AsyncSender; address: string }): Promise<ExecuteResult> => {
+-  const { secretjs, address } = params;
+-
+-  let result = await secretjs.asyncExecute(address, {
+-    claim_reward_pool: {},
+-  });
+-
+-  return result;
+-};
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/keplr.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/keplr.ts
+index 2aa768c..992a5ea 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/keplr.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/keplr.ts
+@@ -8,7 +8,7 @@ export const getViewingKey = async (params: {
+   address: string;
+   currentBalance?: string;
+ }) => {
+-  let { keplr, chainId, address, currentBalance } = params;
++  const { keplr, chainId, address, currentBalance } = params;
+ 
+   if (typeof currentBalance === 'string' && currentBalance.includes(ERROR_WRONG_VIEWING_KEY)) {
+     // In case this tx was set_viewing_key in order to correct the wrong viewing key error
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/sefi.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/sefi.ts
+index c1925e9..052b7cf 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/sefi.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/sefi.ts
+@@ -9,7 +9,7 @@ export const isClaimedSefiRewardsScrt = async (params: {
+   const { secretjs, index } = params;
+   console.log(index);
+   try {
+-    let resp = await secretjs.queryContractSmart(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
++    const resp = await secretjs.queryContractSmart(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
+       is_claimed: { index: index.toString() },
+     });
+ 
+@@ -25,14 +25,14 @@ export const ClaimAirdrop = async (params: { secretjs: AsyncSender; address: str
+   const res = await getScrtProof(address);
+   const proof = res.proof;
+ 
+-  let execMsg = {
++  const execMsg = {
+     index: proof.index.toString(),
+     address: address,
+     amount: parseInt(proof.amount, 16).toString(),
+     proof: proof.proof.map(p => p.substring(2)), // map to remove the '0x's
+   };
+ 
+-  let result = await secretjs.asyncExecute(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
++  const result = await secretjs.asyncExecute(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
+     claim: execMsg,
+   });
+ 
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap.ts
+index 91853b6..f79b453 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap.ts
+@@ -97,7 +97,7 @@ export const handleSimulation = async (
+         console.error(1);
+       }
+ 
+-      let result: SimulationReponse = await SimulateResult({
++      const result: SimulationReponse = await SimulateResult({
+         secretjs,
+         trade,
+         pair,
+@@ -122,7 +122,7 @@ export const handleSimulation = async (
+         console.error(2);
+       }
+ 
+-      let resultReverse: ReverseSimulationResponse = await ReverseSimulateResult({
++      const resultReverse: ReverseSimulationResponse = await ReverseSimulateResult({
+         secretjs,
+         trade,
+         pair,
+@@ -233,7 +233,7 @@ export const CreateNewPair = async ({
+   tokenA: Asset;
+   tokenB: Asset;
+ }): Promise<ExecuteResult> => {
+-  let asset_infos = [];
++  const asset_infos = [];
+   for (const t of [tokenA, tokenB]) {
+     // is a token
+     if ('token' in t.info) {
+diff --git a/utils/secretjs/SecretSwapSite/types/SwapToken.ts b/utils/secretjs/SecretSwapSite/types/SwapToken.ts
+index 49942ca..4f7f400 100644
+--- a/utils/secretjs/SecretSwapSite/types/SwapToken.ts
++++ b/utils/secretjs/SecretSwapSite/types/SwapToken.ts
+@@ -13,7 +13,7 @@ export type SwapToken = {
+   address?: string;
+   name?: string;
+   balance?: string;
+-  price?: Number;
++  price?: number;
+ };
+ 
+ export const getPricesForJSONTokens = async () => {
+@@ -49,7 +49,7 @@ export const SwapTokenFromSnip20Params = (address: string, token: Snip20TokenInf
+ };
+ 
+ export const TokenMapfromITokenInfo = async (tokens: ITokenInfo[]): Promise<SwapTokenMap> => {
+-  let swapTokens: SwapTokenMap = new Map<string, SwapToken>();
++  const swapTokens: SwapTokenMap = new Map<string, SwapToken>();
+ 
+   const tokenPrices =  await getPricesForJSONTokens()
+ 
+diff --git a/utils/secretjs/SecretSwapSite/types/trade.ts b/utils/secretjs/SecretSwapSite/types/trade.ts
+index dd753d6..bb6e34e 100644
+--- a/utils/secretjs/SecretSwapSite/types/trade.ts
++++ b/utils/secretjs/SecretSwapSite/types/trade.ts
+@@ -62,7 +62,7 @@ export class Asset {
+   }
+ 
+   static fromSwapToken(token: SwapToken): Asset {
+-    let tokenInfo: TokenInfo = {
++    const tokenInfo: TokenInfo = {
+       symbol: token.symbol,
+       address: token?.address,
+     };
+diff --git a/utils/secretjs/SecretSwapSite/utils/formatNumber.ts b/utils/secretjs/SecretSwapSite/utils/formatNumber.ts
+index be2e01d..9df1d6b 100644
+--- a/utils/secretjs/SecretSwapSite/utils/formatNumber.ts
++++ b/utils/secretjs/SecretSwapSite/utils/formatNumber.ts
+@@ -3,7 +3,7 @@ const BN = require('bn.js');
+ 
+ //https://stackoverflow.com/questions/9461621/format-a-number-as-2-5k-if-a-thousand-or-more-otherwise-900
+ export const nFormatter = (num, digits) => {
+-  let si = [
++  const si = [
+     { value: 1, symbol: '' },
+     { value: 1e3, symbol: 'K' },
+     { value: 1e6, symbol: 'M' },
+@@ -12,7 +12,7 @@ export const nFormatter = (num, digits) => {
+     { value: 1e15, symbol: 'P' },
+     { value: 1e18, symbol: 'E' },
+   ];
+-  let rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
++  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+   let i;
+   for (i = si.length - 1; i > 0; i--) {
+     if (num >= si[i].value) {
+@@ -23,7 +23,7 @@ export const nFormatter = (num, digits) => {
+ };
+ 
+ export const numberFormatter = (num, digits) => {
+-  let si = [
++  const si = [
+     { value: 1, symbol: '' },
+     { value: 1e3, symbol: 'K' },
+     { value: 1e6, symbol: 'M' },
+@@ -32,7 +32,7 @@ export const numberFormatter = (num, digits) => {
+     { value: 1e15, symbol: 'Q' },
+     { value: 1e18, symbol: 'Qi' },
+   ];
+-  let rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
++  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+   let i;
+   for (i = si.length - 1; i > 0; i--) {
+     if (num >= si[i].value) {
+@@ -58,7 +58,7 @@ export const balanceNumberFormat = new Intl.NumberFormat('en-US', {
+ 
+ export const valueToDecimals = (input: string, numDecimalsInResult: number): string => {
+   let numDecimalsInInput;
+-  let decimalPos = input.indexOf('.');
++  const decimalPos = input.indexOf('.');
+ 
+   if (decimalPos !== -1) {
+     numDecimalsInInput = input.length - decimalPos - 1;
+diff --git a/utils/secretjs/SecretSwapSite/utils/getAllPaths.ts b/utils/secretjs/SecretSwapSite/utils/getAllPaths.ts
+index 189badc..b7bee81 100644
+--- a/utils/secretjs/SecretSwapSite/utils/getAllPaths.ts
++++ b/utils/secretjs/SecretSwapSite/utils/getAllPaths.ts
+@@ -3,8 +3,8 @@ import { cloneDeep } from 'lodash';
+ const MAX_PATH_LENGTH = 5; // The longest path this function will find.  Complexity is O(n!)
+ 
+ export function getAllPaths(graph, tokenSource, tokenDest, tokens): string[][] {
+-  let currentPath = [];
+-  let pathList = [];
++  const currentPath = [];
++  const pathList = [];
+ 
+   dfs(tokenSource, tokenDest); // Call recursive function
+ 
+@@ -28,7 +28,7 @@ export function getAllPaths(graph, tokenSource, tokenDest, tokens): string[][] {
+ 
+     // Recur for all the vertices adjacent to current vertex
+     if (currentPath.length < MAX_PATH_LENGTH) {
+-      for (let i in graph[tokenA]) {
++      for (const i in graph[tokenA]) {
+         dfs(i, tokenB);
+       }
+     }
+diff --git a/utils/secretjs/SecretSwapSite/utils/misc.ts b/utils/secretjs/SecretSwapSite/utils/misc.ts
+index 85f9e60..104ae78 100644
+--- a/utils/secretjs/SecretSwapSite/utils/misc.ts
++++ b/utils/secretjs/SecretSwapSite/utils/misc.ts
+@@ -3,7 +3,7 @@ export const sleep = (ms: number) => {
+ };
+ 
+ export const isEmptyObject = (obj: Object) => {
+-  for(let i in obj) {
++  for(const i in obj) {
+     return false;
+   }
+   return true;

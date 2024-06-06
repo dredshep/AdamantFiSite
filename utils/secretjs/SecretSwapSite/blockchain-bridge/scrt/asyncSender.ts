@@ -1,13 +1,17 @@
-import { SigningCosmWasmClient } from 'secretjs';
-import { Coin, StdFee } from 'secretjs/types/types';
-import retry from 'async-await-retry';
-import { sleep } from '../utils';
-import stores from 'stores';
-import { extractError } from './utils';
+import { Coin, SigningCosmWasmClient, StdFee } from "secretjs";
+import retry from "async-await-retry";
+import { sleep } from "../utils";
+import stores from "stores";
+import { extractError } from "./utils";
 class CustomError extends Error {
   public txHash: string;
+
+  constructor(message?: string) {
+    super(message);
+    this.txHash = "";
+  }
 }
-const blacklistedTxs = ['burn'];
+const blacklistedTxs = ["burn"];
 
 export class AsyncSender extends SigningCosmWasmClient {
   asyncExecute = async (
@@ -19,15 +23,26 @@ export class AsyncSender extends SigningCosmWasmClient {
   ) => {
     let tx;
     const key = Object.keys(handleMsg)[0];
-    if (globalThis.config.IS_MAINTENANCE === 'true' && blacklistedTxs.includes(key)) {
+    if (
+      globalThis.config.IS_MAINTENANCE === "true" &&
+      blacklistedTxs.includes(key)
+    ) {
       stores.user.setModalOpen(true);
-      throw new CustomError('We are working on add functionality back, please,try later.');
+      throw new CustomError(
+        "We are working on add functionality back, please,try later.",
+      );
     }
     try {
-      tx = await this.execute(contractAddress, handleMsg, memo, transferAmount, fee);
+      tx = await this.execute(
+        contractAddress,
+        handleMsg,
+        memo,
+        transferAmount,
+        fee,
+      );
     } catch (e) {
       console.error(`failed to broadcast tx: ${e}`);
-      throw new CustomError('Failed to broadcast transaction');
+      throw new CustomError("Failed to broadcast transaction");
     }
 
     try {
@@ -37,7 +52,7 @@ export class AsyncSender extends SigningCosmWasmClient {
         () => {
           return this.restClient.txById(tx.transactionHash);
         },
-        null,
+        undefined,
         { retriesMax: 5, interval: 6000 },
       );
 
@@ -52,8 +67,10 @@ export class AsyncSender extends SigningCosmWasmClient {
       };
     } catch (e) {
       console.error(`failed to broadcast tx: ${e}`);
-      if (e.toString().includes('not found (HTTP 404)')) {
-        e = new CustomError(`Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`);
+      if ((e as Error).toString().includes("not found (HTTP 404)")) {
+        e = new CustomError(
+          `Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`,
+        );
       }
       // error.txHash = tx.transactionHash;
       throw e;

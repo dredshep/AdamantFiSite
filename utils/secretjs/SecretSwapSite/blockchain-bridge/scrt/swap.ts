@@ -97,7 +97,7 @@ export const handleSimulation = async (
         console.error(1);
       }
 
-      let result: SimulationReponse = await SimulateResult({
+      const result: SimulationReponse = await SimulateResult({
         secretjs,
         trade,
         pair,
@@ -122,7 +122,7 @@ export const handleSimulation = async (
         console.error(2);
       }
 
-      let resultReverse: ReverseSimulationResponse = await ReverseSimulateResult({
+      const resultReverse: ReverseSimulationResponse = await ReverseSimulateResult({
         secretjs,
         trade,
         pair,
@@ -233,7 +233,7 @@ export const CreateNewPair = async ({
   tokenA: Asset;
   tokenB: Asset;
 }): Promise<ExecuteResult> => {
-  let asset_infos = [];
+  const asset_infos = [];
   for (const t of [tokenA, tokenB]) {
     // is a token
     if ('token' in t.info) {

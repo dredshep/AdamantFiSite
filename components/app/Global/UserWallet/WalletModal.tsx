@@ -11,7 +11,7 @@ import { useTokenStore } from "@/store/tokenStore";
 import { useModalStore } from "@/store/modalStore";
 
 const WalletModal: React.FC = () => {
-  const { isWalletModalOpen, closeWalletModal } = useModalStore();
+  const { closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
   const { listAllTokens, getTokenByAddress } = useTokenStore();
   const tokens = listAllTokens();

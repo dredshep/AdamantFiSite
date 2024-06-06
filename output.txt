@@ -1,0 +1,1643 @@
+// Path: ./utils/secretjs/SecretSwapSite/executeRouterSwap.ts
+import { AsyncSender } from "./blockchain-bridge/scrt/asyncSender";
+import { getFeeForExecute } from "./blockchain-bridge/scrt/utils";
+import { GAS_FOR_BASE_SWAP_ROUTE } from "@/utils/secretjs/SecretSwapSite/utils/gasPrices";
+
+export function executeRouterSwap(
+  secretjsSender: AsyncSender,
+  secretAddress: string,
+  fromToken: string,
+  fromAmount: string,
+  hops: (null | {
+    from_token: { snip20: { address: string; code_hash: string } } | "scrt";
+    pair_address: string;
+    pair_code_hash: string;
+    expected_return?: string;
+  })[],
+  expected_return: string,
+  bestRoute: string[]
+) {
+  if (fromToken === "uscrt") {
+    return secretjsSender.asyncExecute(
+      globalThis.config.AMM_ROUTER_CONTRACT,
+      {
+        receive: {
+          from: secretAddress,
+          amount: fromAmount,
+          msg: btoa(
+            JSON.stringify({
+              to: secretAddress,
+              hops,
+              expected_return,
+            })
+          ),
+        },
+      },
+      "",
+      [
+        {
+          amount: fromAmount,
+          denom: "uscrt",
+        },
+      ],
+      getFeeForExecute((bestRoute.length - 1) * GAS_FOR_BASE_SWAP_ROUTE)
+    );
+  } else {
+    return secretjsSender.asyncExecute(
+      fromToken,
+      {
+        send: {
+          recipient: globalThis.config.AMM_ROUTER_CONTRACT,
+          amount: fromAmount,
+          msg: btoa(
+            JSON.stringify({
+              to: secretAddress,
+              hops,
+              expected_return,
+            })
+          ),
+        },
+      },
+      "",
+      [],
+      getFeeForExecute((bestRoute.length - 1) * GAS_FOR_BASE_SWAP_ROUTE)
+    );
+  }
+}
+// Path: ./utils/secretjs/SecretSwapSite/SwapFunctions.ts
+import BigNumber from "bignumber.js";
+import {
+  extractValueFromLogs,
+  getFeeForExecute,
+} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge";
+import { AsyncSender } from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender";
+import {
+  compute_offer_amount,
+  compute_swap,
+} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap";
+// import { RouteOutput } from '@/components/Swap/RouteRow';
+import {
+  PairMap,
+  SwapPair,
+} from "@/utils/secretjs/SecretSwapSite/types/SwapPair";
+import { SwapTokenMap } from "@/utils/secretjs/SecretSwapSite/types/SwapToken";
+import { CosmWasmClient } from "secretjs";
+import { humanizeBalance } from "@/utils/secretjs/SecretSwapSite/utils";
+import {
+  GAS_FOR_BASE_SWAP_ROUTE,
+  GAS_FOR_SWAP_NATIVE_COIN,
+} from "@/utils/secretjs/SecretSwapSite/utils/gasPrices";
+import { Token } from "@/utils/secretjs/SecretSwapSite/types/trade";
+import { storeTxResultLocally } from "@/utils/secretjs/SecretSwapSite/Swap/utils";
+
+export function executeRouterSwap(
+  secretjsSender: AsyncSender,
+  secretAddress: string,
+  fromToken: string,
+  fromAmount: string,
+  hops: (null | {
+    from_token: { snip20: { address: string; code_hash: string } } | "scrt";
+    pair_address: string;
+    pair_code_hash: string;
+    expected_return?: string;
+  })[],
+  expected_return: string,
+  bestRoute: string[]
+) {
+  if (fromToken === "uscrt") {
+    return secretjsSender.asyncExecute(
+      globalThis.config.AMM_ROUTER_CONTRACT,
+      {
+        receive: {
+          from: secretAddress,
+          amount: fromAmount,
+          msg: btoa(
+            JSON.stringify({
+              to: secretAddress,
+              hops,
+              expected_return,
+            })
+          ),
+        },
+      },
+      "",
+      [
+        {
+          amount: fromAmount,
+          denom: "uscrt",
+        },
+      ],
+      getFeeForExecute((bestRoute.length - 1) * GAS_FOR_BASE_SWAP_ROUTE)
+    );
+  } else {
+    return secretjsSender.asyncExecute(
+      fromToken,
+      {
+        send: {
+          recipient: globalThis.config.AMM_ROUTER_CONTRACT,
+          amount: fromAmount,
+          msg: btoa(
+            JSON.stringify({
+              to: secretAddress,
+              hops,
+              expected_return,
+            })
+          ),
+        },
+      },
+      "",
+      [],
+      getFeeForExecute((bestRoute.length - 1) * GAS_FOR_BASE_SWAP_ROUTE)
+    );
+  }
+}
+
+export function executeSwapUscrt(
+  secretjsSender: AsyncSender,
+  pair: SwapPair,
+  fromAmount: string,
+  expected_return: string
+) {
+  // call the swap function directly since this is with uscrt
+  return secretjsSender.asyncExecute(
+    pair.contract_addr,
+    {
+      swap: {
+        offer_asset: {
+          info: { native_token: { denom: "uscrt" } },
+          amount: fromAmount,
+        },
+        expected_return,
+        // offer_asset: Asset,
+        // expected_return: Option<Uint128>
+        // belief_price: Option<Decimal>,
+        // max_spread: Option<Decimal>,
+        // to: Option<HumanAddr>, // TODO
+      },
+    },
+    "",
+    [
+      {
+        amount: fromAmount,
+        denom: "uscrt",
+      },
+    ],
+    getFeeForExecute(GAS_FOR_SWAP_NATIVE_COIN)
+  );
+}
+
+const extractError = (result: any) => {
+  if (
+    result?.raw_log &&
+    result.raw_log.includes("Operation fell short of expected_return")
+  ) {
+    return "Swap fell short of expected return (slippage error)";
+  }
+  if (result?.raw_log) {
+    return result.raw_log;
+  }
+  console.error(result);
+  return `Unknown error`;
+};
+
+export function storeResult(
+  result: any,
+  fromAmount: string,
+  fromDecimals: number,
+  bestRoute: string[],
+  toDecimals: number
+) {
+  if (result?.code) {
+    const error = extractError(result);
+    throw new Error(error);
+  }
+
+  storeTxResultLocally(result);
+
+  const sent = humanizeBalance(
+    new BigNumber(fromAmount),
+    fromDecimals
+  ).toFixed();
+  const received = humanizeBalance(
+    new BigNumber(
+      extractValueFromLogs(result, "return_amount", bestRoute != null)
+    ),
+    toDecimals
+  ).toFixed();
+
+  const fromTokenFromTxn = extractValueFromLogs(result, "offer_asset", false);
+  const toTokenFromTxn = extractValueFromLogs(result, "ask_asset", true);
+
+  return { fromTokenFromTxn, toTokenFromTxn, sent, received };
+}
+
+function getOfferAndAskPools(
+  fromToken: string,
+  toToken: string,
+  pair: SwapPair,
+  tokens: SwapTokenMap,
+  balances
+): { offer_pool: BigNumber; ask_pool: BigNumber } {
+  if (pair === undefined) {
+    return { offer_pool: new BigNumber(0), ask_pool: new BigNumber(0) };
+  }
+
+  const fromDecimals = tokens.get(fromToken).decimals;
+  const toDecimals = tokens.get(toToken).decimals;
+
+  // we normalize offer_pool & ask_pool
+  // we could also canonicalize offer_amount & ask_amount
+  // but this way is less code because we get the results normalized
+
+  let offer_pool = humanizeBalance(
+    new BigNumber(balances[`${fromToken}-${pair.identifier()}`] as any),
+    fromDecimals
+  );
+  let ask_pool = humanizeBalance(
+    new BigNumber(balances[`${toToken}-${pair.identifier()}`] as any),
+    toDecimals
+  );
+
+  // this condition tested as never true,
+  // therefore commented out in case a revert is needed later. 2021-01-13
+  // if (offer_pool.isNaN() || ask_pool.isNaN()) {
+  //   const balances = await this.props.refreshPools({ pair });
+  //   offer_pool = humanizeBalance(new BigNumber(balances[`${fromToken}-${pair.identifier()}`] as any), fromDecimals);
+  //   ask_pool = humanizeBalance(new BigNumber(balances[`${toToken}-${pair.identifier()}`] as any), toDecimals);
+  // }
+
+  return { offer_pool, ask_pool };
+}
+
+export function getBestRoute(
+  fromInput,
+  toInput,
+  cachedGasFeesUnfilledCoin,
+  isToEstimated,
+  routes,
+  tokens,
+  pairs,
+  balances
+) {
+  let bestRoute: string[] = null;
+  let allRoutesOutputs: Array<RouteOutput> = [];
+  let bestRouteToInput,
+    bestRouteToInputWithGas = new BigNumber(-Infinity);
+  let bestRouteFromInput,
+    bestRouteFromInputWithGas = new BigNumber(Infinity);
+
+  for (let i = 0; i < routes.length; i++) {
+    const route = routes[i];
+
+    if (isToEstimated /* top input is filled */ || toInput === null) {
+      let from = new BigNumber(fromInput);
+      let to = new BigNumber(0);
+      for (let i = 0; i < route.length - 1; i++) {
+        const fromToken = route[i];
+        const toToken = route[i + 1];
+        const pair: SwapPair = pairs.get(
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+        );
+
+        const { offer_pool, ask_pool } = getOfferAndAskPools(
+          fromToken,
+          toToken,
+          pair,
+          tokens,
+          balances
+        );
+
+        const offer_amount = from;
+        if (
+          offer_pool.isEqualTo(0) ||
+          ask_pool.isEqualTo(0) ||
+          offer_amount.isNaN() ||
+          offer_amount.isLessThanOrEqualTo(0)
+        ) {
+          to = new BigNumber(0);
+          break;
+        }
+
+        const { return_amount, spread_amount } = compute_swap(
+          offer_pool,
+          ask_pool,
+          offer_amount
+        );
+
+        if (return_amount.isNaN() || return_amount.isLessThanOrEqualTo(0)) {
+          to = new BigNumber(0);
+          break;
+        }
+
+        to = return_amount;
+
+        if (i < route.length - 2) {
+          // setup for next iteration
+          from = return_amount;
+        }
+      }
+
+      const toWithGas = to.minus(cachedGasFeesUnfilledCoin[route.length - 1]);
+
+      allRoutesOutputs.push({ route, toOutput: to, toWithGas });
+
+      if (toWithGas.isGreaterThan(bestRouteToInputWithGas)) {
+        bestRouteFromInput = new BigNumber(fromInput);
+        bestRouteToInput = to;
+        bestRouteToInputWithGas = toWithGas;
+        bestRoute = route;
+      }
+    } else {
+      // isFromEstimated
+      // bottom input is filled
+      let from = new BigNumber(0);
+      let to = new BigNumber(toInput);
+      for (let i = route.length - 1; i > 0; i--) {
+        const fromToken = route[i - 1];
+        const toToken = route[i];
+        const pair: SwapPair = pairs.get(
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+        );
+        const { offer_pool, ask_pool } = getOfferAndAskPools(
+          fromToken,
+          toToken,
+          pair,
+          tokens,
+          balances
+        );
+
+        const ask_amount = to;
+        if (
+          offer_pool.isEqualTo(0) ||
+          ask_pool.isEqualTo(0) ||
+          ask_amount.gt(ask_pool) ||
+          ask_amount.isNaN() ||
+          ask_amount.isZero()
+        ) {
+          from = new BigNumber(Infinity);
+          break;
+        }
+
+        const { offer_amount, spread_amount } = compute_offer_amount(
+          offer_pool,
+          ask_pool,
+          ask_amount
+        );
+
+        if (offer_amount.isNaN() || offer_amount.isLessThanOrEqualTo(0)) {
+          from = new BigNumber(Infinity);
+          break;
+        }
+
+        from = offer_amount;
+
+        if (i > 1) {
+          // setup for next iteration
+          to = offer_amount;
+        }
+      }
+
+      const fromWithGas = from.plus(
+        cachedGasFeesUnfilledCoin[route.length - 1]
+      );
+
+      allRoutesOutputs.push({ route, fromOutput: from, fromWithGas });
+
+      if (fromWithGas.isLessThan(bestRouteFromInputWithGas)) {
+        bestRouteFromInput = from;
+        bestRouteFromInputWithGas = fromWithGas;
+        bestRouteToInput = new BigNumber(toInput);
+        bestRoute = route;
+      }
+    }
+  }
+
+  return { bestRoute, allRoutesOutputs, bestRouteToInput, bestRouteFromInput };
+}
+
+export async function getHops(
+  bestRoute: string[],
+  pairs: PairMap,
+  secretjs: CosmWasmClient
+) {
+  return (
+    await Promise.all(
+      bestRoute.map(async (fromToken, idx) => {
+        if (idx === bestRoute.length - 1) {
+          // destination token
+          return null;
+        }
+
+        const hop: {
+          from_token:
+            | {
+                snip20: {
+                  address: string;
+                  code_hash: string;
+                };
+              }
+            | "scrt";
+          pair_address: string;
+          pair_code_hash: string;
+          expected_return?: string;
+        } = {
+          from_token: null,
+          pair_address: null,
+          pair_code_hash: null,
+        };
+
+        const toToken = bestRoute[idx + 1];
+        const pair: SwapPair = pairs.get(
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+        );
+
+        if (fromToken === "uscrt") {
+          hop.from_token = "scrt";
+        } else {
+          hop.from_token = {
+            snip20: {
+              address: fromToken,
+              code_hash: (
+                pair.asset_infos.find(
+                  (a) => (a.info as Token)?.token?.contract_addr === fromToken
+                ).info as Token
+              ).token.token_code_hash,
+            },
+          };
+        }
+
+        hop.pair_address = pair.contract_addr;
+        hop.pair_code_hash = await SwapPair.getPairCodeHash(
+          hop.pair_address,
+          secretjs
+        );
+
+        return hop;
+      })
+    )
+  ).filter((x) => x !== null);
+}
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap.ts
+import BigNumber from 'bignumber.js';
+import { storeTxResultLocally } from 'pages/Swap/utils';
+import { ExecuteResult, SigningCosmWasmClient, CosmWasmClient } from 'secretjs';
+import { Asset, Currency, NativeToken, Token, Trade, TradeType } from '../../pages/TokenModal/types/trade';
+import { GetContractCodeHash } from './snip20';
+import { extractValueFromLogs, getFeeForExecute, validateBech32Address } from './utils';
+import { AsyncSender } from './asyncSender';
+import { GAS_FOR_CREATE_PAIR } from '../../utils/gasPrices';
+
+export const buildAssetInfo = (currency: Currency) => {
+  if (currency.token.info.type === 'native_token') {
+    return {
+      info: { native_token: currency.token.info.native_token },
+      amount: currency.amount,
+    };
+  } else {
+    return {
+      info: {
+        token: {
+          contract_addr: currency.token.info.token.contract_addr,
+          token_code_hash: currency.token.info.token.token_code_hash,
+          viewing_key: '',
+        },
+      },
+      amount: currency.amount,
+    };
+  }
+};
+
+export interface ReverseSimulationResponse {
+  offer_amount: string;
+  spread_amount: string;
+  commission_amount: string;
+}
+
+export interface SimulationReponse {
+  return_amount: string;
+  spread_amount: string;
+  commission_amount: string;
+}
+
+export interface PoolResponse {
+  assets: Asset[];
+  total_share: string;
+}
+
+export const SimulateResult = async (params: {
+  secretjs: SigningCosmWasmClient;
+  trade: Trade;
+  pair: string;
+}): Promise<SimulationReponse> => {
+  const { secretjs, trade, pair } = params;
+
+  //console.log(`trade: ${pair}: ${JSON.stringify(buildAssetInfo(trade.inputAmount))}`)
+
+  return await secretjs.queryContractSmart(pair, {
+    simulation: {
+      offer_asset: buildAssetInfo(trade.inputAmount),
+    },
+  });
+};
+
+export const ReverseSimulateResult = async (params: {
+  secretjs: SigningCosmWasmClient;
+  trade: Trade;
+  pair: string;
+}): Promise<ReverseSimulationResponse> => {
+  const { secretjs, trade, pair } = params;
+
+  console.log(`trade: ${pair}: ${JSON.stringify(buildAssetInfo(trade.outputAmount))}`);
+
+  return await secretjs.queryContractSmart(pair, {
+    reverse_simulation: {
+      ask_asset: buildAssetInfo(trade.outputAmount),
+    },
+  });
+};
+
+interface GenericSimulationResult {
+  returned_asset: string;
+  commission_amount: string;
+  spread_amount: string;
+}
+
+export const handleSimulation = async (
+  trade: Trade,
+  secretjs: AsyncSender,
+  pair: string,
+  swapDirection: TradeType,
+): Promise<GenericSimulationResult> => {
+  let returned_asset = '0';
+  let commission_amount = '0';
+  let spread_amount = '0';
+  switch (swapDirection) {
+    case TradeType.EXACT_INPUT:
+      if (isNaN(Number(trade.inputAmount))) {
+        console.error(1);
+      }
+
+      let result: SimulationReponse = await SimulateResult({
+        secretjs,
+        trade,
+        pair,
+      }).catch(err => {
+        throw new Error(`Failed to run simulation: ${err}`);
+      });
+
+      returned_asset = result.return_amount;
+      commission_amount = result.commission_amount;
+      spread_amount = result.spread_amount;
+
+      // console.log(
+      //   'sim',
+      //   `return_amount=${returned_asset}`,
+      //   `commission_amount=${commission_amount}`,
+      //   `spread_amount=${spread_amount}`,
+      // );
+
+      break;
+    case TradeType.EXACT_OUTPUT:
+      if (isNaN(Number(trade.outputAmount))) {
+        console.error(2);
+      }
+
+      let resultReverse: ReverseSimulationResponse = await ReverseSimulateResult({
+        secretjs,
+        trade,
+        pair,
+      }).catch(err => {
+        throw new Error(`Failed to run reverse simulation: ${err}`);
+      });
+      returned_asset = resultReverse.offer_amount;
+      commission_amount = resultReverse.commission_amount;
+      spread_amount = resultReverse.spread_amount;
+
+      // console.log(
+      //   'sim reverse',
+      //   `offer_amount=${returned_asset}`,
+      //   `commission_amount=${commission_amount}`,
+      //   `spread_amount=${spread_amount}`,
+      // );
+
+      break;
+  }
+
+  return { returned_asset, spread_amount, commission_amount };
+};
+
+// Commission rate == 0.3%
+const COMMISSION_RATE = new BigNumber(0.3 / 100);
+
+// To reduce unnecessary queries, compute_swap is ported from here https://github.com/enigmampc/SecretSwap/blob/6135f0ad74a17cefacf4ac0e48497983b88dae91/contracts/secretswap_pair/src/contract.rs#L616-L636
+export const compute_swap = (
+  offer_pool: BigNumber,
+  ask_pool: BigNumber,
+  offer_amount: BigNumber,
+): {
+  return_amount: BigNumber;
+  spread_amount: BigNumber;
+  commission_amount: BigNumber;
+} => {
+  // offer => ask
+  // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
+  const cp = offer_pool.multipliedBy(ask_pool);
+  let return_amount = ask_pool.minus(cp.multipliedBy(new BigNumber(1).dividedBy(offer_pool.plus(offer_amount))));
+
+  // calculate spread & commission
+  const spread_amount = offer_amount.multipliedBy(ask_pool.dividedBy(offer_pool)).minus(return_amount);
+  const commission_amount = return_amount.multipliedBy(COMMISSION_RATE);
+
+  // commission will be absorbed to pool
+  return_amount = return_amount.minus(commission_amount);
+
+  return { return_amount, spread_amount, commission_amount };
+};
+
+// To reduce unnecessary queries, cumpute_offer_amount is ported from here https://github.com/enigmampc/SecretSwap/blob/6135f0ad74a17cefacf4ac0e48497983b88dae91/contracts/secretswap_pair/src/contract.rs#L638-L661
+export const compute_offer_amount = (
+  offer_pool: BigNumber,
+  ask_pool: BigNumber,
+  ask_amount: BigNumber,
+): {
+  offer_amount: BigNumber;
+  spread_amount: BigNumber;
+  commission_amount: BigNumber;
+} => {
+  // ask => offer
+  // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
+  const cp = offer_pool.multipliedBy(ask_pool);
+  const one_minus_commission = new BigNumber(1).minus(COMMISSION_RATE);
+
+  const offer_amount = cp
+    .multipliedBy(
+      new BigNumber(1).dividedBy(ask_pool.minus(ask_amount.multipliedBy(reverse_decimal(one_minus_commission)))),
+    )
+    .minus(offer_pool);
+
+  const before_commission_deduction = ask_amount.multipliedBy(reverse_decimal(one_minus_commission));
+
+  let spread_amount = new BigNumber(0);
+  try {
+    spread_amount = offer_amount.multipliedBy(ask_pool.dividedBy(offer_pool)).minus(before_commission_deduction);
+  } catch (e) {}
+
+  const commission_amount = before_commission_deduction.multipliedBy(COMMISSION_RATE);
+  return { offer_amount, spread_amount, commission_amount };
+};
+
+// reverse_decimal ported over from rust
+// https://github.com/enigmampc/SecretSwap/blob/6135f0ad74a17cefacf4ac0e48497983b88dae91/contracts/secretswap_pair/src/math.rs#L4-L12
+const DECIMAL_FRACTIONAL = new BigNumber(1_000_000_000);
+
+export const reverse_decimal = (decimal: BigNumber): BigNumber => {
+  if (decimal.isEqualTo(0)) {
+    return new BigNumber(0);
+  }
+
+  return DECIMAL_FRACTIONAL.dividedBy(decimal.multipliedBy(DECIMAL_FRACTIONAL));
+};
+
+interface CreatePairResponse {
+  contractAddress: string;
+}
+
+export const CreateNewPair = async ({
+  secretjs,
+  secretjsSender,
+  tokenA,
+  tokenB,
+}: {
+  secretjs: CosmWasmClient;
+  secretjsSender: AsyncSender;
+  tokenA: Asset;
+  tokenB: Asset;
+}): Promise<ExecuteResult> => {
+  let asset_infos = [];
+  for (const t of [tokenA, tokenB]) {
+    // is a token
+    if ('token' in t.info) {
+      if (!validateBech32Address(t.info.token.contract_addr)) {
+        throw new Error('Token address is not valid');
+      }
+      const token = t.info.token;
+      try {
+        token.token_code_hash = await GetContractCodeHash({ secretjs, address: token.contract_addr });
+      } catch (e) {
+        throw `Error fetching code hash for ${t.symbol} ${t.info.token.contract_addr}: ${e.message}`;
+      }
+
+      asset_infos.push({ token });
+    } else {
+      asset_infos.push({ native_token: t.info.native_token });
+    }
+  }
+
+  const factoryAddress = globalThis.config.AMM_FACTORY_CONTRACT;
+  const response: ExecuteResult = await secretjsSender.asyncExecute(
+    factoryAddress,
+    {
+      create_pair: { asset_infos },
+    },
+    '',
+    [],
+    getFeeForExecute(GAS_FOR_CREATE_PAIR),
+  );
+  storeTxResultLocally(response);
+  return response;
+};
+
+interface GetAllPairsResponse {
+  pairs: Array<Pair>;
+}
+
+export const GetAllPairs = async (params: { secretjs: SigningCosmWasmClient }): Promise<GetAllPairsResponse> => {
+  const { secretjs } = params;
+  return await secretjs.queryContractSmart(globalThis.config.AMM_FACTORY_CONTRACT, {
+    pairs: { limit: 30 },
+  });
+};
+
+export type Pair = {
+  asset_infos: Array<NativeToken | Token>;
+  contract_addr: string;
+  liquidity_token: string;
+  token_code_hash: string;
+};
+
+export type AssetInfos = {
+  asset_infos: Array<NativeToken | Token>;
+};
+
+export const getSymbolsFromPair = (pair: { asset_infos: any }): string[] => {
+  const symbols = [];
+
+  if ('native_token' in pair.asset_infos[0]) {
+    symbols.push(pair.asset_infos[0].native_token.denom);
+  } else {
+    symbols.push(pair.asset_infos[0].token.contract_addr);
+  }
+  if ('native_token' in pair.asset_infos[1]) {
+    symbols.push(pair.asset_infos[1].native_token.denom);
+  } else {
+    symbols.push(pair.asset_infos[1].token.contract_addr);
+  }
+
+  return symbols;
+};
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
+import { SigningCosmWasmClient } from 'secretjs';
+import { Coin, StdFee } from 'secretjs/types/types';
+import retry from 'async-await-retry';
+import { sleep } from '../utils';
+import stores from 'stores';
+import { extractError } from './utils';
+class CustomError extends Error {
+  public txHash: string;
+}
+const blacklistedTxs = ['burn'];
+
+export class AsyncSender extends SigningCosmWasmClient {
+  asyncExecute = async (
+    contractAddress: string,
+    handleMsg: object,
+    memo?: string,
+    transferAmount?: readonly Coin[],
+    fee?: StdFee,
+  ) => {
+    let tx;
+    const key = Object.keys(handleMsg)[0];
+    if (globalThis.config.IS_MAINTENANCE === 'true' && blacklistedTxs.includes(key)) {
+      stores.user.setModalOpen(true);
+      throw new CustomError('We are working on add functionality back, please,try later.');
+    }
+    try {
+      tx = await this.execute(contractAddress, handleMsg, memo, transferAmount, fee);
+    } catch (e) {
+      console.error(`failed to broadcast tx: ${e}`);
+      throw new CustomError('Failed to broadcast transaction');
+    }
+
+    try {
+      // optimistic
+      await sleep(3000);
+      const res = await retry(
+        () => {
+          return this.restClient.txById(tx.transactionHash);
+        },
+        null,
+        { retriesMax: 5, interval: 6000 },
+      );
+
+      if (res?.code) {
+        const error = extractError(res);
+        throw new CustomError(error);
+      }
+
+      return {
+        ...res,
+        transactionHash: tx.transactionHash,
+      };
+    } catch (e) {
+      console.error(`failed to broadcast tx: ${e}`);
+      if (e.toString().includes('not found (HTTP 404)')) {
+        e = new CustomError(`Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`);
+      }
+      // error.txHash = tx.transactionHash;
+      throw e;
+    }
+  };
+}
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/sefi.ts
+import { CosmWasmClient, ExecuteResult, SigningCosmWasmClient } from 'secretjs';
+import { getScrtProof } from 'services';
+import { AsyncSender } from './asyncSender';
+
+export const isClaimedSefiRewardsScrt = async (params: {
+  secretjs: CosmWasmClient;
+  index: number;
+}): Promise<boolean> => {
+  const { secretjs, index } = params;
+  console.log(index);
+  try {
+    let resp = await secretjs.queryContractSmart(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
+      is_claimed: { index: index.toString() },
+    });
+
+    return resp;
+  } catch (e) {
+    console.log(e);
+    throw Error('Address does not exist');
+  }
+};
+
+export const ClaimAirdrop = async (params: { secretjs: AsyncSender; address: string }): Promise<ExecuteResult> => {
+  const { secretjs, address } = params;
+  const res = await getScrtProof(address);
+  const proof = res.proof;
+
+  let execMsg = {
+    index: proof.index.toString(),
+    address: address,
+    amount: parseInt(proof.amount, 16).toString(),
+    proof: proof.proof.map(p => p.substring(2)), // map to remove the '0x's
+  };
+
+  let result = await secretjs.asyncExecute(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
+    claim: execMsg,
+  });
+
+  return result;
+};
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/snip20.ts
+import { CosmWasmClient, ExecuteResult, SigningCosmWasmClient } from 'secretjs';
+import { divDecimals, sleep, unlockToken } from '../../utils';
+import { StdFee } from 'secretjs/types/types';
+import { AsyncSender } from './asyncSender';
+
+export const Snip20SwapHash = (params: { tx_id: string; address: string }): string => {
+  return `${params.tx_id}|${params.address}`;
+};
+
+export interface Snip20TokenInfo {
+  name: string;
+  symbol: string;
+  decimals: number;
+  total_supply?: string;
+}
+
+export const GetSnip20Params = async (params: {
+  secretjs: CosmWasmClient;
+  address: string;
+}): Promise<Snip20TokenInfo> => {
+  const { secretjs, address } = params;
+
+  try {
+    const paramsResponse = await secretjs.queryContractSmart(address, { token_info: {} });
+
+    return {
+      name: paramsResponse.token_info.name,
+      symbol: paramsResponse.token_info.symbol,
+      decimals: paramsResponse.token_info.decimals,
+      total_supply: paramsResponse.token_info?.total_supply,
+    };
+  } catch (e) {
+    throw Error('Failed to get info');
+  }
+};
+
+export const Snip20GetBalance = async (params: {
+  secretjs: CosmWasmClient;
+  token: string;
+  address: string;
+  key: string;
+}) => {
+  const { secretjs, address, token, key } = params;
+
+  let balanceResponse;
+  for (let i = 0; i < 4; i++) {
+    try {
+      balanceResponse = await secretjs.queryContractSmart(token, {
+        balance: {
+          address: address,
+          key,
+        },
+      });
+      break;
+    } catch (e) {
+      if (e.message !== 'Failed to decrypt the following error message: rpc error: code = Unknown desc = contract: not found (HTTP 500).') {
+        console.error(e)
+        return unlockToken;
+      }
+      await sleep(1000)
+    }
+  }
+
+  if (balanceResponse.viewing_key_error) {
+    return 'Fix Unlock';
+  }
+
+  if (Number(balanceResponse.balance.amount) === 0) {
+    return '0';
+  }
+  return balanceResponse.balance.amount;
+};
+
+export const Snip20SendToBridge = async (params: {
+  secretjs: AsyncSender;
+  address: string;
+  amount: string;
+  msg: string;
+  recipient?: string;
+}): Promise<string> => {
+  const tx = await Snip20Send({
+    recipient: params.recipient || globalThis.config.SCRT_SWAP_CONTRACT,
+    ...params,
+  });
+
+  const txIdKvp = tx.logs[0].events[1].attributes.find(kv => kv.key === 'tx_id');
+  let tx_id: string;
+  if (txIdKvp && txIdKvp.value) {
+    tx_id = txIdKvp.value;
+  } else {
+    throw new Error('Failed to get tx_id');
+  }
+
+  return tx_id;
+};
+
+export const Snip20Send = async (params: {
+  secretjs: AsyncSender;
+  address: string;
+  amount: string;
+  msg: string;
+  recipient: string;
+  fee?: StdFee;
+}): Promise<ExecuteResult> => {
+  const { secretjs, address, amount, msg, recipient, fee } = params;
+
+  return await secretjs.asyncExecute(
+    address,
+    {
+      send: {
+        amount,
+        recipient,
+        msg,
+      },
+    },
+    '',
+    [],
+    fee,
+  );
+};
+
+export const GetContractCodeHash = async ({
+  secretjs,
+  address,
+}: {
+  secretjs: CosmWasmClient;
+  address: string;
+}): Promise<string> => {
+  return await secretjs.getCodeHashByContractAddr(address);
+};
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils.ts
+import { decode } from 'bech32';
+import cogoToast from 'cogo-toast';
+import { ExecuteResult } from 'secretjs';
+import { StdFee } from 'secretjs/types/types';
+import { Tokens } from 'stores/Tokens';
+import { GAS_FOR_BASE_SWAP_ROUTE, GAS_FOR_SWAP_DIRECT } from 'utils/gasPrices';
+import { EXCHANGE_MODE, TOKEN } from '../../stores/interfaces';
+import { NETWORKS } from '../eth/networks';
+
+const HRP = 'secret';
+
+export const swapContractAddress = (network: NETWORKS): string => {
+  switch (network) {
+    case NETWORKS.ETH:
+      return globalThis.config.SCRT_SWAP_CONTRACT;
+    case NETWORKS.BSC:
+      return globalThis.config.BSC_SCRT_SWAP_CONTRACT;
+    case NETWORKS.PLSM:
+      return globalThis.config.PLSM_SWAP_CONTRACT;
+  }
+};
+
+export const getScrtAddress = (address: string): string => {
+  try {
+    const decoded = decode(address, 46);
+    return decoded.prefix === HRP ? address : '';
+  } catch {
+    return '';
+  }
+};
+
+export const validateBech32Address = (address: string): boolean => {
+  return getScrtAddress(address) !== '';
+};
+
+export function extractValueFromLogs(txResult: ExecuteResult, key: string, lastValue?: boolean): string {
+  const wasmLogsReadonly = txResult?.logs[0]?.events?.find(e => e.type === 'wasm')?.attributes;
+  let wasmLogs = Array.from(wasmLogsReadonly ?? []);
+
+  if (lastValue) {
+    wasmLogs = wasmLogs.reverse();
+  }
+
+  return wasmLogs?.find(a => a.key === key)?.value;
+}
+
+const gasPriceUscrt = 0.25;
+export function getFeeForExecute(gas: number): StdFee {
+  return {
+    amount: [{ amount: String(Math.floor(gas * gasPriceUscrt) + 1), denom: 'uscrt' }],
+    gas: String(gas),
+  };
+}
+
+export function getFeeForExecuteUSD(numHops: number, tokens: Tokens): number {
+  if(numHops === 1)
+    var gas = GAS_FOR_SWAP_DIRECT;
+  else
+    var gas = numHops * GAS_FOR_BASE_SWAP_ROUTE;
+
+  return Number(tokens.getTokenBySymbol('sSCRT').price) * gas / 1_000_000 * gasPriceUscrt;
+}
+
+// Cache fees by numHops so we don't have to recompute as often
+export function cacheFeesForExecuteUSD(tokens: Tokens): number[] {
+  return [
+    0,
+    getFeeForExecuteUSD(1, tokens),
+    getFeeForExecuteUSD(2, tokens),
+    getFeeForExecuteUSD(3, tokens),
+    getFeeForExecuteUSD(4, tokens),
+  ]
+}
+
+// todo: fix this up - proxy token
+export const secretTokenName = (mode: EXCHANGE_MODE, token: TOKEN, label: string): string => {
+  if (label === 'SEFI') {
+    return 'SEFI';
+  } else if (label === 'WSCRT') {
+    return mode === EXCHANGE_MODE.FROM_SCRT ? 'SSCRT' : 'WSCRT';
+  } else if (label === 'WSIENNA') {
+    return mode === EXCHANGE_MODE.FROM_SCRT ? 'SIENNA' : 'WSIENNA';
+  } else {
+    return (mode === EXCHANGE_MODE.FROM_SCRT && token === TOKEN.ERC20 ? 'secret' : '') + label;
+  }
+};
+
+export function notify(
+  type: 'success' | 'error' | 'errorWithHash',
+  msg: string,
+  hideAfterSec: number = 120,
+  txHash?: string,
+  useContainer: boolean = false,
+) {
+  // if(globalThis.config.IS_MAINTENANCE === 'true') return;
+  let cogoType: string = type;
+  if (type === 'error' && typeof(msg) === 'string') {
+    msg = msg.replaceAll('Failed to decrypt the following error message: ', '');
+    msg = msg.replace(/\. Decryption error of the error message:.+?/, '');
+  }
+
+  let onClick = () => {
+    hide();
+  };
+  if (type === 'errorWithHash') {
+    cogoType = 'warn';
+    onClick = () => {
+      const url = `https://secretnodes.com/secret/chains/secret-4/transactions/${txHash}`;
+      const win = window.open(url, '_blank');
+      win.focus();
+      hide();
+    };
+  }
+
+  const { hide } = cogoToast[cogoType](msg, {
+    toastContainerID: 'notifications_container',
+    hideAfter: hideAfterSec,
+    onClick,
+  });
+  // NotificationManager[type](undefined, msg, closesAfterMs);
+}
+
+export const extractError = (result: any) => {
+  if (result?.raw_log && result.raw_log.includes('Operation fell short of expected_return')) {
+    return 'Swap fell short of expected return (slippage error)';
+  }
+  if (result?.raw_log) {
+    return result.raw_log;
+  }
+  console.error(result);
+  return `Unknown error`;
+};
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethodsERC20.ts
+import { Contract } from 'web3-eth-contract';
+import Web3 from 'web3';
+import { mulDecimals } from '../../utils';
+import { getGasPrice } from './helpers';
+
+const BN = require('bn.js');
+const MAX_UINT = Web3.utils
+  .toBN(2)
+  .pow(Web3.utils.toBN(256))
+  .sub(Web3.utils.toBN(1));
+
+export interface IEthMethodsInitParams {
+  web3: Web3;
+  ethManagerContract: Contract;
+  ethManagerAddress: string;
+}
+
+export class EthMethodsERC20 {
+  private readonly web3: Web3;
+  private ethManagerContract: Contract;
+  private ethManagerAddress: string;
+
+  constructor(params: IEthMethodsInitParams) {
+    this.web3 = params.web3;
+    this.ethManagerContract = params.ethManagerContract;
+    this.ethManagerAddress = params.ethManagerAddress;
+  }
+
+  sendHandler = async (method: any, args: Object, callback: Function) => {
+    method.send(args).on('transactionHash', function (hash) {
+      callback({ hash })
+    }).then(function (receipt) {
+      callback({ receipt })
+    }).catch(function (error) {
+      callback({ error })
+    })
+  }
+
+  getAllowance = async erc20Address => {
+    // @ts-ignore
+    const accounts = await ethereum.enable();
+
+    const MyERC20Json = require('../out/MyERC20.json');
+    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+
+    return await erc20Contract.methods.allowance(accounts[0], this.ethManagerAddress).call();
+  };
+
+  callApprove = async (erc20Address, amount, decimals, callback) => {
+    // @ts-ignore
+    const accounts = await ethereum.enable();
+
+    const MyERC20Json = require('../out/MyERC20.json');
+    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+
+    amount = Number(mulDecimals(amount, decimals));
+
+    const allowance = await this.getAllowance(erc20Address);
+
+    if (Number(allowance) < Number(amount)) {
+      this.sendHandler(erc20Contract.methods.approve(this.ethManagerAddress, MAX_UINT), {
+        from: accounts[0],
+        gas: globalThis.config.ETH_GAS_LIMIT,
+        gasPrice: await getGasPrice(this.web3),
+        amount: amount,
+      }, callback)
+    }
+  };
+
+  swapToken = async (erc20Address, userAddr, amount, decimals, callback) => {
+    // @ts-ignore
+    const accounts = await ethereum.enable();
+
+    const secretAddrHex = this.web3.utils.fromAscii(userAddr);
+    // TODO: add validation
+
+    const estimateGas = await this.ethManagerContract.methods
+      .swapToken(secretAddrHex, mulDecimals(amount, decimals), erc20Address)
+      .estimateGas({ from: accounts[0] });
+
+    const gasLimit = Math.max(estimateGas + estimateGas * 0.3, Number(globalThis.config.ETH_GAS_LIMIT));
+    this.sendHandler(this.ethManagerContract.methods.swapToken(secretAddrHex, mulDecimals(amount, decimals), erc20Address), {
+      from: accounts[0],
+      gas: new BN(gasLimit),
+      gasPrice: await getGasPrice(this.web3),
+    }, callback)
+
+  };
+
+  checkEthBalance = async (erc20Address, addr) => {
+    const MyERC20Json = require('../out/MyERC20.json');
+    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+
+    return await erc20Contract.methods.balanceOf(addr).call();
+  };
+
+  tokenDetails = async erc20Address => {
+    if (!this.web3.utils.isAddress(erc20Address)) {
+      throw new Error('Invalid token address');
+    }
+
+    const MyERC20Json = require('../out/MyERC20.json');
+    const erc20Contract = new this.web3.eth.Contract(MyERC20Json.abi, erc20Address);
+
+    let name = '';
+    let symbol = '';
+    // maker has some weird encoding for these.. so whatever
+    if (erc20Address === '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2') {
+      name = 'Maker';
+      symbol = 'MKR';
+    } else {
+      name = await erc20Contract.methods.name().call();
+      symbol = await erc20Contract.methods.symbol().call();
+    }
+    // todo: check if all the erc20s we care about have the decimals method (it's not required by the standard)
+    const decimals = await erc20Contract.methods.decimals().call();
+
+    return { name, symbol, decimals, erc20Address };
+  };
+}
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/eth/chainProps.ts
+import { NETWORKS } from '../index';
+
+export enum chainProps {
+  swap_direction_source,
+  swap_direction_dst,
+  wallet,
+  currency_symbol,
+  secret_currency_symbol,
+  image_logo,
+  destination_network_address,
+  full_name,
+  token_name,
+  explorerUrl,
+  decimals,
+}
+
+const message_map: Record<chainProps, Record<NETWORKS, string>> = {
+  [chainProps.destination_network_address]: {
+    [NETWORKS.ETH]: 'Destination ETH Address',
+    [NETWORKS.BSC]: 'Destination BSC Address',
+    [NETWORKS.PLSM]: 'Destination PLSM Addresss',
+  },
+  [chainProps.swap_direction_source]: {
+    [NETWORKS.ETH]: 'ETH -> Secret Network',
+    [NETWORKS.BSC]: 'BSC -> Secret Network',
+    [NETWORKS.PLSM]: 'PLSM -> Secret Network',
+  },
+  [chainProps.swap_direction_dst]: {
+    [NETWORKS.ETH]: 'Secret Network -> ETH',
+    [NETWORKS.BSC]: 'Secret Network -> BSC',
+    [NETWORKS.PLSM]: 'Secret Network -> PLSM',
+  },
+  [chainProps.wallet]: {
+    [NETWORKS.ETH]: '(Metamask)',
+    [NETWORKS.BSC]: '(Metamask)',
+    [NETWORKS.PLSM]: '(Metamask)',
+  },
+  [chainProps.currency_symbol]: {
+    [NETWORKS.ETH]: 'ETH',
+    [NETWORKS.BSC]: 'BNB',
+    [NETWORKS.PLSM]: 'PLM',
+  },
+  [chainProps.secret_currency_symbol]: {
+    [NETWORKS.ETH]: 'secretETH',
+    [NETWORKS.BSC]: 'secretBNB',
+    [NETWORKS.PLSM]: 'secretPLM',
+  },
+  [chainProps.image_logo]: {
+    [NETWORKS.ETH]: '/static/networks/eth.svg',
+    [NETWORKS.BSC]: '/static/networks/binance-smart-chain.svg',
+    [NETWORKS.PLSM]: '/static/plsm.png',
+  },
+  [chainProps.full_name]: {
+    [NETWORKS.ETH]: 'Ethereum',
+    [NETWORKS.BSC]: 'Binance Smart Chain',
+    [NETWORKS.PLSM]: 'Plasm',
+  },
+  [chainProps.token_name]: {
+    [NETWORKS.ETH]: 'ERC20',
+    [NETWORKS.BSC]: 'BEP20',
+    [NETWORKS.PLSM]: 'Parachain',
+  },
+  [chainProps.explorerUrl]: {
+    [NETWORKS.ETH]: globalThis.config.ETH_EXPLORER_URL,
+    [NETWORKS.BSC]: globalThis.config.BSC_EXPLORER_URL,
+    [NETWORKS.PLSM]: globalThis.config.ETH_EXPLORER_URL,
+  },
+  [chainProps.decimals]: {
+    [NETWORKS.ETH]: '18',
+    [NETWORKS.BSC]: '18',
+    [NETWORKS.PLSM]: '18',
+  },
+};
+
+export const chainPropToString = (msg: chainProps, network: NETWORKS): string => {
+  return message_map[msg][network];
+};
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/eth/index.ts
+import { EthMethods } from './EthMethods';
+import { EthMethodsERC20 } from './EthMethodsERC20';
+import { TOKEN } from '../../stores/interfaces';
+import { EthMethodsSefi } from './EthMethodsSefi';
+import { NETWORKS } from './networks';
+
+const Web3 = require('web3');
+
+// TODO Howard
+// const web3URL = window.web3 ? window.web3.currentProvider : globalThis.config.ETH_NODE_URL;
+const web3URL = globalThis.config.ETH_NODE_URL;
+
+export const web3 = new Web3(web3URL);
+
+const ethManagerJson = require('../out/MultiSigSwapWallet.json');
+
+const ethManagerContract = new web3.eth.Contract(ethManagerJson.abi, globalThis.config.ETH_MANAGER_CONTRACT);
+const bscManagerContract = new web3.eth.Contract(ethManagerJson.abi, globalThis.config.BSC_MANAGER_CONTRACT);
+const plmManagerContract = new web3.eth.Contract(ethManagerJson.abi, globalThis.config.PLSM_MANAGER_CONTRACT);
+
+export const fromScrtMethods: Record<NETWORKS, Record<TOKEN, any>> = {
+  [NETWORKS.PLSM]: {
+    [TOKEN.NATIVE]: new EthMethods({
+      web3: web3,
+      ethManagerContract: plmManagerContract,
+    }),
+    [TOKEN.ERC20]: new EthMethodsERC20({
+      web3: web3,
+      ethManagerContract: plmManagerContract,
+      ethManagerAddress: globalThis.config.PLSM_MANAGER_CONTRACT,
+    }),
+    [TOKEN.S20]: null,
+  },
+  [NETWORKS.ETH]: {
+    [TOKEN.NATIVE]: new EthMethods({
+      web3: web3,
+      ethManagerContract: ethManagerContract,
+    }),
+
+    [TOKEN.ERC20]: new EthMethodsERC20({
+      web3: web3,
+      ethManagerContract: ethManagerContract,
+      ethManagerAddress: globalThis.config.ETH_MANAGER_CONTRACT,
+    }),
+    [TOKEN.S20]: null,
+  },
+  [NETWORKS.BSC]: {
+    [TOKEN.NATIVE]: new EthMethods({
+      web3: web3,
+      ethManagerContract: bscManagerContract,
+    }),
+
+    [TOKEN.ERC20]: new EthMethodsERC20({
+      web3: web3,
+      ethManagerContract: bscManagerContract,
+      ethManagerAddress: globalThis.config.BSC_MANAGER_CONTRACT,
+    }),
+    [TOKEN.S20]: null,
+  },
+};
+
+const sefiTokenCompiledContract = require('../out/MyERC20.json');
+const sefiTokenContract = new web3.eth.Contract(sefiTokenCompiledContract.abi, globalThis.config.ETH_GOV_TOKEN_ADDRESS);
+
+const sefiDistCompiledContract = require('../out/MerkleDistributor.json');
+const sefiDistContract = new web3.eth.Contract(sefiDistCompiledContract.abi, globalThis.config.ETH_DIST_TOKEN_ADDRESS);
+
+export const ethMethodsSefi = new EthMethodsSefi({
+  web3: web3,
+  govTokenContract: sefiTokenContract,
+  distributionContract: sefiDistContract,
+});
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/eth/EthMethods.ts
+import { Contract } from 'web3-eth-contract';
+import Web3 from 'web3';
+import { ethToWei, getGasPrice } from './helpers';
+const BN = require('bn.js');
+
+export interface IEthMethodsInitParams {
+  web3: Web3;
+  ethManagerContract: Contract;
+}
+
+export class EthMethods {
+  private web3: Web3;
+  private ethManagerContract: Contract;
+
+  constructor(params: IEthMethodsInitParams) {
+    this.web3 = params.web3;
+    this.ethManagerContract = params.ethManagerContract;
+  }
+
+  swapEth = async (userAddr, amount, sendTxCallback?) => {
+    // @ts-ignore
+    const accounts = await ethereum.enable();
+
+    const secretAddrHex = this.web3.utils.fromAscii(userAddr);
+    // TODO: add validation
+
+    const estimateGas = await this.ethManagerContract.methods.swap(secretAddrHex).estimateGas({
+      value: ethToWei(amount),
+      from: accounts[0],
+    });
+
+    const gasLimit = Math.max(estimateGas + estimateGas * 0.3, Number(globalThis.config.ETH_GAS_LIMIT));
+
+    this.ethManagerContract.methods.swap(secretAddrHex).send({
+      value: ethToWei(amount),
+      from: accounts[0],
+      gas: new BN(gasLimit),
+      gasPrice: await getGasPrice(this.web3),
+    }).on('transactionHash', function (hash) {
+      sendTxCallback({ hash })
+    }).then(function (receipt) {
+      sendTxCallback({ receipt })
+    }).catch(function (error) {
+      sendTxCallback({ error })
+    })
+
+  };
+
+  checkEthBalance = async addr => {
+    return await this.web3.eth.getBalance(addr);
+  };
+}
+// Path: ./utils/secretjs/SecretSwapSite/blockchain-bridge/eth/proxyTokens.ts
+import { NETWORKS } from './networks';
+
+export interface PROXY_CONTRACT {
+  contract: string;
+  symbol: string;
+}
+
+export const ProxyTokens = {
+  WSCRT: {
+    [NETWORKS.ETH]: {
+      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_ETH,
+      token: globalThis.config.SSCRT_CONTRACT,
+      proxySymbol: 'WSCRT',
+    },
+    [NETWORKS.BSC]: {
+      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_BSC,
+      token: globalThis.config.SSCRT_CONTRACT,
+      proxySymbol: 'WSCRT',
+    },
+    [NETWORKS.PLSM]: {
+      proxy: undefined,
+      token: undefined,
+    },
+  },
+  SSCRT: {
+    [NETWORKS.ETH]: {
+      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_ETH,
+      token: globalThis.config.SSCRT_CONTRACT,
+      proxySymbol: 'WSCRT',
+      secretSymbol: 'SSCRT',
+    },
+    [NETWORKS.BSC]: {
+      proxy: globalThis.config.WSCRT_PROXY_CONTRACT_BSC,
+      token: globalThis.config.SSCRT_CONTRACT,
+      proxySymbol: 'WSCRT',
+      secretSymbol: 'SSCRT',
+    },
+    [NETWORKS.PLSM]: {
+      proxy: undefined,
+      token: undefined,
+    },
+  },
+  SIENNA: {
+    [NETWORKS.ETH]: {
+      proxy: globalThis.config.SIENNA_PROXY_CONTRACT_ETH,
+      token: globalThis.config.SIENNA_CONTRACT,
+      proxySymbol: 'WSIENNA',
+      secretSymbol: 'SIENNA',
+    },
+    [NETWORKS.BSC]: {
+      proxy: globalThis.config.SIENNA_PROXY_CONTRACT_BSC,
+      token: globalThis.config.SIENNA_CONTRACT,
+      proxySymbol: 'WSIENNA',
+      secretSymbol: 'SIENNA',
+    },
+    [NETWORKS.PLSM]: {
+      proxy: undefined,
+      token: undefined,
+    },
+  },
+};
+
+export const proxyContracts: PROXY_CONTRACT[] = [
+  { contract: globalThis.config.WSCRT_PROXY_CONTRACT_ETH, symbol: 'SSCRT' },
+  { contract: globalThis.config.WSCRT_PROXY_CONTRACT_BSC, symbol: 'SSCRT' },
+  { contract: globalThis.config.SIENNA_PROXY_CONTRACT_ETH, symbol: 'SIENNA' },
+  { contract: globalThis.config.SIENNA_PROXY_CONTRACT_BSC, symbol: 'SIENNA' },
+];
+// Path: ./utils/secretjs/SecretSwapSite/types/SwapToken.ts
+import { ITokenInfo } from '../../../stores/interfaces';
+import { Snip20TokenInfo, validateBech32Address } from '../../../blockchain-bridge';
+import { tokenImages } from '../../../components/Earn/EarnRow';
+import { sleep } from 'utils';
+
+export type SwapTokenMap = Map<string, SwapToken>;
+
+export type SwapToken = {
+  symbol: string;
+  logo?: string;
+  identifier?: string;
+  decimals?: number;
+  address?: string;
+  name?: string;
+  balance?: string;
+  price?: Number;
+};
+
+export const getPricesForJSONTokens = async () => {
+  for (let i = 0; i < 4; i++) {
+    if (globalThis.config['PRICE_DATA']['SEFI/USDT'].price) {
+      break
+    }
+    await sleep(1000)
+  }
+  return {
+      'secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt': globalThis.config['PRICE_DATA']['SEFI/USDT'].price,
+      'uscrt': globalThis.config['PRICE_DATA']['SCRT/USD'].price,
+      'secret1yxcexylwyxlq58umhgsjgstgcg2a0ytfy4d9lt': globalThis.config['PRICE_DATA']['BUTT/USD'].price,
+      'secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4': globalThis.config['PRICE_DATA']['ATOM/USD'].price,
+      'secret1zwwealwm0pcl9cul4nt6f38dsy6vzplw8lp3qg': globalThis.config['PRICE_DATA']['OSMO/USD'].price,
+      'secret1k8cge73c3nh32d4u0dsd5dgtmk63shtlrfscj5': globalThis.config['PRICE_DATA']['DVPN/USD'].price,
+      'secret19ungtd2c7srftqdwgq0dspwvrw63dhu79qxv88': globalThis.config['PRICE_DATA']['XMR/USD'].price,
+    }
+}
+
+export const SwapTokenFromSnip20Params = (address: string, token: Snip20TokenInfo) => {
+
+  const customTokenInfo: SwapToken = {
+    symbol: token.symbol,
+    address: address,
+    decimals: token.decimals,
+    logo: '/static/unknown.png',
+    identifier: address,
+    name: token.name,
+  };
+
+  return customTokenInfo;
+};
+
+export const TokenMapfromITokenInfo = async (tokens: ITokenInfo[]): Promise<SwapTokenMap> => {
+  let swapTokens: SwapTokenMap = new Map<string, SwapToken>();
+
+  const tokenPrices =  await getPricesForJSONTokens()
+
+  for (const t of tokens) {
+    const secretAddress = validateBech32Address(t.dst_address)
+      ? t.dst_address
+      : validateBech32Address(t.src_address)
+      ? t.src_address
+      : '';
+    let symbol;
+    if (t.display_props.symbol === 'SCRT') {
+      symbol = 'SCRT';
+    } else if (t.display_props.symbol.toLowerCase() === 'sscrt') {
+      symbol = 'sSCRT';
+    } else if (t.display_props.symbol.toLowerCase() === 'sefi') {
+      symbol = 'SEFI';
+    } else if (t.display_props.symbol.toLowerCase() === 'sienna') {
+      symbol = t.display_props.symbol.toUpperCase();
+    } else if (t.display_props.symbol.toLowerCase() === 'alter') {
+      symbol = t.display_props.symbol.toUpperCase();
+    } else if (t.display_props.symbol.toLowerCase() === 'shd') {
+      symbol = t.display_props.symbol.toUpperCase();
+    } else {
+      symbol = 's' + t.display_props.symbol;
+    }
+
+    const swapToken: SwapToken = {
+      identifier: secretAddress,
+      symbol: symbol,
+      logo: t.display_props.symbol.startsWith("lp-") ? t.display_props.image : tokenImages[t.display_props.symbol.toUpperCase()],
+      decimals: Number(t.decimals),
+      name: t.name,
+      address: secretAddress,
+      price: secretAddress === 'secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt' ? tokenPrices[secretAddress] : (Number(t.price) ? Number(t.price) : 0),
+    };
+
+    swapTokens.set(swapToken.identifier, swapToken);
+  }
+
+  return swapTokens;
+};
