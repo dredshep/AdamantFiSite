@@ -1,7 +1,6 @@
-import { Coin, SigningCosmWasmClient, StdFee } from "secretjs";
+import { Coin, SecretNetworkClient } from "secretjs";
 import retry from "async-await-retry";
 import { sleep } from "../utils";
-import stores from "stores";
 import { extractError } from "./utils";
 class CustomError extends Error {
   public txHash: string;
@@ -11,34 +10,39 @@ class CustomError extends Error {
     this.txHash = "";
   }
 }
-const blacklistedTxs = ["burn"];
 
-export class AsyncSender extends SigningCosmWasmClient {
+type StdFee = {
+  amount: readonly Coin[];
+  gas: number;
+};
+
+export class AsyncSender extends SecretNetworkClient {
   asyncExecute = async (
     contractAddress: string,
+    senderAddress: string,
     handleMsg: object,
     memo?: string,
     transferAmount?: readonly Coin[],
     fee?: StdFee,
   ) => {
     let tx;
-    const key = Object.keys(handleMsg)[0];
-    if (
-      globalThis.config.IS_MAINTENANCE === "true" &&
-      blacklistedTxs.includes(key)
-    ) {
-      stores.user.setModalOpen(true);
-      throw new CustomError(
-        "We are working on add functionality back, please,try later.",
-      );
-    }
     try {
-      tx = await this.execute(
-        contractAddress,
-        handleMsg,
-        memo,
-        transferAmount,
-        fee,
+      tx = await this.tx.compute.executeContract(
+        {
+          contract_address: contractAddress,
+          msg: handleMsg,
+          sender: senderAddress,
+          sent_funds: [{
+            denom: "uscrt",
+            amount: transferAmount || "",
+          } as Coin],
+        },
+        {
+          memo,
+          gasLimit: fee?.gas || 2000000,
+          feeDenom: fee?.amount[0].denom || "uscrt",
+          feeGranter: senderAddress,
+        },
       );
     } catch (e) {
       console.error(`failed to broadcast tx: ${e}`);
@@ -49,8 +53,12 @@ export class AsyncSender extends SigningCosmWasmClient {
       // optimistic
       await sleep(3000);
       const res = await retry(
-        () => {
-          return this.restClient.txById(tx.transactionHash);
+        async () => {
+          const result = await this.query.getTx(tx.transactionHash);
+          if (!result) {
+            throw new Error("Transaction not found");
+          }
+          return result;
         },
         undefined,
         { retriesMax: 5, interval: 6000 },
