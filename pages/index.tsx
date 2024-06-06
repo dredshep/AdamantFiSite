@@ -75,15 +75,12 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <div className="px-6 py-8 flex w-full justify-between">
-        {/* logo */}
         <Link className="flex items-center " href="/">
           <Logo className="h-10 w-10" />
           <div className="text-white text-2xl font-bold tracking-wider ml-2">
             ADAMANT<span className="text-adamant-dark">.FI</span>
           </div>
         </Link>
-
-        {/* nav */}
         <div className="flex items-center space-x-11 uppercase text-base font-medium">
           <Link
             href="#"
@@ -111,7 +108,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-      {/* container div simply setting max width and perhaps other settings for content only */}
       <div className="max-w-[1176px] mx-auto px-10">
         <div className="mt-32">
           <div className="flex flex-col items-center gap-6">

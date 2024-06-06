@@ -1,7 +1,7 @@
 import "@radix-ui/themes/styles.css";
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import { Theme } from "@radix-ui/themes";
+// import { Theme } from "@radix-ui/themes";
 import { useEffect } from "react";
 import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
 import { useStore } from "@/store/swapStore";
@@ -25,8 +25,8 @@ export default function App({ Component, pageProps }: AppProps) {
     fetchTokens();
   }, [setSwappableTokens, initializeTokens]);
   return (
-    <Theme color="black" grayColor="olive" accentColor="amber">
+    // <Theme color="black" grayColor="olive" accentColor="amber">
       <Component {...pageProps} />
-    </Theme>
+    // {/* </Theme> */}
   );
 }
