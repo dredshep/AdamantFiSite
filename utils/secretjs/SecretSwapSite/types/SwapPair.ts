@@ -1,14 +1,17 @@
-import { Asset, NativeToken, Token } from './trade';
-import { getSymbolsFromPair, Pair } from '../../../blockchain-bridge/scrt/swap';
-import { SwapTokenMap } from './SwapToken';
-import { CosmWasmClient } from 'secretjs';
+import { Asset, NativeToken, Token } from "./trade";
+import {
+  getSymbolsFromPair,
+  Pair,
+} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap";
+import { SwapTokenMap } from "./SwapToken";
+import { SecretNetworkClient } from "secretjs";
 
 export class SwapPair {
   pair_identifier: string;
   asset_infos: Asset[];
   contract_addr: string;
   liquidity_token: string;
-  static id_delimiter = '/';
+  static id_delimiter = "/";
 
   constructor(
     symbol0: string,
@@ -40,7 +43,8 @@ export class SwapPair {
   }
 
   isSymbolInPair(symbol: string): boolean {
-    return symbol.toUpperCase() === this.asset_infos[0].symbol || symbol.toUpperCase() === this.asset_infos[1].symbol;
+    return symbol.toUpperCase() === this.asset_infos[0].symbol ||
+      symbol.toUpperCase() === this.asset_infos[1].symbol;
   }
 
   humanizedSymbol(): string {
@@ -62,8 +66,14 @@ export class SwapPair {
   static fromPair(pair: Pair, tokenMap: SwapTokenMap) {
     const identifiers = getSymbolsFromPair(pair);
 
-    const symbol0 = tokenMap.get(identifiers[0]).symbol;
-    const symbol1 = tokenMap.get(identifiers[1]).symbol;
+    const symbol0 = tokenMap.get(identifiers[0])?.symbol;
+    const symbol1 = tokenMap.get(identifiers[1])?.symbol;
+
+    if (!symbol0 || !symbol1) {
+      throw new Error(
+        "Failed to get token symbols for pair: " + JSON.stringify(pair),
+      );
+    }
 
     const pair_identifier = pairIdFromTokenIds(identifiers[0], identifiers[1]);
 
@@ -80,13 +90,25 @@ export class SwapPair {
   }
 
   private static code_hash: string;
-  static getPairCodeHash(pair_address: string, secretjs: CosmWasmClient): Promise<string> {
+  static getPairCodeHash(
+    pair_address: string,
+    secretjs: SecretNetworkClient,
+  ): Promise<string> {
     // TODO fix this if we ever have a factory with multiple pair_code_id
     // For now this is the best way to avoid a lot of secretjs requests
     return new Promise(async (accept, reject) => {
       try {
         if (!SwapPair.code_hash) {
-          SwapPair.code_hash = await secretjs.getCodeHashByContractAddr(pair_address);
+          const hashResponse = await secretjs.query.compute
+            .codeHashByContractAddress(
+              { contract_address: pair_address },
+            );
+          if (!hashResponse.code_hash) {
+            throw new Error(
+              "Failed to get code hash from contract: " + pair_address,
+            );
+          }
+          SwapPair.code_hash = hashResponse.code_hash;
         }
         accept(SwapPair.code_hash);
       } catch (e) {
