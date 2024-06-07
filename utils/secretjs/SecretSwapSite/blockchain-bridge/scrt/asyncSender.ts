@@ -2,6 +2,7 @@ import { Coin, SecretNetworkClient } from "secretjs";
 import retry from "async-await-retry";
 import { sleep } from "../utils";
 import { extractError } from "./utils";
+import { HandleMsg } from "@shadeprotocol/shadejs";
 class CustomError extends Error {
   public txHash: string;
 
@@ -20,7 +21,7 @@ export class AsyncSender extends SecretNetworkClient {
   asyncExecute = async (
     contractAddress: string,
     senderAddress: string,
-    handleMsg: object,
+    handleMsg: HandleMsg,
     memo?: string,
     transferAmount?: readonly Coin[],
     fee?: StdFee,
