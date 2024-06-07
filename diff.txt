@@ -1,0 +1,751 @@
+diff --git a/store/useGlobalConfigStore.ts b/store/useGlobalConfigStore.ts
+index 9d76ab9..a6983d3 100644
+--- a/store/useGlobalConfigStore.ts
++++ b/store/useGlobalConfigStore.ts
+@@ -2,7 +2,7 @@ import { SecretString } from "@/types";
+ import { create } from "zustand";
+ 
+ type State = {
+-  config: Record<string, string | undefined>;
++  config: Record<string, SecretString>;
+   isMaintenance: boolean;
+   priceData: Record<string, unknown>;
+   setIsMaintenance: (isMaintenance: boolean) => void;
+@@ -28,7 +28,7 @@ const requiredEnvVars = [
+   "ETH_EXPLORER_URL",
+ ];
+ 
+-function getConfig(): Record<string, SecretString | undefined> {
++function getConfig(): Record<string, SecretString> {
+   // use semantic variable names
+   const { config, missingVars } = requiredEnvVars.reduce(
+     (acc, key) => {
+@@ -46,7 +46,7 @@ function getConfig(): Record<string, SecretString | undefined> {
+       };
+     },
+     {
+-      config: {} as Record<string, SecretString | undefined>,
++      config: {} as Record<string, SecretString>,
+       missingVars: [] as string[],
+     },
+   );
+diff --git a/utils/secretjs/SecretSwapSite/SwapFunctions.ts b/utils/secretjs/SecretSwapSite/SwapFunctions.ts
+index ade3da2..a710af5 100644
+--- a/utils/secretjs/SecretSwapSite/SwapFunctions.ts
++++ b/utils/secretjs/SecretSwapSite/SwapFunctions.ts
+@@ -1,144 +1,19 @@
+ import BigNumber from "bignumber.js";
+ import {
+-  extractValueFromLogs,
+-  getFeeForExecute,
+-} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge";
+-import { AsyncSender } from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender";
+-import {
+-  compute_offer_amount,
+-  compute_swap,
+-} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap";
++  extractError,
++} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils";
+ // import { RouteOutput } from '@/components/Swap/RouteRow';
+-import {
+-  PairMap,
+-  SwapPair,
+-} from "@/utils/secretjs/SecretSwapSite/types/SwapPair";
+-import { SwapTokenMap } from "@/utils/secretjs/SecretSwapSite/types/SwapToken";
+-import { CosmWasmClient } from "secretjs";
+ import { humanizeBalance } from "@/utils/secretjs/SecretSwapSite/utils";
+-import {
+-  GAS_FOR_BASE_SWAP_ROUTE,
+-  GAS_FOR_SWAP_NATIVE_COIN,
+-} from "@/utils/secretjs/SecretSwapSite/utils/gasPrices";
+-import { Token } from "@/utils/secretjs/SecretSwapSite/types/trade";
+ import { storeTxResultLocally } from "@/utils/secretjs/SecretSwapSite/Swap/utils";
+-
+-export function executeRouterSwap(
+-  secretjsSender: AsyncSender,
+-  secretAddress: string,
+-  fromToken: string,
+-  fromAmount: string,
+-  hops: (null | {
+-    from_token: { snip20: { address: string; code_hash: string } } | "scrt";
+-    pair_address: string;
+-    pair_code_hash: string;
+-    expected_return?: string;
+-  })[],
+-  expected_return: string,
+-  bestRoute: string[]
+-) {
+-  if (fromToken === "uscrt") {
+-    return secretjsSender.asyncExecute(
+-      globalThis.config.AMM_ROUTER_CONTRACT,
+-      {
+-        receive: {
+-          from: secretAddress,
+-          amount: fromAmount,
+-          msg: btoa(
+-            JSON.stringify({
+-              to: secretAddress,
+-              hops,
+-              expected_return,
+-            })
+-          ),
+-        },
+-      },
+-      "",
+-      [
+-        {
+-          amount: fromAmount,
+-          denom: "uscrt",
+-        },
+-      ],
+-      getFeeForExecute((bestRoute.length - 1) * GAS_FOR_BASE_SWAP_ROUTE)
+-    );
+-  } else {
+-    return secretjsSender.asyncExecute(
+-      fromToken,
+-      {
+-        send: {
+-          recipient: globalThis.config.AMM_ROUTER_CONTRACT,
+-          amount: fromAmount,
+-          msg: btoa(
+-            JSON.stringify({
+-              to: secretAddress,
+-              hops,
+-              expected_return,
+-            })
+-          ),
+-        },
+-      },
+-      "",
+-      [],
+-      getFeeForExecute((bestRoute.length - 1) * GAS_FOR_BASE_SWAP_ROUTE)
+-    );
+-  }
+-}
+-
+-export function executeSwapUscrt(
+-  secretjsSender: AsyncSender,
+-  pair: SwapPair,
+-  fromAmount: string,
+-  expected_return: string
+-) {
+-  // call the swap function directly since this is with uscrt
+-  return secretjsSender.asyncExecute(
+-    pair.contract_addr,
+-    {
+-      swap: {
+-        offer_asset: {
+-          info: { native_token: { denom: "uscrt" } },
+-          amount: fromAmount,
+-        },
+-        expected_return,
+-        // offer_asset: Asset,
+-        // expected_return: Option<Uint128>
+-        // belief_price: Option<Decimal>,
+-        // max_spread: Option<Decimal>,
+-        // to: Option<HumanAddr>, // TODO
+-      },
+-    },
+-    "",
+-    [
+-      {
+-        amount: fromAmount,
+-        denom: "uscrt",
+-      },
+-    ],
+-    getFeeForExecute(GAS_FOR_SWAP_NATIVE_COIN)
+-  );
+-}
+-
+-const extractError = (result: any) => {
+-  if (
+-    result?.raw_log &&
+-    result.raw_log.includes("Operation fell short of expected_return")
+-  ) {
+-    return "Swap fell short of expected return (slippage error)";
+-  }
+-  if (result?.raw_log) {
+-    return result.raw_log;
+-  }
+-  console.error(result);
+-  return `Unknown error`;
+-};
++import { TxResponse } from "secretjs";
++import extractValueFromLogs from "./blockchain-bridge/scrt/utils/extractValueFromLogs";
+ 
+ export function storeResult(
+-  result: any,
++  result: TxResponse,
+   fromAmount: string,
+   fromDecimals: number,
+   bestRoute: string[],
+-  toDecimals: number
++  toDecimals: number,
+ ) {
+   if (result?.code) {
+     const error = extractError(result);
+@@ -149,13 +24,13 @@ export function storeResult(
+ 
+   const sent = humanizeBalance(
+     new BigNumber(fromAmount),
+-    fromDecimals
++    fromDecimals,
+   ).toFixed();
+   const received = humanizeBalance(
+     new BigNumber(
+-      extractValueFromLogs(result, "return_amount", bestRoute != null)
++      extractValueFromLogs(result, "return_amount", bestRoute != null),
+     ),
+-    toDecimals
++    toDecimals,
+   ).toFixed();
+ 
+   const fromTokenFromTxn = extractValueFromLogs(result, "offer_asset", false);
+@@ -163,250 +38,3 @@ export function storeResult(
+ 
+   return { fromTokenFromTxn, toTokenFromTxn, sent, received };
+ }
+-
+-function getOfferAndAskPools(
+-  fromToken: string,
+-  toToken: string,
+-  pair: SwapPair,
+-  tokens: SwapTokenMap,
+-  balances
+-): { offer_pool: BigNumber; ask_pool: BigNumber } {
+-  if (pair === undefined) {
+-    return { offer_pool: new BigNumber(0), ask_pool: new BigNumber(0) };
+-  }
+-
+-  const fromDecimals = tokens.get(fromToken).decimals;
+-  const toDecimals = tokens.get(toToken).decimals;
+-
+-  // we normalize offer_pool & ask_pool
+-  // we could also canonicalize offer_amount & ask_amount
+-  // but this way is less code because we get the results normalized
+-
+-  const offer_pool = humanizeBalance(
+-    new BigNumber(balances[`${fromToken}-${pair.identifier()}`] as any),
+-    fromDecimals
+-  );
+-  const ask_pool = humanizeBalance(
+-    new BigNumber(balances[`${toToken}-${pair.identifier()}`] as any),
+-    toDecimals
+-  );
+-
+-  // this condition tested as never true,
+-  // therefore commented out in case a revert is needed later. 2021-01-13
+-  // if (offer_pool.isNaN() || ask_pool.isNaN()) {
+-  //   const balances = await this.props.refreshPools({ pair });
+-  //   offer_pool = humanizeBalance(new BigNumber(balances[`${fromToken}-${pair.identifier()}`] as any), fromDecimals);
+-  //   ask_pool = humanizeBalance(new BigNumber(balances[`${toToken}-${pair.identifier()}`] as any), toDecimals);
+-  // }
+-
+-  return { offer_pool, ask_pool };
+-}
+-
+-export function getBestRoute(
+-  fromInput,
+-  toInput,
+-  cachedGasFeesUnfilledCoin,
+-  isToEstimated,
+-  routes,
+-  tokens,
+-  pairs,
+-  balances
+-) {
+-  let bestRoute: string[] = null;
+-  const allRoutesOutputs: Array<RouteOutput> = [];
+-  let bestRouteToInput,
+-    bestRouteToInputWithGas = new BigNumber(-Infinity);
+-  let bestRouteFromInput,
+-    bestRouteFromInputWithGas = new BigNumber(Infinity);
+-
+-  for (let i = 0; i < routes.length; i++) {
+-    const route = routes[i];
+-
+-    if (isToEstimated /* top input is filled */ || toInput === null) {
+-      let from = new BigNumber(fromInput);
+-      let to = new BigNumber(0);
+-      for (let i = 0; i < route.length - 1; i++) {
+-        const fromToken = route[i];
+-        const toToken = route[i + 1];
+-        const pair: SwapPair = pairs.get(
+-          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+-        );
+-
+-        const { offer_pool, ask_pool } = getOfferAndAskPools(
+-          fromToken,
+-          toToken,
+-          pair,
+-          tokens,
+-          balances
+-        );
+-
+-        const offer_amount = from;
+-        if (
+-          offer_pool.isEqualTo(0) ||
+-          ask_pool.isEqualTo(0) ||
+-          offer_amount.isNaN() ||
+-          offer_amount.isLessThanOrEqualTo(0)
+-        ) {
+-          to = new BigNumber(0);
+-          break;
+-        }
+-
+-        const { return_amount, spread_amount } = compute_swap(
+-          offer_pool,
+-          ask_pool,
+-          offer_amount
+-        );
+-
+-        if (return_amount.isNaN() || return_amount.isLessThanOrEqualTo(0)) {
+-          to = new BigNumber(0);
+-          break;
+-        }
+-
+-        to = return_amount;
+-
+-        if (i < route.length - 2) {
+-          // setup for next iteration
+-          from = return_amount;
+-        }
+-      }
+-
+-      const toWithGas = to.minus(cachedGasFeesUnfilledCoin[route.length - 1]);
+-
+-      allRoutesOutputs.push({ route, toOutput: to, toWithGas });
+-
+-      if (toWithGas.isGreaterThan(bestRouteToInputWithGas)) {
+-        bestRouteFromInput = new BigNumber(fromInput);
+-        bestRouteToInput = to;
+-        bestRouteToInputWithGas = toWithGas;
+-        bestRoute = route;
+-      }
+-    } else {
+-      // isFromEstimated
+-      // bottom input is filled
+-      let from = new BigNumber(0);
+-      let to = new BigNumber(toInput);
+-      for (let i = route.length - 1; i > 0; i--) {
+-        const fromToken = route[i - 1];
+-        const toToken = route[i];
+-        const pair: SwapPair = pairs.get(
+-          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+-        );
+-        const { offer_pool, ask_pool } = getOfferAndAskPools(
+-          fromToken,
+-          toToken,
+-          pair,
+-          tokens,
+-          balances
+-        );
+-
+-        const ask_amount = to;
+-        if (
+-          offer_pool.isEqualTo(0) ||
+-          ask_pool.isEqualTo(0) ||
+-          ask_amount.gt(ask_pool) ||
+-          ask_amount.isNaN() ||
+-          ask_amount.isZero()
+-        ) {
+-          from = new BigNumber(Infinity);
+-          break;
+-        }
+-
+-        const { offer_amount, spread_amount } = compute_offer_amount(
+-          offer_pool,
+-          ask_pool,
+-          ask_amount
+-        );
+-
+-        if (offer_amount.isNaN() || offer_amount.isLessThanOrEqualTo(0)) {
+-          from = new BigNumber(Infinity);
+-          break;
+-        }
+-
+-        from = offer_amount;
+-
+-        if (i > 1) {
+-          // setup for next iteration
+-          to = offer_amount;
+-        }
+-      }
+-
+-      const fromWithGas = from.plus(
+-        cachedGasFeesUnfilledCoin[route.length - 1]
+-      );
+-
+-      allRoutesOutputs.push({ route, fromOutput: from, fromWithGas });
+-
+-      if (fromWithGas.isLessThan(bestRouteFromInputWithGas)) {
+-        bestRouteFromInput = from;
+-        bestRouteFromInputWithGas = fromWithGas;
+-        bestRouteToInput = new BigNumber(toInput);
+-        bestRoute = route;
+-      }
+-    }
+-  }
+-
+-  return { bestRoute, allRoutesOutputs, bestRouteToInput, bestRouteFromInput };
+-}
+-
+-export async function getHops(
+-  bestRoute: string[],
+-  pairs: PairMap,
+-  secretjs: CosmWasmClient
+-) {
+-  return (
+-    await Promise.all(
+-      bestRoute.map(async (fromToken, idx) => {
+-        if (idx === bestRoute.length - 1) {
+-          // destination token
+-          return null;
+-        }
+-
+-        const hop: {
+-          from_token:
+-            | {
+-                snip20: {
+-                  address: string;
+-                  code_hash: string;
+-                };
+-              }
+-            | "scrt";
+-          pair_address: string;
+-          pair_code_hash: string;
+-          expected_return?: string;
+-        } = {
+-          from_token: null,
+-          pair_address: null,
+-          pair_code_hash: null,
+-        };
+-
+-        const toToken = bestRoute[idx + 1];
+-        const pair: SwapPair = pairs.get(
+-          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+-        );
+-
+-        if (fromToken === "uscrt") {
+-          hop.from_token = "scrt";
+-        } else {
+-          hop.from_token = {
+-            snip20: {
+-              address: fromToken,
+-              code_hash: (
+-                pair.asset_infos.find(
+-                  (a) => (a.info as Token)?.token?.contract_addr === fromToken
+-                ).info as Token
+-              ).token.token_code_hash,
+-            },
+-          };
+-        }
+-
+-        hop.pair_address = pair.contract_addr;
+-        hop.pair_code_hash = await SwapPair.getPairCodeHash(
+-          hop.pair_address,
+-          secretjs
+-        );
+-
+-        return hop;
+-      })
+-    )
+-  ).filter((x) => x !== null);
+-}
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/index.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/index.ts
+index 51488d3..3954b41 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/index.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/index.ts
+@@ -1,5 +1,5 @@
+-export * from './eth';
+-export * from './eth/getBalances';
+-export * from './scrt';
+-export { networkFromToken } from './eth/networks';
+-export { NETWORKS } from './eth/networks';
++// export * from './eth';
++// export * from './eth/getBalances';
++// export * from './scrt';
++// export { networkFromToken } from './eth/networks';
++// export { NETWORKS } from './eth/networks';
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
+index 7e3db9b..527ad7e 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/asyncSender.ts
+@@ -2,6 +2,7 @@ import { Coin, SecretNetworkClient } from "secretjs";
+ import retry from "async-await-retry";
+ import { sleep } from "../utils";
+ import { extractError } from "./utils";
++import { HandleMsg } from "@shadeprotocol/shadejs";
+ class CustomError extends Error {
+   public txHash: string;
+ 
+@@ -20,7 +21,7 @@ export class AsyncSender extends SecretNetworkClient {
+   asyncExecute = async (
+     contractAddress: string,
+     senderAddress: string,
+-    handleMsg: object,
++    handleMsg: HandleMsg,
+     memo?: string,
+     transferAmount?: readonly Coin[],
+     fee?: StdFee,
+diff --git a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils.ts b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils.ts
+index ac934d8..b7655bb 100644
+--- a/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils.ts
++++ b/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/utils.ts
+@@ -1,13 +1,13 @@
+-import { decode } from 'bech32';
+-import cogoToast from 'cogo-toast';
+-import { ExecuteResult } from 'secretjs';
+-import { StdFee } from 'secretjs/types/types';
+-import { Tokens } from 'stores/Tokens';
+-import { GAS_FOR_BASE_SWAP_ROUTE, GAS_FOR_SWAP_DIRECT } from 'utils/gasPrices';
+-import { EXCHANGE_MODE, TOKEN } from '../../stores/interfaces';
+-import { NETWORKS } from '../eth/networks';
++import { decode } from "bech32";
++import cogoToast from "cogo-toast";
++import { TxResponse } from "secretjs";
++import { StdFee } from "secretjs/types/types";
++import { Tokens } from "stores/Tokens";
++import { GAS_FOR_BASE_SWAP_ROUTE, GAS_FOR_SWAP_DIRECT } from "utils/gasPrices";
++import { EXCHANGE_MODE, TOKEN } from "../../stores/interfaces";
++import { NETWORKS } from "../eth/networks";
+ 
+-const HRP = 'secret';
++const HRP = "secret";
+ 
+ export const swapContractAddress = (network: NETWORKS): string => {
+   switch (network) {
+@@ -23,42 +23,36 @@ export const swapContractAddress = (network: NETWORKS): string => {
+ export const getScrtAddress = (address: string): string => {
+   try {
+     const decoded = decode(address, 46);
+-    return decoded.prefix === HRP ? address : '';
++    return decoded.prefix === HRP ? address : "";
+   } catch {
+-    return '';
++    return "";
+   }
+ };
+ 
+ export const validateBech32Address = (address: string): boolean => {
+-  return getScrtAddress(address) !== '';
++  return getScrtAddress(address) !== "";
+ };
+ 
+-export function extractValueFromLogs(txResult: ExecuteResult, key: string, lastValue?: boolean): string {
+-  const wasmLogsReadonly = txResult?.logs[0]?.events?.find(e => e.type === 'wasm')?.attributes;
+-  let wasmLogs = Array.from(wasmLogsReadonly ?? []);
+-
+-  if (lastValue) {
+-    wasmLogs = wasmLogs.reverse();
+-  }
+-
+-  return wasmLogs?.find(a => a.key === key)?.value;
+-}
+-
+ const gasPriceUscrt = 0.25;
+ export function getFeeForExecute(gas: number): StdFee {
+   return {
+-    amount: [{ amount: String(Math.floor(gas * gasPriceUscrt) + 1), denom: 'uscrt' }],
++    amount: [{
++      amount: String(Math.floor(gas * gasPriceUscrt) + 1),
++      denom: "uscrt",
++    }],
+     gas: String(gas),
+   };
+ }
+ 
+ export function getFeeForExecuteUSD(numHops: number, tokens: Tokens): number {
+-  if(numHops === 1)
++  if (numHops === 1) {
+     var gas = GAS_FOR_SWAP_DIRECT;
+-  else
++  } else {
+     var gas = numHops * GAS_FOR_BASE_SWAP_ROUTE;
++  }
+ 
+-  return Number(tokens.getTokenBySymbol('sSCRT').price) * gas / 1_000_000 * gasPriceUscrt;
++  return Number(tokens.getTokenBySymbol("sSCRT").price) * gas / 1_000_000 *
++    gasPriceUscrt;
+ }
+ 
+ // Cache fees by numHops so we don't have to recompute as often
+@@ -69,24 +63,30 @@ export function cacheFeesForExecuteUSD(tokens: Tokens): number[] {
+     getFeeForExecuteUSD(2, tokens),
+     getFeeForExecuteUSD(3, tokens),
+     getFeeForExecuteUSD(4, tokens),
+-  ]
++  ];
+ }
+ 
+ // todo: fix this up - proxy token
+-export const secretTokenName = (mode: EXCHANGE_MODE, token: TOKEN, label: string): string => {
+-  if (label === 'SEFI') {
+-    return 'SEFI';
+-  } else if (label === 'WSCRT') {
+-    return mode === EXCHANGE_MODE.FROM_SCRT ? 'SSCRT' : 'WSCRT';
+-  } else if (label === 'WSIENNA') {
+-    return mode === EXCHANGE_MODE.FROM_SCRT ? 'SIENNA' : 'WSIENNA';
++export const secretTokenName = (
++  mode: EXCHANGE_MODE,
++  token: TOKEN,
++  label: string,
++): string => {
++  if (label === "SEFI") {
++    return "SEFI";
++  } else if (label === "WSCRT") {
++    return mode === EXCHANGE_MODE.FROM_SCRT ? "SSCRT" : "WSCRT";
++  } else if (label === "WSIENNA") {
++    return mode === EXCHANGE_MODE.FROM_SCRT ? "SIENNA" : "WSIENNA";
+   } else {
+-    return (mode === EXCHANGE_MODE.FROM_SCRT && token === TOKEN.ERC20 ? 'secret' : '') + label;
++    return (mode === EXCHANGE_MODE.FROM_SCRT && token === TOKEN.ERC20
++      ? "secret"
++      : "") + label;
+   }
+ };
+ 
+ export function notify(
+-  type: 'success' | 'error' | 'errorWithHash',
++  type: "success" | "error" | "errorWithHash",
+   msg: string,
+   hideAfterSec: number = 120,
+   txHash?: string,
+@@ -94,26 +94,27 @@ export function notify(
+ ) {
+   // if(globalThis.config.IS_MAINTENANCE === 'true') return;
+   let cogoType: string = type;
+-  if (type === 'error' && typeof(msg) === 'string') {
+-    msg = msg.replaceAll('Failed to decrypt the following error message: ', '');
+-    msg = msg.replace(/\. Decryption error of the error message:.+?/, '');
++  if (type === "error" && typeof msg === "string") {
++    msg = msg.replaceAll("Failed to decrypt the following error message: ", "");
++    msg = msg.replace(/\. Decryption error of the error message:.+?/, "");
+   }
+ 
+   let onClick = () => {
+     hide();
+   };
+-  if (type === 'errorWithHash') {
+-    cogoType = 'warn';
++  if (type === "errorWithHash") {
++    cogoType = "warn";
+     onClick = () => {
+-      const url = `https://secretnodes.com/secret/chains/secret-4/transactions/${txHash}`;
+-      const win = window.open(url, '_blank');
++      const url =
++        `https://secretnodes.com/secret/chains/secret-4/transactions/${txHash}`;
++      const win = window.open(url, "_blank");
+       win.focus();
+       hide();
+     };
+   }
+ 
+   const { hide } = cogoToast[cogoType](msg, {
+-    toastContainerID: 'notifications_container',
++    toastContainerID: "notifications_container",
+     hideAfter: hideAfterSec,
+     onClick,
+   });
+@@ -121,8 +122,11 @@ export function notify(
+ }
+ 
+ export const extractError = (result: any) => {
+-  if (result?.raw_log && result.raw_log.includes('Operation fell short of expected_return')) {
+-    return 'Swap fell short of expected return (slippage error)';
++  if (
++    result?.raw_log &&
++    result.raw_log.includes("Operation fell short of expected_return")
++  ) {
++    return "Swap fell short of expected return (slippage error)";
+   }
+   if (result?.raw_log) {
+     return result.raw_log;
+@@ -130,3 +134,5 @@ export const extractError = (result: any) => {
+   console.error(result);
+   return `Unknown error`;
+ };
++
++export * from "./utils/extractValueFromLogs";
+diff --git a/utils/secretjs/SecretSwapSite/types/SwapPair.ts b/utils/secretjs/SecretSwapSite/types/SwapPair.ts
+index 9a7a0f6..4a92b1f 100644
+--- a/utils/secretjs/SecretSwapSite/types/SwapPair.ts
++++ b/utils/secretjs/SecretSwapSite/types/SwapPair.ts
+@@ -1,14 +1,17 @@
+-import { Asset, NativeToken, Token } from './trade';
+-import { getSymbolsFromPair, Pair } from '../../../blockchain-bridge/scrt/swap';
+-import { SwapTokenMap } from './SwapToken';
+-import { CosmWasmClient } from 'secretjs';
++import { Asset, NativeToken, Token } from "./trade";
++import {
++  getSymbolsFromPair,
++  Pair,
++} from "@/utils/secretjs/SecretSwapSite/blockchain-bridge/scrt/swap";
++import { SwapTokenMap } from "./SwapToken";
++import { SecretNetworkClient } from "secretjs";
+ 
+ export class SwapPair {
+   pair_identifier: string;
+   asset_infos: Asset[];
+   contract_addr: string;
+   liquidity_token: string;
+-  static id_delimiter = '/';
++  static id_delimiter = "/";
+ 
+   constructor(
+     symbol0: string,
+@@ -40,7 +43,8 @@ export class SwapPair {
+   }
+ 
+   isSymbolInPair(symbol: string): boolean {
+-    return symbol.toUpperCase() === this.asset_infos[0].symbol || symbol.toUpperCase() === this.asset_infos[1].symbol;
++    return symbol.toUpperCase() === this.asset_infos[0].symbol ||
++      symbol.toUpperCase() === this.asset_infos[1].symbol;
+   }
+ 
+   humanizedSymbol(): string {
+@@ -62,8 +66,14 @@ export class SwapPair {
+   static fromPair(pair: Pair, tokenMap: SwapTokenMap) {
+     const identifiers = getSymbolsFromPair(pair);
+ 
+-    const symbol0 = tokenMap.get(identifiers[0]).symbol;
+-    const symbol1 = tokenMap.get(identifiers[1]).symbol;
++    const symbol0 = tokenMap.get(identifiers[0])?.symbol;
++    const symbol1 = tokenMap.get(identifiers[1])?.symbol;
++
++    if (!symbol0 || !symbol1) {
++      throw new Error(
++        "Failed to get token symbols for pair: " + JSON.stringify(pair),
++      );
++    }
+ 
+     const pair_identifier = pairIdFromTokenIds(identifiers[0], identifiers[1]);
+ 
+@@ -80,13 +90,25 @@ export class SwapPair {
+   }
+ 
+   private static code_hash: string;
+-  static getPairCodeHash(pair_address: string, secretjs: CosmWasmClient): Promise<string> {
++  static getPairCodeHash(
++    pair_address: string,
++    secretjs: SecretNetworkClient,
++  ): Promise<string> {
+     // TODO fix this if we ever have a factory with multiple pair_code_id
+     // For now this is the best way to avoid a lot of secretjs requests
+     return new Promise(async (accept, reject) => {
+       try {
+         if (!SwapPair.code_hash) {
+-          SwapPair.code_hash = await secretjs.getCodeHashByContractAddr(pair_address);
++          const hashResponse = await secretjs.query.compute
++            .codeHashByContractAddress(
++              { contract_address: pair_address },
++            );
++          if (!hashResponse.code_hash) {
++            throw new Error(
++              "Failed to get code hash from contract: " + pair_address,
++            );
++          }
++          SwapPair.code_hash = hashResponse.code_hash;
+         }
+         accept(SwapPair.code_hash);
+       } catch (e) {
