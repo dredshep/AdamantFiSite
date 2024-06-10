@@ -62,7 +62,7 @@ export class Asset {
   }
 
   static fromSwapToken(token: SwapToken): Asset {
-    let tokenInfo: TokenInfo = {
+    const tokenInfo: TokenInfo = {
       symbol: token.symbol,
       address: token?.address,
     };

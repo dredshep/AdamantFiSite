@@ -3,7 +3,7 @@ const BN = require('bn.js');
 
 //https://stackoverflow.com/questions/9461621/format-a-number-as-2-5k-if-a-thousand-or-more-otherwise-900
 export const nFormatter = (num, digits) => {
-  let si = [
+  const si = [
     { value: 1, symbol: '' },
     { value: 1e3, symbol: 'K' },
     { value: 1e6, symbol: 'M' },
@@ -12,7 +12,7 @@ export const nFormatter = (num, digits) => {
     { value: 1e15, symbol: 'P' },
     { value: 1e18, symbol: 'E' },
   ];
-  let rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
   let i;
   for (i = si.length - 1; i > 0; i--) {
     if (num >= si[i].value) {
@@ -23,7 +23,7 @@ export const nFormatter = (num, digits) => {
 };
 
 export const numberFormatter = (num, digits) => {
-  let si = [
+  const si = [
     { value: 1, symbol: '' },
     { value: 1e3, symbol: 'K' },
     { value: 1e6, symbol: 'M' },
@@ -32,7 +32,7 @@ export const numberFormatter = (num, digits) => {
     { value: 1e15, symbol: 'Q' },
     { value: 1e18, symbol: 'Qi' },
   ];
-  let rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
   let i;
   for (i = si.length - 1; i > 0; i--) {
     if (num >= si[i].value) {
@@ -58,7 +58,7 @@ export const balanceNumberFormat = new Intl.NumberFormat('en-US', {
 
 export const valueToDecimals = (input: string, numDecimalsInResult: number): string => {
   let numDecimalsInInput;
-  let decimalPos = input.indexOf('.');
+  const decimalPos = input.indexOf('.');
 
   if (decimalPos !== -1) {
     numDecimalsInInput = input.length - decimalPos - 1;

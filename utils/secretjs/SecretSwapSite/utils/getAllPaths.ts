@@ -3,8 +3,8 @@ import { cloneDeep } from 'lodash';
 const MAX_PATH_LENGTH = 5; // The longest path this function will find.  Complexity is O(n!)
 
 export function getAllPaths(graph, tokenSource, tokenDest, tokens): string[][] {
-  let currentPath = [];
-  let pathList = [];
+  const currentPath = [];
+  const pathList = [];
 
   dfs(tokenSource, tokenDest); // Call recursive function
 
@@ -28,7 +28,7 @@ export function getAllPaths(graph, tokenSource, tokenDest, tokens): string[][] {
 
     // Recur for all the vertices adjacent to current vertex
     if (currentPath.length < MAX_PATH_LENGTH) {
-      for (let i in graph[tokenA]) {
+      for (const i in graph[tokenA]) {
         dfs(i, tokenB);
       }
     }

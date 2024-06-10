@@ -56,7 +56,7 @@ const TokenPage = () => {
     : null;
 
   if (!details) {
-    return <p>Token not found</p>; // TODO: Better Not Found page
+    return <div>Token not found</div>; // TODO: Better Not Found page
   }
 
   return (
@@ -113,7 +113,7 @@ const TokenPage = () => {
           {/* About Text */}
           <div>
             <h2 className="text-xl font-bold mb-4">About {details.name}</h2>
-            <p>{details.about}</p>
+            <div>{details.about}</div>
           </div>
         </div>
       </div>

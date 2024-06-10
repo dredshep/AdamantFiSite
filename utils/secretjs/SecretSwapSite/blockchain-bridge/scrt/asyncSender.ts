@@ -1,43 +1,67 @@
-import { SigningCosmWasmClient } from 'secretjs';
-import { Coin, StdFee } from 'secretjs/types/types';
-import retry from 'async-await-retry';
-import { sleep } from '../utils';
-import stores from 'stores';
-import { extractError } from './utils';
+import { Coin, SecretNetworkClient } from "secretjs";
+import retry from "async-await-retry";
+import { sleep } from "../utils";
+import { extractError } from "./utils";
+import { HandleMsg } from "@shadeprotocol/shadejs";
 class CustomError extends Error {
   public txHash: string;
-}
-const blacklistedTxs = ['burn'];
 
-export class AsyncSender extends SigningCosmWasmClient {
+  constructor(message?: string) {
+    super(message);
+    this.txHash = "";
+  }
+}
+
+type StdFee = {
+  amount: readonly Coin[];
+  gas: number;
+};
+
+export class AsyncSender extends SecretNetworkClient {
   asyncExecute = async (
     contractAddress: string,
-    handleMsg: object,
+    senderAddress: string,
+    handleMsg: HandleMsg,
     memo?: string,
     transferAmount?: readonly Coin[],
     fee?: StdFee,
   ) => {
     let tx;
-    const key = Object.keys(handleMsg)[0];
-    if (globalThis.config.IS_MAINTENANCE === 'true' && blacklistedTxs.includes(key)) {
-      stores.user.setModalOpen(true);
-      throw new CustomError('We are working on add functionality back, please,try later.');
-    }
     try {
-      tx = await this.execute(contractAddress, handleMsg, memo, transferAmount, fee);
+      tx = await this.tx.compute.executeContract(
+        {
+          contract_address: contractAddress,
+          msg: handleMsg,
+          sender: senderAddress,
+          sent_funds: [{
+            denom: "uscrt",
+            amount: transferAmount || "",
+          } as Coin],
+        },
+        {
+          memo,
+          gasLimit: fee?.gas || 2000000,
+          feeDenom: fee?.amount[0].denom || "uscrt",
+          feeGranter: senderAddress,
+        },
+      );
     } catch (e) {
       console.error(`failed to broadcast tx: ${e}`);
-      throw new CustomError('Failed to broadcast transaction');
+      throw new CustomError("Failed to broadcast transaction");
     }
 
     try {
       // optimistic
       await sleep(3000);
       const res = await retry(
-        () => {
-          return this.restClient.txById(tx.transactionHash);
+        async () => {
+          const result = await this.query.getTx(tx.transactionHash);
+          if (!result) {
+            throw new Error("Transaction not found");
+          }
+          return result;
         },
-        null,
+        undefined,
         { retriesMax: 5, interval: 6000 },
       );
 
@@ -52,8 +76,10 @@ export class AsyncSender extends SigningCosmWasmClient {
       };
     } catch (e) {
       console.error(`failed to broadcast tx: ${e}`);
-      if (e.toString().includes('not found (HTTP 404)')) {
-        e = new CustomError(`Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`);
+      if ((e as Error).toString().includes("not found (HTTP 404)")) {
+        e = new CustomError(
+          `Timed out waiting for transaction. Your transaction is pending and may be processed soon. Check an explorer to confirm.`,
+        );
       }
       // error.txHash = tx.transactionHash;
       throw e;

@@ -11,7 +11,7 @@ import { useTokenStore } from "@/store/tokenStore";
 import { useModalStore } from "@/store/modalStore";
 
 const WalletModal: React.FC = () => {
-  const { isWalletModalOpen, closeWalletModal } = useModalStore();
+  const { closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
   const { listAllTokens, getTokenByAddress } = useTokenStore();
   const tokens = listAllTokens();
@@ -42,9 +42,9 @@ const WalletModal: React.FC = () => {
             size={48}
           />
           <div className="mx-3">
-            <p className="font-bold">
+            <div className="font-bold">
               {truncatedAddress || "secret1 no address"}
-            </p>
+            </div>
           </div>
           <RiFileCopyLine
             className="text-gray-500 p-1 w-6 h-6 rounded-full hover:bg-opacity-10 duration-150 transition-all hover:bg-white cursor-pointer text-base"
@@ -61,8 +61,8 @@ const WalletModal: React.FC = () => {
         />
       </div>
       <div className="my-8 px-6">
-        <p className="text-lg font-semibold text-gray-500">Your balance</p>
-        <p className="text-4xl font-bold top-1">${balance}</p>
+        <div className="text-lg font-semibold text-gray-500">Your balance</div>
+        <div className="text-4xl font-bold top-1">${balance}</div>
       </div>
       <div className="px-6">
         <button className="w-full py-3 rounded-xl bg-adamant-accentBg text-black font-bold my-4 uppercase">
@@ -70,9 +70,9 @@ const WalletModal: React.FC = () => {
         </button>
       </div>
       <div>
-        <p className="text-sm font-semibold mb-2 ml-6 uppercase text-gray-500">
+        <div className="text-sm font-semibold mb-2 ml-6 uppercase text-gray-500">
           Tokens
-        </p>
+        </div>
         {tokens?.map((token, index) => (
           <div
             key={index}
@@ -88,10 +88,10 @@ const WalletModal: React.FC = () => {
             <span className="font-bold">{token.balance}</span>
           </div>
         )) || (
-          <p>
+          <div>
             Token store not correctly initialized. Check your internet
             connection or availability of the API server.
-          </p>
+          </div>
         )}
       </div>
     </div>

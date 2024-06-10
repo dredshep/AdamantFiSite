@@ -53,9 +53,9 @@ function CoolBox({
         <h1 className="text-2xl font-bold px-10 text-center leading-10 mt-7">
           {mainText}
         </h1>
-        <p className="text-lg flex-grow leading-8 mt-1 mb-10">
+        <div className="text-lg flex-grow leading-8 mt-1 mb-10">
           {secondaryText}
-        </p>
+        </div>
         <Link
           href={link}
           className={cn(

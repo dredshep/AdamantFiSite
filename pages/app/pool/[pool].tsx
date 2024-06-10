@@ -86,7 +86,7 @@ export default function PoolPage() {
         {/* About Text */}
         <div>
           <h2 className="text-xl font-bold mb-4">About {details.name}</h2>
-          <p>{details.about}</p>
+          <div>{details.about}</div>
         </div>
       </div>
     </AppLayout>

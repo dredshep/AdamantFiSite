@@ -13,7 +13,7 @@ export type SwapToken = {
   address?: string;
   name?: string;
   balance?: string;
-  price?: Number;
+  price?: number;
 };
 
 export const getPricesForJSONTokens = async () => {
@@ -49,7 +49,7 @@ export const SwapTokenFromSnip20Params = (address: string, token: Snip20TokenInf
 };
 
 export const TokenMapfromITokenInfo = async (tokens: ITokenInfo[]): Promise<SwapTokenMap> => {
-  let swapTokens: SwapTokenMap = new Map<string, SwapToken>();
+  const swapTokens: SwapTokenMap = new Map<string, SwapToken>();
 
   const tokenPrices =  await getPricesForJSONTokens()
 

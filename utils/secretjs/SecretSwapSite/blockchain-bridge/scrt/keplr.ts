@@ -8,7 +8,7 @@ export const getViewingKey = async (params: {
   address: string;
   currentBalance?: string;
 }) => {
-  let { keplr, chainId, address, currentBalance } = params;
+  const { keplr, chainId, address, currentBalance } = params;
 
   if (typeof currentBalance === 'string' && currentBalance.includes(ERROR_WRONG_VIEWING_KEY)) {
     // In case this tx was set_viewing_key in order to correct the wrong viewing key error

@@ -9,7 +9,7 @@ export const isClaimedSefiRewardsScrt = async (params: {
   const { secretjs, index } = params;
   console.log(index);
   try {
-    let resp = await secretjs.queryContractSmart(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
+    const resp = await secretjs.queryContractSmart(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
       is_claimed: { index: index.toString() },
     });
 
@@ -25,14 +25,14 @@ export const ClaimAirdrop = async (params: { secretjs: AsyncSender; address: str
   const res = await getScrtProof(address);
   const proof = res.proof;
 
-  let execMsg = {
+  const execMsg = {
     index: proof.index.toString(),
     address: address,
     amount: parseInt(proof.amount, 16).toString(),
     proof: proof.proof.map(p => p.substring(2)), // map to remove the '0x's
   };
 
-  let result = await secretjs.asyncExecute(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
+  const result = await secretjs.asyncExecute(globalThis.config.SCRT_DIST_TOKEN_ADDRESS, {
     claim: execMsg,
   });
 

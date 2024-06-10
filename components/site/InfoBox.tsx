@@ -23,9 +23,9 @@ function InfoBox({
       )}
     >
       <h1 className="text-2xl font-bold leading-8">{title}</h1>
-      <p className="text-lg opacity-50 leading-8 mt-2 font-bold">
+      <div className="text-lg opacity-50 leading-8 mt-2 font-bold">
         {description}
-      </p>
+      </div>
       <Link
         href={link}
         className={cn(
