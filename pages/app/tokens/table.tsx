@@ -4,7 +4,6 @@ import { Token, TokensResponse } from "@/types/api/TokensResponse";
 import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
 import AppLayout from "@/components/app/Global/AppLayout";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import {
   FinancialDataRow,
   FinancialTableSearchBar,
@@ -48,7 +47,7 @@ const TokensPage: React.FC<TokensPageProps> = ({ tokens }) => {
           ]}
         />
         <div className="rounded-b-[10px] overflow-hidden">
-          {tokens.map((token, index) => (
+          {tokens.map((token) => (
             <Link
               key={token._id}
               href={`/app/token/${token.src_network}/${token.src_address}`}

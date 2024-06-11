@@ -1,5 +1,4 @@
 // Import necessary hooks and components
-import React, { useState } from "react";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import AppLayout from "@/components/app/Global/AppLayout";
 import TwoTokenFormBox from "@/components/app/Shared/Forms/TwoTokenFormBox";

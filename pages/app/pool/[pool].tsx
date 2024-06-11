@@ -3,7 +3,6 @@ import AppLayout from "@/components/app/Global/AppLayout";
 import React, { useEffect, useState } from "react";
 import { TablePool } from "@/types";
 import { getTablePools } from "@/utils/apis/getTablePools";
-import { CaretRightIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/app/Breadcrumb";
 

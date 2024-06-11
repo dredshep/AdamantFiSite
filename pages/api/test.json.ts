@@ -31,7 +31,21 @@ export default async function handleRawApiRequest(
     const tokens = [...tokens1.tokens, ...tokens2.tokens, ...tokens3.tokens];
 
     res.status(200).json(tokens);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Something went wrong" });
+  } catch (error) {
+    // res.status(500).json({ error: error.message || "Something went wrong" });
+
+    // gota use the address of the file so we know where we are debugging
+
+    if (error instanceof Error) {
+      res.status(500).json({
+        error:
+          "@/pages/api/rawApiEndpoint.ts:" +
+          (error.message || "Something went wrong"),
+      });
+    } else {
+      res.status(500).json({
+        error: "@/pages/api/rawApiEndpoint.ts:An unknown error occurred",
+      });
+    }
   }
 }

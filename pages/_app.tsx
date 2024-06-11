@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
 import { useStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
+import { SwappableToken } from "@/types";
 
 export default function App({ Component, pageProps }: AppProps) {
   const setSwappableTokens = useStore((state) => state.setSwappableTokens);
@@ -15,10 +16,13 @@ export default function App({ Component, pageProps }: AppProps) {
     const fetchTokens = async () => {
       const tokens = await getSwappableTokens();
       setSwappableTokens(tokens);
-      const indexedTokens = tokens.reduce((acc: Record<string, any>, token) => {
-        acc[token.address] = token;
-        return acc;
-      }, {});
+      const indexedTokens = tokens.reduce(
+        (acc: Record<string, SwappableToken>, token) => {
+          acc[token.address] = token;
+          return acc;
+        },
+        {}
+      );
       initializeTokens(indexedTokens);
     };
 
@@ -26,7 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [setSwappableTokens, initializeTokens]);
   return (
     // <Theme color="black" grayColor="olive" accentColor="amber">
-      <Component {...pageProps} />
+    <Component {...pageProps} />
     // {/* </Theme> */}
   );
 }

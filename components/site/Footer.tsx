@@ -1,11 +1,4 @@
-import {
-  FaDiscord,
-  FaTwitter,
-  FaMediumM,
-  FaRedditAlien,
-  FaGithub,
-} from "react-icons/fa";
-import { SiTelegram } from "react-icons/si";
+import { FaDiscord, FaTwitter, FaGithub } from "react-icons/fa";
 import Link from "next/link";
 
 const Footer = () => {

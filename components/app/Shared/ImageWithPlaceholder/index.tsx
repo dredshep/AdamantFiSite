@@ -13,8 +13,6 @@ interface ImageWithPlaceholderProps {
 function ImageWithPlaceholder({
   imageUrl,
   placeholderUrl,
-  index,
-  length,
   alt,
   size,
 }: ImageWithPlaceholderProps) {
@@ -32,8 +30,8 @@ function ImageWithPlaceholder({
       alt={alt}
       onError={handleError}
       className="rounded-circle object-cover rounded-full"
-      height={pixelSize} // Dynamic size
-      width={pixelSize} // Dynamic size
+      height={pixelSize}
+      width={pixelSize}
     />
   );
 }

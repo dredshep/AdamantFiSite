@@ -1,5 +1,5 @@
 import { VegaLite, VisualizationSpec } from "react-vega";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 
 const ResponsiveVegaChart = ({
   spec,

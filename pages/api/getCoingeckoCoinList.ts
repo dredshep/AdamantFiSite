@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { fetchFromCoinGecko } from "@/utils/apis/coingecko-utils";
+import { handleApiError } from "@/utils/apis/handleApiError";
 
 export default async function getCoingeckoCoinList(
   req: NextApiRequest,
@@ -8,9 +9,7 @@ export default async function getCoingeckoCoinList(
   try {
     const data = await fetchFromCoinGecko(`/coins/list`);
     res.status(200).json(data);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    handleApiError(error, res);
   }
 }
-
-// http://localhost:3000/api/getCoingeckoCoinList

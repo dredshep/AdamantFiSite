@@ -1,7 +1,6 @@
 // Import necessary hooks and components
 import React, { useState } from "react";
-import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
-import AppLayout from "@/components/app/Global/AppLayout";
+// import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import cn from "classnames";
 import AddLiquidityPrompt from "@/components/app/Shared/AddLiquidityText";
 import TabTriangle from "@/components/app/Shared/TabTriangle";
@@ -11,10 +10,10 @@ interface Tab {
   Component: React.FC;
 }
 
-const tabs: Tab[] = [
-  { label: "SWAP", Component: SwapForm },
-  { label: "SEND", Component: SwapForm },
-];
+// const tabs: Tab[] = [
+//   { label: "SWAP", Component: SwapForm },
+//   { label: "SEND", Component: SwapForm },
+// ];
 
 type TwoTokenFormBoxProps = {
   tabs: Tab[];

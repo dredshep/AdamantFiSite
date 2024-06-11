@@ -36,8 +36,16 @@ async function handler(
     const combinedTokens = [...tokens1, ...tokens2];
 
     res.status(200).json({ tokens: combinedTokens });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Something went wrong" });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({ error: error.message || "Something went wrong" });
+    } else {
+      res
+        .status(500)
+        .json({
+          error: "An unknown error occurred at @pages/api/tokens_legacy.ts",
+        });
+    }
   }
 }
 

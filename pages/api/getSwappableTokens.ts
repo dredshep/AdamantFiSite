@@ -2,7 +2,9 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { AzureTokensToken } from "@/types/api/azure/tokens"; // Adjust the import path as necessary
 import { fetchAndTransform } from "@/utils/apis/fetchAndTransform";
 
-function transformTokensData(data: any): AzureTokensToken[] {
+function transformTokensData(data: {
+  tokens: AzureTokensToken[];
+}): AzureTokensToken[] {
   return data.tokens;
 }
 
@@ -21,12 +23,18 @@ export default async function handleTransformedApiRequest(
     );
 
     res.status(200).json(tokens);
-  } catch (error: any) {
-    res.status(500).json({
-      error:
-        "@/pages/api/getSwappableTokens.ts:" +
-        (error.message || "Something went wrong"),
-    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        error:
+          "@/pages/api/getSwappableTokens.ts:" +
+          (error.message || "Something went wrong"),
+      });
+    } else {
+      res.status(500).json({
+        error: "@/pages/api/getSwappableTokens.ts:An unknown error occurred",
+      });
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { fetchFromCoinGecko } from "@/utils/apis/coingecko-utils";
+import { handleApiError } from "@/utils/apis/handleApiError";
 
 export default async function getCoingeckoPrice(
   req: NextApiRequest,
@@ -16,9 +17,7 @@ export default async function getCoingeckoPrice(
       `/coins/markets?vs_currency=usd&ids=${symbol}`
     );
     res.status(200).json(data);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    handleApiError(error, res);
   }
 }
-
-// http://localhost:3000/api/getCoingeckoPrice?symbol=bitcoin

@@ -1,9 +1,7 @@
 import React, { useState } from "react";
-import { FaPencilAlt, FaCheck } from "react-icons/fa"; // Importing check icon
+import { FaCheck } from "react-icons/fa"; // Importing check icon
 import { useStore } from "@/store/swapStore"; // Adjust the import path as necessary
 import { StoreState } from "@/types";
-import { Pencil, PencilLine } from "lucide-react";
-import { Pencil1Icon, Pencil2Icon } from "@radix-ui/react-icons";
 import { RiPencilFill } from "react-icons/ri";
 
 interface DynamicFieldProps {

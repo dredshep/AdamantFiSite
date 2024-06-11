@@ -13,7 +13,6 @@ interface TokenSelectionModalProps {
 }
 
 const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
-  isOpen,
   onClose,
   inputIdentifier,
 }) => {

@@ -2,7 +2,6 @@ import { Jura } from "next/font/google";
 import AppLayout from "@/components/app/Global/AppLayout";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import { useStore } from "@/store/swapStore";
-import { useEffect } from "react";
 import { useTokenStore } from "@/store/tokenStore";
 
 const jura = Jura({ subsets: ["latin"] });

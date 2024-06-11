@@ -1,4 +1,5 @@
 import { SecretString } from "@/types";
+import { Window as KeplrWindow } from "@keplr-wallet/types";
 
 type RegisterTokenButtonProps = {
   tokenAddress: SecretString;
@@ -7,12 +8,16 @@ type RegisterTokenButtonProps = {
 const RegisterTokenButton = ({ tokenAddress }: RegisterTokenButtonProps) => {
   const handleRegisterToken = async () => {
     try {
-      if (!(window as unknown as { keplr: any }).keplr) {
+      if (!(window as unknown as KeplrWindow).keplr) {
         alert("Keplr extension not detected.");
         return;
       }
+      if (!process.env.NEXT_PUBLIC_CHAIN_ID) {
+        alert("Chain ID not set in environment.");
+        return;
+      }
 
-      await (window as unknown as { keplr: any }).keplr.suggestToken(
+      await (window as unknown as KeplrWindow).keplr!.suggestToken(
         process.env.NEXT_PUBLIC_CHAIN_ID,
         tokenAddress
       );

@@ -22,10 +22,14 @@ const SyncViewingKeyButton = ({
       }
       // Request the user's permission to fetch the viewing key
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!; // Ensure this is set in your environment
-      const viewingKey = await (window.keplr as any).getSecret20ViewingKey(
-        chainId,
-        tokenAddress
-      );
+      const viewingKey = await (
+        window.keplr as unknown as {
+          getSecret20ViewingKey: (
+            chainId: string,
+            contractAddress: string
+          ) => Promise<string>;
+        }
+      ).getSecret20ViewingKey(chainId, tokenAddress);
 
       // Store the viewing key in the Zustand store
       setViewingKey(tokenAddress, viewingKey);
