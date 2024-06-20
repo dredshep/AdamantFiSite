@@ -1,3 +1,4 @@
+import useGlobalConfigStore from "@/store/useGlobalConfigStore";
 import { AsyncSender } from "./blockchain-bridge/scrt/asyncSender";
 import { getFeeForExecute } from "./blockchain-bridge/scrt/utils";
 import { GAS_FOR_BASE_SWAP_ROUTE } from "@/utils/secretjs/SecretSwapSite/utils/gasPrices";
@@ -16,9 +17,11 @@ export function executeRouterSwap(
   expected_return: string,
   bestRoute: string[]
 ) {
+  const { AMM_ROUTER_CONTRACT } = useGlobalConfigStore.getState().config;
   if (fromToken === "uscrt") {
     return secretjsSender.asyncExecute(
-      globalThis.config.AMM_ROUTER_CONTRACT,
+      AMM_ROUTER_CONTRACT,
+      secretAddress,
       {
         receive: {
           from: secretAddress,
@@ -44,9 +47,10 @@ export function executeRouterSwap(
   } else {
     return secretjsSender.asyncExecute(
       fromToken,
+      secretAddress,
       {
         send: {
-          recipient: globalThis.config.AMM_ROUTER_CONTRACT,
+          recipient: AMM_ROUTER_CONTRACT,
           amount: fromAmount,
           msg: btoa(
             JSON.stringify({

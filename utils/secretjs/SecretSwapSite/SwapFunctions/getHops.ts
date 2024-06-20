@@ -2,16 +2,15 @@ import { SecretNetworkClient } from "secretjs";
 import { PairMap, SwapPair } from "../types/SwapPair";
 import { Token } from "../types/trade";
 
-// Function to get token details
-async function getTokenDetails(
+function getTokenDetails(
   fromToken: string,
-  pair: SwapPair | undefined,
-): Promise<{ address: string; code_hash: string } | "scrt"> {
+  pair: SwapPair | undefined
+): { address: string; code_hash: string } | "scrt" {
   if (fromToken === "uscrt") {
     return "scrt";
   } else {
     const tokenInfo = pair?.asset_infos.find(
-      (a) => (a.info as Token)?.token?.contract_addr === fromToken,
+      (a) => (a.info as Token)?.token?.contract_addr === fromToken
     )?.info as Token;
 
     return {
@@ -21,27 +20,27 @@ async function getTokenDetails(
   }
 }
 
-// Function to get the pair code hash
-async function getPairCodeHash(
+// getTokenDetails("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", undefined);
+
+function getPairCodeHash(
   pair_address: string,
-  secretjs: SecretNetworkClient,
+  secretjs: SecretNetworkClient
 ): Promise<string> {
   return SwapPair.getPairCodeHash(pair_address, secretjs);
 }
 
-// Function to construct a hop
 async function constructHop(
   fromToken: string,
   toToken: string,
   pairs: PairMap,
-  secretjs: SecretNetworkClient,
+  secretjs: SecretNetworkClient
 ) {
   const pair = pairs.get(`${fromToken}${SwapPair.id_delimiter}${toToken}`);
   if (!pair) {
-    return null; // If no pair found, return null
+    return null;
   }
 
-  const from_token = await getTokenDetails(fromToken, pair);
+  const from_token = getTokenDetails(fromToken, pair);
   const pair_code_hash = await getPairCodeHash(pair.contract_addr, secretjs);
 
   return {
@@ -51,18 +50,16 @@ async function constructHop(
   };
 }
 
-// Updated getHops function using the refactored approach
 export async function getHops(
   bestRoute: string[],
   pairs: PairMap,
-  secretjs: SecretNetworkClient,
+  secretjs: SecretNetworkClient
 ) {
   const hops = await Promise.all(
     bestRoute.slice(0, -1).map(async (fromToken, idx) => {
       const toToken = bestRoute[idx + 1];
       return constructHop(fromToken, toToken, pairs, secretjs);
-    }),
+    })
   );
-
   return hops.filter((x) => x !== null);
 }

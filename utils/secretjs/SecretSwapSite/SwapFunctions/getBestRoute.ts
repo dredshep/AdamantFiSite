@@ -15,27 +15,25 @@ export type RouteOutput = {
   fromWithGas?: BigNumber;
 };
 
-export function getBestRoute(
-  {
-    fromInput,
-    toInput,
-    cachedGasFeesUnfilledCoin,
-    isToEstimated,
-    routes,
-    tokens,
-    pairs,
-    balances,
-  }: {
-    fromInput: number;
-    toInput: number;
-    cachedGasFeesUnfilledCoin: number[];
-    isToEstimated: boolean;
-    routes: string[][];
-    tokens: SwapTokenMap;
-    pairs: Map<string, SwapPair>;
-    balances: { [key: string]: string };
-  },
-) {
+export function getBestRoute({
+  fromInput,
+  toInput,
+  cachedGasFeesUnfilledCoin,
+  isToEstimated,
+  routes,
+  tokens,
+  pairs,
+  balances,
+}: {
+  fromInput: number;
+  toInput: number;
+  cachedGasFeesUnfilledCoin: number[];
+  isToEstimated: boolean;
+  routes: string[][];
+  tokens: SwapTokenMap;
+  pairs: Map<string, SwapPair>;
+  balances: { [key: string]: string };
+}) {
   const allRoutesOutputs: Array<RouteOutput> = [];
   let bestRoute: string[] | null = null;
 
@@ -54,7 +52,7 @@ export function getBestRoute(
         const fromToken = route[i];
         const toToken = route[i + 1];
         const pair: SwapPair | undefined = pairs.get(
-          `${fromToken}${SwapPair.id_delimiter}${toToken}`,
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`
         );
         if (!pair) {
           break;
@@ -65,7 +63,7 @@ export function getBestRoute(
           toToken,
           pair,
           tokens,
-          balances,
+          balances
         );
 
         const offer_amount = from;
@@ -82,7 +80,7 @@ export function getBestRoute(
         const { return_amount } = compute_swap(
           offer_pool,
           ask_pool,
-          offer_amount,
+          offer_amount
         );
 
         if (return_amount.isNaN() || return_amount.isLessThanOrEqualTo(0)) {
@@ -117,7 +115,7 @@ export function getBestRoute(
         const fromToken = route[i - 1];
         const toToken = route[i];
         const pair: SwapPair | undefined = pairs.get(
-          `${fromToken}${SwapPair.id_delimiter}${toToken}`,
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`
         );
         if (!pair) {
           break;
@@ -127,7 +125,7 @@ export function getBestRoute(
           toToken,
           pair,
           tokens,
-          balances,
+          balances
         );
 
         const ask_amount = to;
@@ -145,7 +143,7 @@ export function getBestRoute(
         const { offer_amount } = compute_offer_amount(
           offer_pool,
           ask_pool,
-          ask_amount,
+          ask_amount
         );
 
         if (offer_amount.isNaN() || offer_amount.isLessThanOrEqualTo(0)) {
@@ -162,7 +160,7 @@ export function getBestRoute(
       }
 
       const fromWithGas = from.plus(
-        cachedGasFeesUnfilledCoin[route.length - 1],
+        cachedGasFeesUnfilledCoin[route.length - 1]
       );
 
       allRoutesOutputs.push({ route, fromOutput: from, fromWithGas });
@@ -177,3 +175,15 @@ export function getBestRoute(
   }
   return { bestRoute, allRoutesOutputs, bestRouteToInput, bestRouteFromInput };
 }
+
+// sample execution:
+// getBestRoute({
+//   fromInput: 1,
+//   toInput: 1,
+//   cachedGasFeesUnfilledCoin: [0.12],
+//   isToEstimated: true,
+//   routes: [["a", "b"]],
+//   tokens: { a: "a", b: "b" },
+//   pairs: new Map([["a:b", { id: "a:b" }]]),
+//   balances: { a: "a", b: "b" },
+// });
