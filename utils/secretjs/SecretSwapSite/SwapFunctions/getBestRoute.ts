@@ -175,15 +175,3 @@ export function getBestRoute({
   }
   return { bestRoute, allRoutesOutputs, bestRouteToInput, bestRouteFromInput };
 }
-
-// sample execution:
-// getBestRoute({
-//   fromInput: 1,
-//   toInput: 1,
-//   cachedGasFeesUnfilledCoin: [0.12],
-//   isToEstimated: true,
-//   routes: [["a", "b"]],
-//   tokens: { a: "a", b: "b" },
-//   pairs: new Map([["a:b", { id: "a:b" }]]),
-//   balances: { a: "a", b: "b" },
-// });

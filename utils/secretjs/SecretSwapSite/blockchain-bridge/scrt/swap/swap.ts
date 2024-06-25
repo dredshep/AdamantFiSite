@@ -1,342 +1,84 @@
+import { MsgExecuteContract, SecretNetworkClient, Wallet } from "secretjs";
 import BigNumber from "bignumber.js";
-// import { storeTxResultLocally } from 'pages/Swap/utils';
-// import { ExecuteResult, SigningCosmWasmClient, CosmWasmClient } from 'secretjs';
 import {
-  Asset,
-  Currency,
-  NativeToken,
-  Token,
-  Trade,
-  TradeType,
-} from "../TokenModalTypes/types/trade";
-import { GetContractCodeHash } from "../snip20/GetContractCodeHash";
-import {
-  // extractValueFromLogs,
-  getFeeForExecute,
-  validateBech32Address,
-} from "../utils";
-import { AsyncSender } from "../asyncSender";
-import { GAS_FOR_CREATE_PAIR } from "../../../utils/gasPrices";
+  Keplr,
+  OfflineAminoSigner,
+  OfflineDirectSigner,
+  Window,
+} from "@keplr-wallet/types";
+import { getBestRoute } from "../../../SwapFunctions/getBestRoute";
+import { getHops } from "../../../SwapFunctions/getHops";
+import { executeRouterSwap } from "../../../executeRouterSwap";
 
-export const buildAssetInfo = (currency: Currency) => {
-  if (currency.token.info.type === "native_token") {
-    return {
-      info: { native_token: currency.token.info.native_token },
-      amount: currency.amount,
-    };
-  } else {
-    return {
-      info: {
-        token: {
-          contract_addr: currency.token.info.token.contract_addr,
-          token_code_hash: currency.token.info.token.token_code_hash,
-          viewing_key: "",
-        },
-      },
-      amount: currency.amount,
-    };
-  }
+// Keplr Wallet Integration
+const connectKeplr = async () => {
+  await (window as Window).keplr?.enable("secret-4");
+  const offlineSigner = (window as Window).getOfflineSigner?.("secret-4");
+  const accounts = await offlineSigner?.getAccounts();
+  return {
+    address: accounts?.[0].address,
+    signer: offlineSigner,
+  };
 };
 
-export interface ReverseSimulationResponse {
-  offer_amount: string;
-  spread_amount: string;
-  commission_amount: string;
-}
-
-export interface SimulationReponse {
-  return_amount: string;
-  spread_amount: string;
-  commission_amount: string;
-}
-
-export interface PoolResponse {
-  assets: Asset[];
-  total_share: string;
-}
-
-export const SimulateResult = async (params: {
-  secretjs: SigningCosmWasmClient;
-  trade: Trade;
-  pair: string;
-}): Promise<SimulationReponse> => {
-  const { secretjs, trade, pair } = params;
-
-  //console.log(`trade: ${pair}: ${JSON.stringify(buildAssetInfo(trade.inputAmount))}`)
-
-  return await secretjs.queryContractSmart(pair, {
-    simulation: {
-      offer_asset: buildAssetInfo(trade.inputAmount),
-    },
+const createClient = async (
+  signer: OfflineAminoSigner & OfflineDirectSigner,
+) => {
+  const accounts = await signer.getAccounts();
+  const client = new SecretNetworkClient({
+    url: "https://grpc-web.secret-4.api.trivium.network:9091",
+    wallet: signer,
+    walletAddress: accounts[0].address,
+    chainId: "secret-4",
   });
+  return client;
 };
 
-export const ReverseSimulateResult = async (params: {
-  secretjs: SigningCosmWasmClient;
-  trade: Trade;
-  pair: string;
-}): Promise<ReverseSimulationResponse> => {
-  const { secretjs, trade, pair } = params;
+(async () => {
+  const keplrConnection = await connectKeplr();
+  if (!keplrConnection.signer) {
+    console.error("No signer found");
+    return;
+  }
+  const secretjs = await createClient(keplrConnection.signer);
 
-  console.log(
-    `trade: ${pair}: ${JSON.stringify(buildAssetInfo(trade.outputAmount))}`,
-  );
+  // Define the parameters for the swap
+  const fromToken = "secret1...";
+  const toToken = "secret2...";
+  const fromAmount = "1000000"; // Example amount
+  const expectedReturn = "990000"; // Example expected return
 
-  return await secretjs.queryContractSmart(pair, {
-    reverse_simulation: {
-      ask_asset: buildAssetInfo(trade.outputAmount),
+  const bestRouteData = getBestRoute({
+    fromInput: 1,
+    toInput: 1,
+    cachedGasFeesUnfilledCoin: [0.12],
+    isToEstimated: true,
+    routes: [["a", "b"]],
+    tokens: {
+      a: { address: "secret1...", code_hash: "..." },
+      b: { address: "secret2...", code_hash: "..." },
     },
+    pairs: new Map([["a:b", { contract_addr: "secret1...", asset_infos: [] }]]),
+    balances: { a: "1000000", b: "1000000" },
   });
-};
 
-interface GenericSimulationResult {
-  returned_asset: string;
-  commission_amount: string;
-  spread_amount: string;
-}
+  if (bestRouteData.bestRoute) {
+    const hops = await getHops(
+      bestRouteData.bestRoute,
+      bestRouteData.pairs,
+      secretjs,
+    );
 
-export const handleSimulation = async (
-  trade: Trade,
-  secretjs: AsyncSender,
-  pair: string,
-  swapDirection: TradeType,
-): Promise<GenericSimulationResult> => {
-  let returned_asset = "0";
-  let commission_amount = "0";
-  let spread_amount = "0";
-  switch (swapDirection) {
-    case TradeType.EXACT_INPUT:
-      if (isNaN(Number(trade.inputAmount))) {
-        console.error(1);
-      }
-
-      const result: SimulationReponse = await SimulateResult({
-        secretjs,
-        trade,
-        pair,
-      }).catch((err) => {
-        throw new Error(`Failed to run simulation: ${err}`);
-      });
-
-      returned_asset = result.return_amount;
-      commission_amount = result.commission_amount;
-      spread_amount = result.spread_amount;
-
-      // console.log(
-      //   'sim',
-      //   `return_amount=${returned_asset}`,
-      //   `commission_amount=${commission_amount}`,
-      //   `spread_amount=${spread_amount}`,
-      // );
-
-      break;
-    case TradeType.EXACT_OUTPUT:
-      if (isNaN(Number(trade.outputAmount))) {
-        console.error(2);
-      }
-
-      const resultReverse: ReverseSimulationResponse =
-        await ReverseSimulateResult({
-          secretjs,
-          trade,
-          pair,
-        }).catch((err) => {
-          throw new Error(`Failed to run reverse simulation: ${err}`);
-        });
-      returned_asset = resultReverse.offer_amount;
-      commission_amount = resultReverse.commission_amount;
-      spread_amount = resultReverse.spread_amount;
-
-      // console.log(
-      //   'sim reverse',
-      //   `offer_amount=${returned_asset}`,
-      //   `commission_amount=${commission_amount}`,
-      //   `spread_amount=${spread_amount}`,
-      // );
-
-      break;
-  }
-
-  return { returned_asset, spread_amount, commission_amount };
-};
-
-// Commission rate == 0.3%
-const COMMISSION_RATE = new BigNumber(0.3 / 100);
-
-// To reduce unnecessary queries, compute_swap is ported from here https://github.com/enigmampc/SecretSwap/blob/6135f0ad74a17cefacf4ac0e48497983b88dae91/contracts/secretswap_pair/src/contract.rs#L616-L636
-export const compute_swap = (
-  offer_pool: BigNumber,
-  ask_pool: BigNumber,
-  offer_amount: BigNumber,
-): {
-  return_amount: BigNumber;
-  spread_amount: BigNumber;
-  commission_amount: BigNumber;
-} => {
-  // offer => ask
-  // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-  const cp = offer_pool.multipliedBy(ask_pool);
-  let return_amount = ask_pool.minus(
-    cp.multipliedBy(new BigNumber(1).dividedBy(offer_pool.plus(offer_amount))),
-  );
-
-  // calculate spread & commission
-  const spread_amount = offer_amount.multipliedBy(
-    ask_pool.dividedBy(offer_pool),
-  ).minus(return_amount);
-  const commission_amount = return_amount.multipliedBy(COMMISSION_RATE);
-
-  // commission will be absorbed to pool
-  return_amount = return_amount.minus(commission_amount);
-
-  return { return_amount, spread_amount, commission_amount };
-};
-
-// To reduce unnecessary queries, cumpute_offer_amount is ported from here https://github.com/enigmampc/SecretSwap/blob/6135f0ad74a17cefacf4ac0e48497983b88dae91/contracts/secretswap_pair/src/contract.rs#L638-L661
-export const compute_offer_amount = (
-  offer_pool: BigNumber,
-  ask_pool: BigNumber,
-  ask_amount: BigNumber,
-): {
-  offer_amount: BigNumber;
-  spread_amount: BigNumber;
-  commission_amount: BigNumber;
-} => {
-  // ask => offer
-  // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
-  const cp = offer_pool.multipliedBy(ask_pool);
-  const one_minus_commission = new BigNumber(1).minus(COMMISSION_RATE);
-
-  const offer_amount = cp
-    .multipliedBy(
-      new BigNumber(1).dividedBy(
-        ask_pool.minus(
-          ask_amount.multipliedBy(reverse_decimal(one_minus_commission)),
-        ),
-      ),
-    )
-    .minus(offer_pool);
-
-  const before_commission_deduction = ask_amount.multipliedBy(
-    reverse_decimal(one_minus_commission),
-  );
-
-  let spread_amount = new BigNumber(0);
-  try {
-    spread_amount = offer_amount.multipliedBy(ask_pool.dividedBy(offer_pool))
-      .minus(before_commission_deduction);
-  } catch (e) {}
-
-  const commission_amount = before_commission_deduction.multipliedBy(
-    COMMISSION_RATE,
-  );
-  return { offer_amount, spread_amount, commission_amount };
-};
-
-// reverse_decimal ported over from rust
-// https://github.com/enigmampc/SecretSwap/blob/6135f0ad74a17cefacf4ac0e48497983b88dae91/contracts/secretswap_pair/src/math.rs#L4-L12
-const DECIMAL_FRACTIONAL = new BigNumber(1_000_000_000);
-
-export const reverse_decimal = (decimal: BigNumber): BigNumber => {
-  if (decimal.isEqualTo(0)) {
-    return new BigNumber(0);
-  }
-
-  return DECIMAL_FRACTIONAL.dividedBy(decimal.multipliedBy(DECIMAL_FRACTIONAL));
-};
-
-interface CreatePairResponse {
-  contractAddress: string;
-}
-
-export const CreateNewPair = async ({
-  secretjs,
-  secretjsSender,
-  tokenA,
-  tokenB,
-}: {
-  secretjs: CosmWasmClient;
-  secretjsSender: AsyncSender;
-  tokenA: Asset;
-  tokenB: Asset;
-}): Promise<ExecuteResult> => {
-  const asset_infos = [];
-  for (const t of [tokenA, tokenB]) {
-    // is a token
-    if ("token" in t.info) {
-      if (!validateBech32Address(t.info.token.contract_addr)) {
-        throw new Error("Token address is not valid");
-      }
-      const token = t.info.token;
-      try {
-        token.token_code_hash = await GetContractCodeHash({
-          secretjs,
-          address: token.contract_addr,
-        });
-      } catch (e) {
-        throw `Error fetching code hash for ${t.symbol} ${t.info.token.contract_addr}: ${e.message}`;
-      }
-
-      asset_infos.push({ token });
-    } else {
-      asset_infos.push({ native_token: t.info.native_token });
-    }
-  }
-
-  const factoryAddress = globalThis.config.AMM_FACTORY_CONTRACT;
-  const response: ExecuteResult = await secretjsSender.asyncExecute(
-    factoryAddress,
-    {
-      create_pair: { asset_infos },
-    },
-    "",
-    [],
-    getFeeForExecute(GAS_FOR_CREATE_PAIR),
-  );
-  storeTxResultLocally(response);
-  return response;
-};
-
-interface GetAllPairsResponse {
-  pairs: Array<Pair>;
-}
-
-export const GetAllPairs = async (
-  params: { secretjs: SigningCosmWasmClient },
-): Promise<GetAllPairsResponse> => {
-  const { secretjs } = params;
-  return await secretjs.queryContractSmart(
-    globalThis.config.AMM_FACTORY_CONTRACT,
-    {
-      pairs: { limit: 30 },
-    },
-  );
-};
-
-export type Pair = {
-  asset_infos: Array<NativeToken | Token>;
-  contract_addr: string;
-  liquidity_token: string;
-  token_code_hash: string;
-};
-
-export type AssetInfos = {
-  asset_infos: Array<NativeToken | Token>;
-};
-
-export const getSymbolsFromPair = (pair: { asset_infos: any }): string[] => {
-  const symbols = [];
-
-  if ("native_token" in pair.asset_infos[0]) {
-    symbols.push(pair.asset_infos[0].native_token.denom);
+    await executeRouterSwap(
+      keplrConnection.signer,
+      keplrConnection.address,
+      fromToken,
+      fromAmount,
+      hops,
+      expectedReturn,
+      bestRouteData.bestRoute,
+    );
   } else {
-    symbols.push(pair.asset_infos[0].token.contract_addr);
+    console.error("No valid route found");
   }
-  if ("native_token" in pair.asset_infos[1]) {
-    symbols.push(pair.asset_infos[1].native_token.denom);
-  } else {
-    symbols.push(pair.asset_infos[1].token.contract_addr);
-  }
-
-  return symbols;
-};
+})();
