@@ -47,7 +47,12 @@ const QueryPools = () => {
       const pools = await queryPools(secretjs, contractAddress);
       setPools(pools);
     } catch (error) {
-      setError((error as Error).message);
+      const err = error as Error;
+      const toString = (err: Error) => {
+        return `${err.name}: ${err.message}`;
+      };
+      setError(toString(err));
+      console.error(err);
     }
   };
 
@@ -86,6 +91,7 @@ const QueryPools = () => {
                 </ul>
               </div>
             )}
+            {error && <p className="text-lg text-red-500 mt-4">{error}</p>}
           </div>
         ) : (
           <p className="text-lg">Connecting to Keplr...</p>
