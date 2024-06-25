@@ -11,7 +11,6 @@ export const queryPools = async (
     pools: {},
   };
 
-  // try {
   const queryResult = (await secretjs.query.compute.queryContract({
     contract_address: contractAddress,
     query: queryMsg,
