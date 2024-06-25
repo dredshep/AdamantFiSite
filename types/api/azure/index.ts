@@ -1,7 +1,7 @@
 export * from "./secretswap_pairs";
 export * from "./rewards";
 export * from "./secretswap_pools";
-export * from "./secret_tokens_legacy";
+// export * from "./secret_tokens_legacy";
 export * from "./tokens";
 
 // Note: Types below are untested and may be incorrect

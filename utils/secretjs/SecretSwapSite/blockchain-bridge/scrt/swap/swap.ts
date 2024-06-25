@@ -1,14 +1,25 @@
-import BigNumber from 'bignumber.js';
-import { storeTxResultLocally } from 'pages/Swap/utils';
-import { ExecuteResult, SigningCosmWasmClient, CosmWasmClient } from 'secretjs';
-import { Asset, Currency, NativeToken, Token, Trade, TradeType } from '../../pages/TokenModal/types/trade';
-import { GetContractCodeHash } from './snip20';
-import { extractValueFromLogs, getFeeForExecute, validateBech32Address } from './utils';
-import { AsyncSender } from './asyncSender';
-import { GAS_FOR_CREATE_PAIR } from '../../utils/gasPrices';
+import BigNumber from "bignumber.js";
+// import { storeTxResultLocally } from 'pages/Swap/utils';
+// import { ExecuteResult, SigningCosmWasmClient, CosmWasmClient } from 'secretjs';
+import {
+  Asset,
+  Currency,
+  NativeToken,
+  Token,
+  Trade,
+  TradeType,
+} from "../TokenModalTypes/types/trade";
+import { GetContractCodeHash } from "../snip20/GetContractCodeHash";
+import {
+  // extractValueFromLogs,
+  getFeeForExecute,
+  validateBech32Address,
+} from "../utils";
+import { AsyncSender } from "../asyncSender";
+import { GAS_FOR_CREATE_PAIR } from "../../../utils/gasPrices";
 
 export const buildAssetInfo = (currency: Currency) => {
-  if (currency.token.info.type === 'native_token') {
+  if (currency.token.info.type === "native_token") {
     return {
       info: { native_token: currency.token.info.native_token },
       amount: currency.amount,
@@ -19,7 +30,7 @@ export const buildAssetInfo = (currency: Currency) => {
         token: {
           contract_addr: currency.token.info.token.contract_addr,
           token_code_hash: currency.token.info.token.token_code_hash,
-          viewing_key: '',
+          viewing_key: "",
         },
       },
       amount: currency.amount,
@@ -67,7 +78,9 @@ export const ReverseSimulateResult = async (params: {
 }): Promise<ReverseSimulationResponse> => {
   const { secretjs, trade, pair } = params;
 
-  console.log(`trade: ${pair}: ${JSON.stringify(buildAssetInfo(trade.outputAmount))}`);
+  console.log(
+    `trade: ${pair}: ${JSON.stringify(buildAssetInfo(trade.outputAmount))}`,
+  );
 
   return await secretjs.queryContractSmart(pair, {
     reverse_simulation: {
@@ -88,9 +101,9 @@ export const handleSimulation = async (
   pair: string,
   swapDirection: TradeType,
 ): Promise<GenericSimulationResult> => {
-  let returned_asset = '0';
-  let commission_amount = '0';
-  let spread_amount = '0';
+  let returned_asset = "0";
+  let commission_amount = "0";
+  let spread_amount = "0";
   switch (swapDirection) {
     case TradeType.EXACT_INPUT:
       if (isNaN(Number(trade.inputAmount))) {
@@ -101,7 +114,7 @@ export const handleSimulation = async (
         secretjs,
         trade,
         pair,
-      }).catch(err => {
+      }).catch((err) => {
         throw new Error(`Failed to run simulation: ${err}`);
       });
 
@@ -122,13 +135,14 @@ export const handleSimulation = async (
         console.error(2);
       }
 
-      const resultReverse: ReverseSimulationResponse = await ReverseSimulateResult({
-        secretjs,
-        trade,
-        pair,
-      }).catch(err => {
-        throw new Error(`Failed to run reverse simulation: ${err}`);
-      });
+      const resultReverse: ReverseSimulationResponse =
+        await ReverseSimulateResult({
+          secretjs,
+          trade,
+          pair,
+        }).catch((err) => {
+          throw new Error(`Failed to run reverse simulation: ${err}`);
+        });
       returned_asset = resultReverse.offer_amount;
       commission_amount = resultReverse.commission_amount;
       spread_amount = resultReverse.spread_amount;
@@ -162,10 +176,14 @@ export const compute_swap = (
   // offer => ask
   // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
   const cp = offer_pool.multipliedBy(ask_pool);
-  let return_amount = ask_pool.minus(cp.multipliedBy(new BigNumber(1).dividedBy(offer_pool.plus(offer_amount))));
+  let return_amount = ask_pool.minus(
+    cp.multipliedBy(new BigNumber(1).dividedBy(offer_pool.plus(offer_amount))),
+  );
 
   // calculate spread & commission
-  const spread_amount = offer_amount.multipliedBy(ask_pool.dividedBy(offer_pool)).minus(return_amount);
+  const spread_amount = offer_amount.multipliedBy(
+    ask_pool.dividedBy(offer_pool),
+  ).minus(return_amount);
   const commission_amount = return_amount.multipliedBy(COMMISSION_RATE);
 
   // commission will be absorbed to pool
@@ -191,18 +209,27 @@ export const compute_offer_amount = (
 
   const offer_amount = cp
     .multipliedBy(
-      new BigNumber(1).dividedBy(ask_pool.minus(ask_amount.multipliedBy(reverse_decimal(one_minus_commission)))),
+      new BigNumber(1).dividedBy(
+        ask_pool.minus(
+          ask_amount.multipliedBy(reverse_decimal(one_minus_commission)),
+        ),
+      ),
     )
     .minus(offer_pool);
 
-  const before_commission_deduction = ask_amount.multipliedBy(reverse_decimal(one_minus_commission));
+  const before_commission_deduction = ask_amount.multipliedBy(
+    reverse_decimal(one_minus_commission),
+  );
 
   let spread_amount = new BigNumber(0);
   try {
-    spread_amount = offer_amount.multipliedBy(ask_pool.dividedBy(offer_pool)).minus(before_commission_deduction);
+    spread_amount = offer_amount.multipliedBy(ask_pool.dividedBy(offer_pool))
+      .minus(before_commission_deduction);
   } catch (e) {}
 
-  const commission_amount = before_commission_deduction.multipliedBy(COMMISSION_RATE);
+  const commission_amount = before_commission_deduction.multipliedBy(
+    COMMISSION_RATE,
+  );
   return { offer_amount, spread_amount, commission_amount };
 };
 
@@ -236,13 +263,16 @@ export const CreateNewPair = async ({
   const asset_infos = [];
   for (const t of [tokenA, tokenB]) {
     // is a token
-    if ('token' in t.info) {
+    if ("token" in t.info) {
       if (!validateBech32Address(t.info.token.contract_addr)) {
-        throw new Error('Token address is not valid');
+        throw new Error("Token address is not valid");
       }
       const token = t.info.token;
       try {
-        token.token_code_hash = await GetContractCodeHash({ secretjs, address: token.contract_addr });
+        token.token_code_hash = await GetContractCodeHash({
+          secretjs,
+          address: token.contract_addr,
+        });
       } catch (e) {
         throw `Error fetching code hash for ${t.symbol} ${t.info.token.contract_addr}: ${e.message}`;
       }
@@ -259,7 +289,7 @@ export const CreateNewPair = async ({
     {
       create_pair: { asset_infos },
     },
-    '',
+    "",
     [],
     getFeeForExecute(GAS_FOR_CREATE_PAIR),
   );
@@ -271,11 +301,16 @@ interface GetAllPairsResponse {
   pairs: Array<Pair>;
 }
 
-export const GetAllPairs = async (params: { secretjs: SigningCosmWasmClient }): Promise<GetAllPairsResponse> => {
+export const GetAllPairs = async (
+  params: { secretjs: SigningCosmWasmClient },
+): Promise<GetAllPairsResponse> => {
   const { secretjs } = params;
-  return await secretjs.queryContractSmart(globalThis.config.AMM_FACTORY_CONTRACT, {
-    pairs: { limit: 30 },
-  });
+  return await secretjs.queryContractSmart(
+    globalThis.config.AMM_FACTORY_CONTRACT,
+    {
+      pairs: { limit: 30 },
+    },
+  );
 };
 
 export type Pair = {
@@ -292,12 +327,12 @@ export type AssetInfos = {
 export const getSymbolsFromPair = (pair: { asset_infos: any }): string[] => {
   const symbols = [];
 
-  if ('native_token' in pair.asset_infos[0]) {
+  if ("native_token" in pair.asset_infos[0]) {
     symbols.push(pair.asset_infos[0].native_token.denom);
   } else {
     symbols.push(pair.asset_infos[0].token.contract_addr);
   }
-  if ('native_token' in pair.asset_infos[1]) {
+  if ("native_token" in pair.asset_infos[1]) {
     symbols.push(pair.asset_infos[1].native_token.denom);
   } else {
     symbols.push(pair.asset_infos[1].token.contract_addr);

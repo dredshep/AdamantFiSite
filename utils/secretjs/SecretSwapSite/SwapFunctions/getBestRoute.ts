@@ -2,7 +2,7 @@ import BigNumber from "bignumber.js";
 import {
   compute_offer_amount,
   compute_swap,
-} from "../blockchain-bridge/scrt/swap";
+} from "../blockchain-bridge/scrt/swap/swap";
 import { SwapPair } from "../types/SwapPair";
 import { getOfferAndAskPools } from "./getOfferAndAskPools";
 import { SwapTokenMap } from "../types/SwapToken";
@@ -52,7 +52,7 @@ export function getBestRoute({
         const fromToken = route[i];
         const toToken = route[i + 1];
         const pair: SwapPair | undefined = pairs.get(
-          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`,
         );
         if (!pair) {
           break;
@@ -63,7 +63,7 @@ export function getBestRoute({
           toToken,
           pair,
           tokens,
-          balances
+          balances,
         );
 
         const offer_amount = from;
@@ -80,7 +80,7 @@ export function getBestRoute({
         const { return_amount } = compute_swap(
           offer_pool,
           ask_pool,
-          offer_amount
+          offer_amount,
         );
 
         if (return_amount.isNaN() || return_amount.isLessThanOrEqualTo(0)) {
@@ -115,7 +115,7 @@ export function getBestRoute({
         const fromToken = route[i - 1];
         const toToken = route[i];
         const pair: SwapPair | undefined = pairs.get(
-          `${fromToken}${SwapPair.id_delimiter}${toToken}`
+          `${fromToken}${SwapPair.id_delimiter}${toToken}`,
         );
         if (!pair) {
           break;
@@ -125,7 +125,7 @@ export function getBestRoute({
           toToken,
           pair,
           tokens,
-          balances
+          balances,
         );
 
         const ask_amount = to;
@@ -143,7 +143,7 @@ export function getBestRoute({
         const { offer_amount } = compute_offer_amount(
           offer_pool,
           ask_pool,
-          ask_amount
+          ask_amount,
         );
 
         if (offer_amount.isNaN() || offer_amount.isLessThanOrEqualTo(0)) {
@@ -160,7 +160,7 @@ export function getBestRoute({
       }
 
       const fromWithGas = from.plus(
-        cachedGasFeesUnfilledCoin[route.length - 1]
+        cachedGasFeesUnfilledCoin[route.length - 1],
       );
 
       allRoutesOutputs.push({ route, fromOutput: from, fromWithGas });
