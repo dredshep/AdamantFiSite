@@ -11,23 +11,23 @@ const jura = Jura({ subsets: ["latin"] });
 const coolBoxes = (
   <div className="flex flex-wrap gap-8">
     <CoolBox
-      icon="/icons/coolBox/1.svg" // Replace with your actual icon path
+      icon="/icons/coolBox/1.svg"
       mainText="Exchange tokens without trace"
       secondaryText="Swap SNIP-20 tokens"
       buttonText="SWAP PRIVATELY"
-      link="/swap-privately" // Replace with your actual link
+      link="/swap-privately"
       type="dark"
     />
     <CoolBox
-      icon="/icons/coolBox/2.svg" // Replace with your actual icon path
+      icon="/icons/coolBox/2.svg"
       mainText="Provide liquidity and earn by staking"
       secondaryText="Earn trading fees and incentives"
       buttonText="ADD LIQUIDITY"
-      link="/add-liquidity" // Replace with your actual link
+      link="/add-liquidity"
       type="light"
     />
     <CoolBox
-      icon="/icons/coolBox/3.svg" // Replace with your actual icon path
+      icon="/icons/coolBox/3.svg"
       mainText={
         <>
           Explore <br />
@@ -36,7 +36,7 @@ const coolBoxes = (
       }
       secondaryText="SNIP-20 token list"
       buttonText="TOKENS ON SECRET"
-      link="/tokens-on-secret" // Replace with your actual link
+      link="/tokens-on-secret"
       type="dark"
       alt="Explore Secret Network"
     />
@@ -44,24 +44,20 @@ const coolBoxes = (
 );
 const infoBoxes = (
   <div className="flex flex-wrap gap-4 w-full">
-    {" "}
-    {/* Adjust this gap if necessary */}
     <InfoBox
       title="Grants"
       description="Would you like to build a new protocol for Adamant or implement our liquidity?"
       buttonText="APPLY FOR A GRANT"
-      link="https://adamantfi.gitbook.io/documentation/" // Replace with your actual link
+      link="https://adamantfi.gitbook.io/documentation/"
     />
     <InfoBox
       title="Infra and SDKs"
       description="Adamant tech stack offers many solutions that can provide your application the necessary infrastructure."
       buttonText="LEARN MORE"
-      link="https://github.com/dredshep/AdamantFiSite" // Replace with your actual link
+      link="https://github.com/dredshep/AdamantFiSite"
     />
   </div>
 );
-
-// Then render infoBoxes where you need it in your component tree.
 
 export default function Home() {
   return (
