@@ -1,0 +1,147 @@
+export const queryPoolDetails = [
+  {
+    pair: "sSCRT-sAAVE",
+    contract_address: "secret1fz6k6sxlnqwga9q67y9wly6q9hcknddn8alrtg",
+    lp_token_contract: "secret1k6ypx2hv28yd73c9ethamru48ke9vetqrjzu26",
+  },
+  {
+    pair: "sSCRT-sBAC",
+    contract_address: "secret1py6j9h7mfe87h9jud0e6zyk6qyhllz4r89xpe8",
+    lp_token_contract: "secret138wwgfj4p7w87dwq8hnjckjhpy6kv76e6ez4me",
+  },
+  {
+    pair: "sSCRT-sBAND",
+    contract_address: "secret1mq2f0x9qyr2fwpyuaux3tehgvk8faz9ntazehd",
+    lp_token_contract: "secret1n5qe4k8zf09gh8zdrydcc3jqls4ceww8wzr2kv",
+  },
+  {
+    pair: "sSCRT-sBAT",
+    contract_address: "secret1fh9f4zquppnzp8wrhvy2pfkwyd4tadt530332a",
+    lp_token_contract: "secret1djl87ynczxgsm0xzcpqslcwkpuppp5tc68yywv",
+  },
+  {
+    pair: "sSCRT-sDAI",
+    contract_address: "secret1sj65pd9fqgwyj0a9ctl4cecp62y52z5nzpq60r",
+    lp_token_contract: "secret17w0wjempgtt8ngn59y7cwlae02kve5jzar4xmw",
+  },
+  {
+    pair: "sSCRT-sDPI",
+    contract_address: "secret1ldac7f6372k5nte03u9ev9c0ls7le5sp09gz8d",
+    lp_token_contract: "secret1jmv4h3f8rtlxsfaven4kstdaq55pr8rwty8ss5",
+  },
+  {
+    pair: "sSCRT-sENJ",
+    contract_address: "secret14mzz277cnt8l4efnskzj4s3c04lx6njd52nfnn",
+    lp_token_contract: "secret1uf6kk3a6damq93w6gnjj4xyr4xdpj86kzpvrwh",
+  },
+  {
+    pair: "sSCRT-sETH",
+    contract_address: "secret14zv2fdsfwqzxqt7s2ushp4c4jr56ysyld5zcdf",
+    lp_token_contract: "secret17gja535zp09t9mlzzxndqqg4gzvhg0vsklhd54",
+  },
+  {
+    pair: "sSCRT-sFATS",
+    contract_address: "secret1fspv4fzc90g72r22djhhtf2jrxvcte3dsvp2dk",
+    lp_token_contract: "secret1kg8pd6ag4cx72302uflm5n8nau2m6k7q9efck3",
+  },
+  {
+    pair: "sSCRT-sLINK",
+    contract_address: "secret1x8244a7l2fr642axef0sl5z3jw2pn75rp36hxs",
+    lp_token_contract: "secret1rldr66767a4gz3adkq2vgndwgnxlfqqae4fgen",
+  },
+  {
+    pair: "sSCRT-sMANA",
+    contract_address: "secret1u9zfyh7d4mgf44f3y8fhz4e70dhjzd5e5df8hp",
+    lp_token_contract: "secret1gewshds6yhyry842vnxl9q6krezaatep6rxyt2",
+  },
+  {
+    pair: "sSCRT-sMKR",
+    contract_address: "secret15kkj9gyjurvxqcv63ly96lmc7vpcsllt65f7dv",
+    lp_token_contract: "secret185jen8q6ss5xnja33vj7pvqz49m8frkdekvzpy",
+  },
+  {
+    pair: "sSCRT-sOCEAN",
+    contract_address: "secret13ns5mzms67jttq5cnv76j5lgtd0xf69sv4sdpq",
+    lp_token_contract: "secret1kduh3vlszmg3snq36k6s8l4v8s26z47m3q9haa",
+  },
+  {
+    pair: "sSCRT-sREN",
+    contract_address: "secret1lamq00jwpms5hzel22rjgmd0v2wn8fep6rzhmh",
+    lp_token_contract: "secret1m76hs58wqxasd7f6au3c7gx8at5xu2ez9kf44l",
+  },
+  {
+    pair: "sSCRT-sRSR",
+    contract_address: "secret1g97kxc857asparfgdudzkzyq5akd74xmup52uj",
+    lp_token_contract: "secret102gfpp4hgvytxlxsz8hnjy7uqndmhau3jkzps8",
+  },
+  {
+    pair: "sSCRT-sRUNE",
+    contract_address: "secret1j8vs8v729vregluuzr5n4zr77ztaleqtqcw026",
+    lp_token_contract: "secret1kg24nc3v4wm4vzufup8fvmvffxtm8425uwfvqd",
+  },
+  {
+    pair: "sSCRT-SCRT",
+    contract_address: "secret1rf4uqg4d2elmvp535ayhxwnrpdykmxan0nrwtg",
+    lp_token_contract: "secret1xhvv5uj5fa9yxcuuk4awqw568ve7g05v7fa0vd",
+  },
+  {
+    pair: "sSCRT-SEFI",
+    contract_address: "secret1rgky3ns9ua09rt059049yl0zqf3xjqxne7ezhp",
+    lp_token_contract: "secret1709qy2smh0r7jjac0qxfgjsqn7zpvgthsdz025",
+  },
+  {
+    pair: "sSCRT-sSIENNA",
+    contract_address: "secret1rxrg8mp4qm5703ccz26lgh8hx7gpnkujrn6qcr",
+    lp_token_contract: "secret1l3azwns4uqglmu42hnjgfrlqc7hhqulq05cheg",
+  },
+  {
+    pair: "sSCRT-sSNX",
+    contract_address: "secret12um5gxf2vdm6vy4q36jcxlg9mc60y6wgewwxx9",
+    lp_token_contract: "secret1tp25zaypu53g8av4qcr3gdrzujerxze38hm090",
+  },
+  {
+    pair: "sSCRT-sSUSHI",
+    contract_address: "secret1m79q9hnz44xtndmlrd9p57tt6z3kjeecp7957u",
+    lp_token_contract: "secret15atu5s5aqhkezg44d035nufq80ltwx968vey00",
+  },
+  {
+    pair: "sSCRT-sTORN",
+    contract_address: "secret14v3p9xq0353fvwrhkjyv4c96vrujjvzwmqyq0k",
+    lp_token_contract: "secret1853yqdhf2yjnaf2xerhmgsl5dt50t4grh63y3r",
+  },
+  {
+    pair: "sSCRT-sTUSD",
+    contract_address: "secret103e3kt05rt89fayp9y7w44wj4x3k5zumy6cdyc",
+    lp_token_contract: "secret1hsd23gm7ces9rf24e0mryhywlcl4l5903pwrts",
+  },
+  {
+    pair: "sSCRT-sUNI",
+    contract_address: "secret1pmt7ncuhau2g7h9snygx2tlkzqnks3uz5edgyc",
+    lp_token_contract: "secret1m8msletvevuj2vsl8rcvqq9esflxmmnd2lf7yd",
+  },
+  {
+    pair: "sSCRT-sUNILP-WSCRT-ETH",
+    contract_address: "secret1v82egg9xtycsaz0h3nqay0saq0dv296z4swjku",
+    lp_token_contract: "secret1t6vfa5wnzqgvlk7u7u6fz9dwltrn44kzr22fh6",
+  },
+  {
+    pair: "sSCRT-sUSDC",
+    contract_address: "secret1uakhxh3qwe2k8khww709cpxlm8kmwapufmfrr0",
+    lp_token_contract: "secret1azgy8zx6duz2s4yhxqvghsd25gnun6hefy7ff4",
+  },
+  {
+    pair: "sSCRT-sUSDT",
+    contract_address: "secret1gyct75dc2pf20vtj3l86k2jxg79mffyh9ljve3",
+    lp_token_contract: "secret1cgd6gcc4uyrxmzsmk4tpeta8auzcgwk4n5ngrx",
+  },
+  {
+    pair: "sSCRT-sWBTC",
+    contract_address: "secret10x0k62eaal4q3t9c200qvmgftahxjqvdawn69c",
+    lp_token_contract: "secret1xxvqanj85m7dppplku5782cn9hl8askqd329sv",
+  },
+  {
+    pair: "sSCRT-sYFI",
+    contract_address: "secret1zra95h6nf4kc49x59x66t7crxxl79hr5nph882",
+    lp_token_contract: "secret1he6rzcet6jcwryu544a5zkkadxee4sk0umu703",
+  },
+] as const;

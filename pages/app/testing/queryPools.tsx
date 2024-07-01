@@ -26,7 +26,7 @@ const QueryPools = () => {
 
       const client = new SecretNetworkClient({
         chainId: "secret-4",
-        url: "https://scrt.public-rpc.com",
+        url: "https://rpc.ankr.com/http/scrt_cosmos",
         wallet: offlineSigner,
         walletAddress: accounts?.[0].address,
       });
@@ -42,9 +42,15 @@ const QueryPools = () => {
     if (!secretjs) return;
 
     const contractAddress = "secret1fz6k6sxlnqwga9q67y9wly6q9hcknddn8alrtg"; // sCRT-sAAVE https://docs.secretswap.net/resources/contract-addresses
+    const contractCodeHash =
+      "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490";
 
     try {
-      const pools = await queryPools(secretjs, contractAddress);
+      const pools = await queryPools(
+        secretjs,
+        contractAddress,
+        contractCodeHash
+      );
       setPools(pools);
     } catch (error) {
       const err = error as Error;
@@ -69,7 +75,7 @@ const QueryPools = () => {
             >
               Query Pools
             </button>
-            {pools.length > 0 && (
+            {pools.length > 0 ? (
               <div>
                 <h2 className="text-2xl font-bold mt-4">Pools</h2>
                 <ul className="mt-2">
@@ -90,6 +96,11 @@ const QueryPools = () => {
                   ))}
                 </ul>
               </div>
+            ) : (
+              // some pre text with tailwind styling for mono font
+              <pre className="text-lg bg-gray-800 p-4 mt-4">
+                {JSON.stringify(pools.length, null, 2)}
+              </pre>
             )}
             {error && <p className="text-lg text-red-500 mt-4">{error}</p>}
           </div>
