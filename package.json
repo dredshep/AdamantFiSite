@@ -34,6 +34,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+    "decimal.js": "^10.4.3",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.362.0",
     "marked": "^12.0.2",
