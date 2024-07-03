@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { SecretNetworkClient } from "secretjs";
 import Decimal from "decimal.js";
 import SelectComponent from "@/components/app/Testing/SelectComponent";
-import { getTokenName } from "@/utils/apis/tokenInfo";
+import { getTokenDecimals, getTokenName } from "@/utils/apis/tokenInfo";
 import { fullPoolsData } from "../fullPoolsData";
 
 interface PoolQueryResponse {
@@ -45,10 +45,11 @@ const getPoolData = async (
   const reserves = response.assets.reduce(
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
       const decimals =
-        asset.info.token.contract_addr ===
+        asset.info.token?.contract_addr ===
         "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
           ? 6
-          : 12; // Adjust accordingly
+          : getTokenDecimals(asset.info.token.contract_addr) || 0;
+      console.log({ decimals });
       acc[asset.info.token.contract_addr] = {
         amount: new Decimal(asset.amount),
         decimals,
@@ -109,22 +110,28 @@ const SwapPage = () => {
   const [amountIn, setAmountIn] = useState<string>("");
   const [estimatedOutput, setEstimatedOutput] = useState<string>("");
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [poolAddress, setPoolAddress] = useState<string>("");
+  // const [poolAddress, setPoolAddress] = useState<string>("");
   const [inputToken, setInputToken] = useState<string>("");
   const [outputToken, setOutputToken] = useState<string>("");
 
-  function handleSelectChange(from: string, to: string) {
-    const poolAddress = fullPoolsData.find((pool) =>
-      pool.query_result.assets.every(
-        (asset) =>
-          asset.info.token?.contract_addr === from ||
-          asset.info.token?.contract_addr === to
-      )
-    )?.contract_address;
-    setPoolAddress(poolAddress || "");
-    setInputToken(from);
-    setOutputToken(to);
-  }
+  // function handleSelectChange(from: string, to: string) {
+  //   const poolAddress = fullPoolsData.find((pool) =>
+  //     pool.query_result.assets.every(
+  //       (asset) =>
+  //         asset.info.token?.contract_addr === from ||
+  //         asset.info.token?.contract_addr === to
+  //     )
+  //   )?.contract_address;
+  //   setPoolAddress(poolAddress || "");
+  //   setInputToken(from);
+  //   setOutputToken(to);
+  //   setEstimatedOutput("");
+  // }
+
+  useEffect(() => {
+    // if there's a change in from or to, empty the estimated output
+    setEstimatedOutput("");
+  }, [inputToken, outputToken]);
 
   useEffect(() => {
     const connectKeplr = async () => {
@@ -159,12 +166,20 @@ const SwapPage = () => {
   }, []);
 
   const handleSwap = async () => {
+    console.log("handling button click");
     if (secretjs && amountIn) {
       // const poolAddress = "secret1sj65pd9fqgwyj0a9ctl4cecp62y52z5nzpq60r"; // sSCRT-sDAI
       // const inputToken = "secret1vnjck36ld45apf8u4fedxd5zy7f5l92y3w5qwq"; // sUSDT
       // const outputToken = "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"; // sSCRT11
       const amountInDecimal = new Decimal(amountIn);
 
+      const poolAddress = fullPoolsData.find((pool) =>
+        pool.query_result.assets.every(
+          (asset) =>
+            asset.info.token?.contract_addr === inputToken ||
+            asset.info.token?.contract_addr === outputToken
+        )
+      )?.contract_address as string;
       try {
         const output = await estimateSwapOutput(
           secretjs,
@@ -173,13 +188,18 @@ const SwapPage = () => {
           inputToken,
           outputToken
         );
-        setEstimatedOutput(output.toFixed(6)); // Adjust the precision as needed
+        const fixedOutput = output.toFixed(6);
+        // console.log({ output });
+        setEstimatedOutput(fixedOutput); // Adjust the precision as needed
       } catch (error) {
         console.error("Error estimating swap output:", error);
         setEstimatedOutput("Error estimating output");
       }
     }
   };
+  useEffect(() => {
+    console.log({ estimatedOutput });
+  }, [estimatedOutput]);
 
   return (
     <div className="bg-gradient-to-r from-adamant-box-dark to-adamant-box-veryDark min-h-screen flex items-center justify-center">
@@ -188,11 +208,7 @@ const SwapPage = () => {
           Secret Swap Estimator
         </h1>
         <div className="flex flex-col space-y-4">
-          <SelectComponent
-            onChange={(from: string, to: string) =>
-              handleSelectChange(from, to)
-            }
-          />
+          <SelectComponent setFrom={setInputToken} setTo={setOutputToken} />
           {inputToken && outputToken && (
             <>
               <input
@@ -209,12 +225,14 @@ const SwapPage = () => {
                 Estimate Swap
               </button>
               <div>
-                <h2 className="text-xl font-bold text-center text-white mt-8">
-                  Estimated Output
-                </h2>
+                {estimatedOutput.length > 0 && (
+                  <h2 className="text-xl font-bold text-center text-white mt-8">
+                    Estimated Output
+                  </h2>
+                )}
                 <p className="text-2xl text-center text-white">
                   {estimatedOutput}{" "}
-                  {estimatedOutput && (
+                  {estimatedOutput.length > 0 && (
                     <span className="font-bold text-adamant-">
                       {getTokenName(outputToken)}
                     </span>

@@ -4,10 +4,12 @@ import { fetchTokenData, getTokenName } from "@/utils/apis/tokenInfo";
 
 const SelectComponent = ({
   apiUrl = "http://localhost:3000/api/tokens",
-  onChange,
+  setFrom,
+  setTo,
 }: {
   apiUrl?: string;
-  onChange: (from: string, to: string) => void;
+  setFrom?: (from: string) => void;
+  setTo?: (to: string) => void;
 }) => {
   const [fromTokens, setFromTokens] = useState<string[]>([]);
   const [toTokens, setToTokens] = useState<string[]>([]);
@@ -17,10 +19,16 @@ const SelectComponent = ({
 
   // on change run the func
   useEffect(() => {
-    if (onChange) {
-      onChange(selectedFrom, selectedTo);
+    // if (onChange) {
+    //   onChange(selectedFrom, selectedTo);
+    // }
+    if (setFrom) {
+      setFrom(selectedFrom);
     }
-  }, [selectedFrom, selectedTo, onChange]);
+    if (setTo) {
+      setTo(selectedTo);
+    }
+  }, [selectedFrom, selectedTo, setFrom, setTo]);
 
   const pools = fullPoolsData;
   //   const poolAddresses = pools.map((pool) => pool.contract_address);
@@ -47,7 +55,10 @@ const SelectComponent = ({
   useEffect(() => {
     const toOptions = findToOptions(selectedFrom);
     const toAddresses = toOptions.map(
-      (asset) => asset.info.token?.contract_addr || "not found"
+      (asset) =>
+        asset.info.token?.contract_addr ||
+        asset.info.native_token?.denom ||
+        "not found"
     );
     setToTokens(toAddresses);
     console.log(
@@ -100,7 +111,10 @@ const SelectComponent = ({
         .filter(
           (addressOrDenom): addressOrDenom is string =>
             addressOrDenom !== undefined
-        );
+        )
+        .filter((address) => {
+          return address !== "uscrt";
+        });
 
       setFromTokens(Array.from(new Set(fromOptions)));
     };
@@ -127,7 +141,8 @@ const SelectComponent = ({
           return addr && addr !== fromToken && tokenNames[addr] ? addr : null;
         })
       )
-      .filter((addr): addr is string => addr !== null);
+      .filter((addr): addr is string => addr !== null)
+      .filter((addr) => addr !== "uscrt");
 
     // setToTokens(Array.from(new Set(toOptions)));
     setSelectedTo(""); // Reset the selected 'to' token
