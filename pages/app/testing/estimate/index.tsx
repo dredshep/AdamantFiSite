@@ -71,28 +71,36 @@ const calculateSwapOutput = (
   inputToken: string,
   outputToken: string
 ): Decimal => {
-  const inputReserve = poolData.reserves[inputToken];
-  const outputReserve = poolData.reserves[outputToken];
+  const rawInputReserve = poolData.reserves[inputToken];
+  const rawOutputReserve = poolData.reserves[outputToken];
 
-  if (!inputReserve || !outputReserve) {
+  if (!rawInputReserve || !rawOutputReserve) {
     throw new Error("Invalid token addresses");
   }
 
-  const x = inputReserve.amount;
-  const y = outputReserve.amount;
+  const inputReserve = rawInputReserve.amount;
+  const outputReserve = rawOutputReserve.amount;
 
-  const amountInAdjusted = amountIn.mul(Decimal.pow(10, inputReserve.decimals));
-  const feeMultiplier = new Decimal(1000).sub(poolData.fee * 1000);
-  const amountInWithFee = amountInAdjusted.mul(feeMultiplier).div(1000);
+  // Adjust input amount by input token decimals
+  const amountInAdjusted = amountIn.mul(
+    Decimal.pow(10, rawInputReserve.decimals)
+  );
 
-  const k = x.mul(y);
-  const newX = x.add(amountInWithFee);
-  const newY = k.div(newX);
+  // Calculate fee and adjust input amount
+  const feeMultiplier = new Decimal(1).sub(poolData.fee);
+  const amountInWithFee = amountInAdjusted.mul(feeMultiplier);
 
-  const output = y.sub(newY);
+  // Compute output using constant product formula
+  const productOfReserves = inputReserve.mul(outputReserve);
+  const newInputReserve = inputReserve.add(amountInWithFee);
+  const newOutputReserve = productOfReserves.div(newInputReserve);
+  let output = outputReserve.sub(newOutputReserve);
+
+  // Adjust output by output token decimals
+  output = output.div(Decimal.pow(10, rawOutputReserve.decimals));
 
   // Ensure output does not exceed reserves
-  return output.lessThanOrEqualTo(y) ? output : y;
+  return output.lessThanOrEqualTo(outputReserve) ? output : outputReserve;
 };
 
 const estimateSwapOutput = async (
