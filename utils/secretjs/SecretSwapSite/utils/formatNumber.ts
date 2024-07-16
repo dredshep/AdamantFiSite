@@ -1,16 +1,17 @@
-import { BigNumber } from 'bignumber.js';
-const BN = require('bn.js');
+import { BigNumber } from "bignumber.js";
+// const BN = require('bn.js');
+import BN from "bn.js";
 
 //https://stackoverflow.com/questions/9461621/format-a-number-as-2-5k-if-a-thousand-or-more-otherwise-900
-export const nFormatter = (num, digits) => {
+export const nFormatter = (num: number, digits: number) => {
   const si = [
-    { value: 1, symbol: '' },
-    { value: 1e3, symbol: 'K' },
-    { value: 1e6, symbol: 'M' },
-    { value: 1e9, symbol: 'G' },
-    { value: 1e12, symbol: 'T' },
-    { value: 1e15, symbol: 'P' },
-    { value: 1e18, symbol: 'E' },
+    { value: 1, symbol: "" },
+    { value: 1e3, symbol: "K" },
+    { value: 1e6, symbol: "M" },
+    { value: 1e9, symbol: "G" },
+    { value: 1e12, symbol: "T" },
+    { value: 1e15, symbol: "P" },
+    { value: 1e18, symbol: "E" },
   ];
   const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
   let i;
@@ -19,18 +20,18 @@ export const nFormatter = (num, digits) => {
       break;
     }
   }
-  return (num / si[i].value).toFixed(digits).replace(rx, '$1') + si[i].symbol;
+  return (num / si[i].value).toFixed(digits).replace(rx, "$1") + si[i].symbol;
 };
 
-export const numberFormatter = (num, digits) => {
+export const numberFormatter = (num: number, digits: number) => {
   const si = [
-    { value: 1, symbol: '' },
-    { value: 1e3, symbol: 'K' },
-    { value: 1e6, symbol: 'M' },
-    { value: 1e9, symbol: 'B' },
-    { value: 1e12, symbol: 'T' },
-    { value: 1e15, symbol: 'Q' },
-    { value: 1e18, symbol: 'Qi' },
+    { value: 1, symbol: "" },
+    { value: 1e3, symbol: "K" },
+    { value: 1e6, symbol: "M" },
+    { value: 1e9, symbol: "B" },
+    { value: 1e12, symbol: "T" },
+    { value: 1e15, symbol: "Q" },
+    { value: 1e18, symbol: "Qi" },
   ];
   const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
   let i;
@@ -39,26 +40,31 @@ export const numberFormatter = (num, digits) => {
       break;
     }
   }
-  return (num / si[i].value).toFixed(digits).replace(rx, '$1') + ' ' + si[i].symbol;
+  return (
+    (num / si[i].value).toFixed(digits).replace(rx, "$1") + " " + si[i].symbol
+  );
 };
 
-export const toFixedTrunc = (x, n) => {
-  const v = (typeof x === 'string' ? x : x.toString()).split('.');
+export const toFixedTrunc = (x: number, n: number) => {
+  const v = (typeof x === "string" ? x : x.toString()).split(".");
   if (n <= 0) return v[0];
-  let f = v[1] || '';
+  let f = v[1] || "";
   if (f.length > n) return `${v[0]}.${f.substr(0, n)}`;
-  while (f.length < n) f += '0';
+  while (f.length < n) f += "0";
   return `${v[0]}.${f}`;
 };
 
-export const balanceNumberFormat = new Intl.NumberFormat('en-US', {
+export const balanceNumberFormat = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 6,
   useGrouping: true,
 });
 
-export const valueToDecimals = (input: string, numDecimalsInResult: number): string => {
+export const valueToDecimals = (
+  input: string,
+  numDecimalsInResult: number
+): string => {
   let numDecimalsInInput;
-  const decimalPos = input.indexOf('.');
+  const decimalPos = input.indexOf(".");
 
   if (decimalPos !== -1) {
     numDecimalsInInput = input.length - decimalPos - 1;
@@ -67,10 +73,10 @@ export const valueToDecimals = (input: string, numDecimalsInResult: number): str
     numDecimalsInInput = 0;
   }
 
-  let result = input.replace('.', '');
+  let result = input.replace(".", "");
 
   if (numDecimalsInResult >= numDecimalsInInput) {
-    result += '0'.repeat(numDecimalsInResult - numDecimalsInInput);
+    result += "0".repeat(numDecimalsInResult - numDecimalsInInput);
   } else {
     // This situation may never happen.  It's when the input has more decimal places than the result should have.
     result = result.slice(0, numDecimalsInResult - numDecimalsInInput);
@@ -79,7 +85,7 @@ export const valueToDecimals = (input: string, numDecimalsInResult: number): str
   return result;
 };
 
-export const zeroDecimalsFormatter = new Intl.NumberFormat('en-US', {
+export const zeroDecimalsFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
@@ -88,12 +94,12 @@ export function formatZeroDecimals(value: number | string) {
   return zeroDecimalsFormatter.format(Number(value));
 }
 
-const twoDecimalsFormatter = new Intl.NumberFormat('en-US', {
+const twoDecimalsFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-const sixDecimalsFormatter = new Intl.NumberFormat('en-US', {
+const sixDecimalsFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 6,
 });
 
@@ -117,24 +123,30 @@ export function formatWithTwoDecimalsRub(value: number) {
  * 123.456789 => 123.457
  * 123456789.123456 => 123456789
  */
-export function formatSignificantFigures(value: number | string | BigNumber, sigFigs: number) {
+export function formatSignificantFigures(
+  value: number | string | BigNumber,
+  sigFigs: number
+) {
   value = Number(value);
 
   let maxFractionDigits = sigFigs - 1 - Math.floor(Math.log10(Math.abs(value)));
   maxFractionDigits = Math.max(0, maxFractionDigits);
   maxFractionDigits = Math.min(20, maxFractionDigits);
 
-  return new Intl.NumberFormat('en-US', {maximumFractionDigits: maxFractionDigits}).format(value);
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: maxFractionDigits,
+  }).format(value);
 }
 
 export function formatAsUSD(value: number | string | BigNumber) {
-  return '$' +
-  new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-  .format(Number(value)) +
-  ' USD';
+  return (
+    "$" +
+    new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value)) +
+    " USD"
+  );
 }
 
 export function ones(value: number | string) {
@@ -143,7 +155,7 @@ export function ones(value: number | string) {
 
 export function truncateSymbol(symbol: string, num: number = 6) {
   if (!symbol) {
-    return '';
+    return "";
   }
 
   if (symbol.length <= 6) {
@@ -156,7 +168,7 @@ export function truncateSymbol(symbol: string, num: number = 6) {
 
 export function truncateAddressString(address: string, num = 12) {
   if (!address) {
-    return '';
+    return "";
   }
 
   const first = address.slice(0, num);
@@ -164,40 +176,51 @@ export function truncateAddressString(address: string, num = 12) {
   return `${first}...${last}`;
 }
 
-export const sortedStringify = (obj: any) => JSON.stringify(obj, Object.keys(obj).sort());
+export const sortedStringify = (obj: any) =>
+  JSON.stringify(obj, Object.keys(obj).sort());
 
-export const mulDecimals = (amount: string | number, decimals: string | number) => {
-  const decimalsMul = `10${new Array(Number(decimals)).join('0')}`;
+export const mulDecimals = (
+  amount: string | number,
+  decimals: string | number
+) => {
+  const decimalsMul = `10${new Array(Number(decimals)).join("0")}`;
   const amountStr = new BigNumber(amount).multipliedBy(decimalsMul);
 
   return new BN(amountStr.toFixed());
 };
 
-export const divDecimals = (amount: string | number, decimals: string | number) => {
+export const divDecimals = (
+  amount: string | number,
+  decimals: string | number
+) => {
   if (decimals === 0) {
     return String(amount);
   }
 
-  const decimalsMul = `10${new Array(Number(decimals)).join('0')}`;
+  const decimalsMul = `10${new Array(Number(decimals)).join("0")}`;
   const amountStr = new BigNumber(amount).dividedBy(decimalsMul);
 
   return amountStr.toFixed();
 };
 
-export const UINT128_MAX = '340282366920938463463374607431768211454';
+export const UINT128_MAX = "340282366920938463463374607431768211454";
 
 export const displayHumanizedBalance = (
   balance: BigNumber,
   roundingMode: BigNumber.RoundingMode = BigNumber.ROUND_HALF_UP,
-  decimals: number = 6,
+  decimals: number = 6
 ): string =>
-  new Intl.NumberFormat('en-US', {
+  new Intl.NumberFormat("en-US", {
     maximumFractionDigits: decimals,
     useGrouping: true,
   }).format(Number(balance.toFixed(decimals, roundingMode)));
 
-export const humanizeBalance = (balance: BigNumber, decimals: number): BigNumber =>
-  balance.dividedBy(new BigNumber(`1e${decimals}`));
+export const humanizeBalance = (
+  balance: BigNumber,
+  decimals: number
+): BigNumber => balance.dividedBy(new BigNumber(`1e${decimals}`));
 
-export const canonicalizeBalance = (balance: BigNumber, decimals: number): BigNumber =>
-  balance.multipliedBy(new BigNumber(`1e${decimals}`));
+export const canonicalizeBalance = (
+  balance: BigNumber,
+  decimals: number
+): BigNumber => balance.multipliedBy(new BigNumber(`1e${decimals}`));

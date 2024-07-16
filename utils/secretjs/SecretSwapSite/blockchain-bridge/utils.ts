@@ -1,19 +1,20 @@
-export const sleep = duration => new Promise(res => setTimeout(res, duration));
+export const sleep = (duration: number | undefined) =>
+  new Promise((res) => setTimeout(res, duration));
 
 export const networkToDisplay = (name?: string) => {
   if (!name) {
-    return '';
+    return "";
   }
   switch (name.toLowerCase().trim()) {
-    case 'binancesmartchain':
-      return 'Binance Smart Chain';
-    case 'ethereum':
-      return 'Ethereum';
-    case 'secret':
-      return 'Secret Network';
-    case 'secret20':
-      return 'Secret Network';
+    case "binancesmartchain":
+      return "Binance Smart Chain";
+    case "ethereum":
+      return "Ethereum";
+    case "secret":
+      return "Secret Network";
+    case "secret20":
+      return "Secret Network";
     default:
-      return '';
+      return "";
   }
 };

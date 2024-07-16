@@ -1,4 +1,4 @@
-import { SwapToken } from './SwapToken';
+import { SwapToken } from "./SwapToken";
 
 export enum TradeType {
   EXACT_INPUT,
@@ -18,7 +18,7 @@ export interface TokenInfo {
 }
 
 export interface Token {
-  type: 'token';
+  type: "token";
   token: {
     contract_addr: string;
     token_code_hash: string;
@@ -27,7 +27,7 @@ export interface Token {
 }
 
 export interface NativeToken {
-  type: 'native_token';
+  type: "native_token";
   native_token: {
     denom: string;
   };
@@ -38,7 +38,7 @@ export class Currency {
   public readonly token: Asset;
 
   isEqualToIdentifier(info: string) {
-    return this.token.info.type === 'native_token'
+    return this.token.info.type === "native_token"
       ? this.token.info.native_token.denom === info
       : this.token.info.token.contract_addr === info;
   }
@@ -58,7 +58,7 @@ export class Asset {
   }
 
   private static _isNative(info: any): info is NativeToken {
-    return 'native_token' in info;
+    return "native_token" in info;
   }
 
   static fromSwapToken(token: SwapToken): Asset {
@@ -73,16 +73,16 @@ export class Asset {
   static fromTokenInfo(token: TokenInfo): Asset {
     if (token.address) {
       return new Asset(token.symbol, {
-        type: 'token',
+        type: "token",
         token: {
           contract_addr: token.address,
-          token_code_hash: token.token_code_hash,
-          viewing_key: '',
+          token_code_hash: token.token_code_hash ?? "",
+          viewing_key: "",
         },
       });
     } else {
       return new Asset(token.symbol, {
-        type: 'native_token',
+        type: "native_token",
         native_token: { denom: `u${token.symbol.toLowerCase()}` },
       });
     }
@@ -118,19 +118,27 @@ export class Trade {
   /**
    * The mid price after the trade executes assuming no slippage.
    */
-  public readonly price: number;
+  // public readonly price: number;
 
   //public readonly pair: string
 
   getExactAmount(): string {
-    return this.tradeType === TradeType.EXACT_OUTPUT ? this.outputAmount.amount : this.inputAmount.amount;
+    return this.tradeType === TradeType.EXACT_OUTPUT
+      ? this.outputAmount.amount
+      : this.inputAmount.amount;
   }
 
   getEstimatedAmount(): string {
-    return this.tradeType === TradeType.EXACT_OUTPUT ? this.inputAmount.amount : this.outputAmount.amount;
+    return this.tradeType === TradeType.EXACT_OUTPUT
+      ? this.inputAmount.amount
+      : this.outputAmount.amount;
   }
 
-  constructor(inputAmount: Currency, outputAmount: Currency, tradeType: TradeType) {
+  constructor(
+    inputAmount: Currency,
+    outputAmount: Currency,
+    tradeType: TradeType
+  ) {
     this.inputAmount = inputAmount;
     this.outputAmount = outputAmount;
     this.tradeType = tradeType;

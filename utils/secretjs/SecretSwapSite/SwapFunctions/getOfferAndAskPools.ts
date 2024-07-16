@@ -8,7 +8,7 @@ export function getOfferAndAskPools(
   toToken: string,
   pair: SwapPair,
   tokens: SwapTokenMap,
-  balances: { [key: string]: string },
+  balances: { [key: string]: string }
 ): { offer_pool: BigNumber; ask_pool: BigNumber } {
   if (!pair) {
     return { offer_pool: new BigNumber(0), ask_pool: new BigNumber(0) };
@@ -23,11 +23,11 @@ export function getOfferAndAskPools(
 
   const offer_pool = humanizeBalance(
     new BigNumber(balances[`${fromToken}-${pair.identifier()}`]),
-    fromDecimals,
+    fromDecimals
   );
   const ask_pool = humanizeBalance(
     new BigNumber(balances[`${toToken}-${pair.identifier()}`]),
-    toDecimals,
+    toDecimals
   );
 
   // this condition tested as never true,

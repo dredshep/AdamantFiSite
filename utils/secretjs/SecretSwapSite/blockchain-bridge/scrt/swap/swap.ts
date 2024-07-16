@@ -22,7 +22,7 @@ const connectKeplr = async () => {
 };
 
 const createClient = async (
-  signer: OfflineAminoSigner & OfflineDirectSigner,
+  signer: OfflineAminoSigner & OfflineDirectSigner
 ) => {
   const accounts = await signer.getAccounts();
   const client = new SecretNetworkClient({
@@ -34,51 +34,51 @@ const createClient = async (
   return client;
 };
 
-(async () => {
-  const keplrConnection = await connectKeplr();
-  if (!keplrConnection.signer) {
-    console.error("No signer found");
-    return;
-  }
-  const secretjs = await createClient(keplrConnection.signer);
+// (async () => {
+//   const keplrConnection = await connectKeplr();
+//   if (!keplrConnection.signer) {
+//     console.error("No signer found");
+//     return;
+//   }
+//   const secretjs = await createClient(keplrConnection.signer);
 
-  // Define the parameters for the swap
-  const fromToken = "secret1...";
-  const toToken = "secret2...";
-  const fromAmount = "1000000"; // Example amount
-  const expectedReturn = "990000"; // Example expected return
+//   // Define the parameters for the swap
+//   const fromToken = "secret1...";
+//   const toToken = "secret2...";
+//   const fromAmount = "1000000"; // Example amount
+//   const expectedReturn = "990000"; // Example expected return
 
-  const bestRouteData = getBestRoute({
-    fromInput: 1,
-    toInput: 1,
-    cachedGasFeesUnfilledCoin: [0.12],
-    isToEstimated: true,
-    routes: [["a", "b"]],
-    tokens: {
-      a: { address: "secret1...", code_hash: "..." },
-      b: { address: "secret2...", code_hash: "..." },
-    },
-    pairs: new Map([["a:b", { contract_addr: "secret1...", asset_infos: [] }]]),
-    balances: { a: "1000000", b: "1000000" },
-  });
+//   const bestRouteData = getBestRoute({
+//     fromInput: 1,
+//     toInput: 1,
+//     cachedGasFeesUnfilledCoin: [0.12],
+//     isToEstimated: true,
+//     routes: [["a", "b"]],
+//     tokens: {
+//       a: { address: "secret1...", code_hash: "..." },
+//       b: { address: "secret2...", code_hash: "..." },
+//     },
+//     pairs: new Map([["a:b", { contract_addr: "secret1...", asset_infos: [] }]]),
+//     balances: { a: "1000000", b: "1000000" },
+//   });
 
-  if (bestRouteData.bestRoute) {
-    const hops = await getHops(
-      bestRouteData.bestRoute,
-      bestRouteData.pairs,
-      secretjs,
-    );
+//   if (bestRouteData.bestRoute) {
+//     const hops = await getHops(
+//       bestRouteData.bestRoute,
+//       bestRouteData.pairs,
+//       secretjs,
+//     );
 
-    await executeRouterSwap(
-      keplrConnection.signer,
-      keplrConnection.address,
-      fromToken,
-      fromAmount,
-      hops,
-      expectedReturn,
-      bestRouteData.bestRoute,
-    );
-  } else {
-    console.error("No valid route found");
-  }
-})();
+//     await executeRouterSwap(
+//       keplrConnection.signer,
+//       keplrConnection.address,
+//       fromToken,
+//       fromAmount,
+//       hops,
+//       expectedReturn,
+//       bestRouteData.bestRoute,
+//     );
+//   } else {
+//     console.error("No valid route found");
+//   }
+// })();
