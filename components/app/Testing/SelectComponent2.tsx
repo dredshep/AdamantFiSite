@@ -10,7 +10,7 @@ interface SelectComponentProps {
 }
 
 const SelectComponent2: React.FC<SelectComponentProps> = ({
-  apiUrl = "http://localhost:3000/api/tokens",
+  apiUrl = "/api/tokens",
   setFrom,
   setTo,
   outputOptions = [], // Default to empty array if not provided
