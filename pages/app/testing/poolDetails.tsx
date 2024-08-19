@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { SecretNetworkClient } from "secretjs";
 import { Window as KeplrWindow } from "@keplr-wallet/types";
-import { queryPoolDetails as addresses } from "./queryPoolDetails";
+import { queryPoolDetails as addresses } from "../../../components/app/Testing/queryPoolDetails";
 
 // const addresses = [
 //   {

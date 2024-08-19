@@ -1,5 +1,0 @@
-export const Snip20SwapHash = (
-  params: { tx_id: string; address: string },
-): string => {
-  return `${params.tx_id}|${params.address}`;
-};

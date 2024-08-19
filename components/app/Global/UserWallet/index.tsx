@@ -9,15 +9,15 @@ import { useModalStore } from "@/store/modalStore";
 import WalletModal from "./WalletModal";
 import { useWalletStore } from "@/store/walletStore";
 
-interface UserWalletProps {
-  // isConnected: boolean;
-  // userAddress: SecretString;
-  // balanceSCRT: number;
-  // balanceADMT: number;
-  // onConnect: () => void;
-}
+// interface UserWalletProps {
+//   // isConnected: boolean;
+//   // userAddress: SecretString;
+//   // balanceSCRT: number;
+//   // balanceADMT: number;
+//   // onConnect: () => void;
+// }
 
-const UserWallet: React.FC<UserWalletProps> = (
+const UserWallet: React.FC = (
   {
     // isConnected,
     // userAddress,
