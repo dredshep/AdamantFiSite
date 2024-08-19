@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { SecretNetworkClient } from "secretjs";
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 import { processPoolsData } from "../../../../utils/secretjs/decimals/utils/processPoolData";
-import { fullPoolsData } from "../fullPoolsData";
+import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
 
 const QueryTokenDecimals = () => {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);

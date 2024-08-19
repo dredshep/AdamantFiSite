@@ -4,7 +4,7 @@ import { SecretNetworkClient } from "secretjs";
 import Decimal from "decimal.js";
 import SelectComponent from "@/components/app/Testing/SelectComponent";
 import { getTokenDecimals, getTokenName } from "@/utils/apis/tokenInfo";
-import { fullPoolsData } from "../fullPoolsData";
+import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
 
 interface PoolQueryResponse {
   assets: {
@@ -118,26 +118,10 @@ const SwapPage = () => {
   const [amountIn, setAmountIn] = useState<string>("");
   const [estimatedOutput, setEstimatedOutput] = useState<string>("");
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  // const [poolAddress, setPoolAddress] = useState<string>("");
   const [inputToken, setInputToken] = useState<string>("");
   const [outputToken, setOutputToken] = useState<string>("");
 
-  // function handleSelectChange(from: string, to: string) {
-  //   const poolAddress = fullPoolsData.find((pool) =>
-  //     pool.query_result.assets.every(
-  //       (asset) =>
-  //         asset.info.token?.contract_addr === from ||
-  //         asset.info.token?.contract_addr === to
-  //     )
-  //   )?.contract_address;
-  //   setPoolAddress(poolAddress || "");
-  //   setInputToken(from);
-  //   setOutputToken(to);
-  //   setEstimatedOutput("");
-  // }
-
   useEffect(() => {
-    // if there's a change in from or to, empty the estimated output
     setEstimatedOutput("");
   }, [inputToken, outputToken]);
 
