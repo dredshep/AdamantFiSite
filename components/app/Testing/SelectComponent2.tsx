@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from "react";
 import fullPoolsData from "@/outputs/fullPoolsData.json";
 import { fetchTokenData, getTokenName } from "@/utils/apis/tokenInfo";
+import { SecretString } from "@/types";
 
 interface SelectComponentProps {
   apiUrl?: string;
-  setFrom?: (from: string) => void;
-  setTo?: (to: string) => void;
-  outputOptions?: string[]; // New prop for filtered output options
+  setFrom?: (from: SecretString | "") => void;
+  setTo?: (to: SecretString | "") => void;
+  outputOptions?: SecretString[];
 }
 
 const SelectComponent2: React.FC<SelectComponentProps> = ({
   apiUrl = "/api/tokens",
   setFrom,
   setTo,
-  outputOptions = [], // Default to empty array if not provided
+  outputOptions = [] as SecretString[],
 }) => {
-  const [fromTokens, setFromTokens] = useState<string[]>([]);
-  const [toTokens, setToTokens] = useState<string[]>([]);
-  const [selectedFrom, setSelectedFrom] = useState<string>("");
-  const [selectedTo, setSelectedTo] = useState<string>("");
+  const [fromTokens, setFromTokens] = useState<SecretString[]>([]);
+  const [toTokens, setToTokens] = useState<SecretString[]>([]);
+  const [selectedFrom, setSelectedFrom] = useState<SecretString | "">("");
+  const [selectedTo, setSelectedTo] = useState<SecretString | "">("");
   const [tokenNames, setTokenNames] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -59,7 +60,7 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
           (addressOrDenom): addressOrDenom is string =>
             addressOrDenom !== undefined
         )
-        .filter((address) => address !== "uscrt");
+        .filter((address) => address !== "uscrt") as SecretString[];
 
       setFromTokens(Array.from(new Set(fromOptions)));
     };
@@ -68,7 +69,7 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
   }, [apiUrl]);
 
   const handleFromSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const fromToken = event.target.value;
+    const fromToken = event.target.value as SecretString;
     setSelectedFrom(fromToken);
 
     if (outputOptions.length > 0) {
@@ -90,7 +91,7 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
           })
         )
         .filter((addr): addr is string => addr !== null)
-        .filter((addr) => addr !== "uscrt");
+        .filter((addr) => addr !== "uscrt") as SecretString[];
 
       setToTokens(Array.from(new Set(toOptions)));
     }
@@ -99,7 +100,7 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
   };
 
   const handleToSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedTo(event.target.value);
+    setSelectedTo(event.target.value as SecretString);
   };
 
   return (

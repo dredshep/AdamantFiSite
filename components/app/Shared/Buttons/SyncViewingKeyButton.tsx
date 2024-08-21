@@ -1,5 +1,5 @@
 import React from "react";
-import { useViewingKeyStore } from "@/store/viewingKeyStore";
+import { useViewingKeyStore } from "@/store/viewingKeyStore2";
 import { SecretString } from "@/types";
 
 const SyncViewingKeyButton = ({

@@ -1,11 +1,14 @@
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 import { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
+import { SecretNetworkClient, TxOptions } from "secretjs";
 import Decimal from "decimal.js";
 import { getTokenDecimals, getTokenName } from "@/utils/apis/tokenInfo";
 import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
 import SelectComponent2 from "@/components/app/Testing/SelectComponent2";
 import SwapResult from "@/components/app/Testing/SwapResult";
+import ViewingKeyModal from "@/components/app/Testing/ViewingKeyModal";
+import { useViewingKeyStore } from "@/store/viewingKeyStore";
+import { SecretString } from "@/types";
 
 interface PoolQueryResponse {
   assets: {
@@ -97,7 +100,7 @@ const findAllReachableTokens = (
 
   return reachableTokens;
 };
-interface Path {
+export interface Path {
   pools: string[]; // Array of pool addresses
   tokens: string[]; // Array of token addresses in the path
 }
@@ -145,7 +148,7 @@ const findPaths = (
 
   return paths;
 };
-interface PathEstimation {
+export interface PathEstimation {
   path: Path;
   finalOutput: Decimal;
   totalPriceImpact: string;
@@ -416,20 +419,28 @@ const SwapPage = () => {
   const [amountIn, setAmountIn] = useState<string>("");
   const [estimatedOutput, setEstimatedOutput] = useState<string>("");
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [inputToken, setInputToken] = useState<string>("");
-  const [outputToken, setOutputToken] = useState<string>("");
-  const [outputOptions, setOutputOptions] = useState<string[]>([]);
+  const [inputToken, setInputToken] = useState<SecretString | "">("");
+  const [outputToken, setOutputToken] = useState<SecretString | "">("");
+  const [outputOptions, setOutputOptions] = useState<SecretString[]>([]);
   const [bestPathEstimation, setBestPathEstimation] =
     useState<PathEstimation | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const inputViewingKey = useViewingKeyStore((state) =>
+    state.getViewingKey(inputToken)
+  );
+  const outputViewingKey = useViewingKeyStore((state) =>
+    state.getViewingKey(outputToken)
+  );
 
   useEffect(() => {
-    // setEstimatedOutput("");
+    setEstimatedOutput("");
     setBestPathEstimation(null);
     if (inputToken) {
       const possibleOutputs = getPossibleOutputsForToken(
         inputToken,
         fullPoolsData
-      );
+      ) as SecretString[];
       setOutputOptions(possibleOutputs);
     }
   }, [inputToken, outputToken]);
@@ -459,6 +470,7 @@ const SwapPage = () => {
         wallet: offlineSigner,
         walletAddress: accounts[0].address,
       });
+      setWalletAddress(accounts[0].address);
 
       setSecretjs(client);
     };
@@ -466,7 +478,13 @@ const SwapPage = () => {
     connectKeplr();
   }, []);
 
-  const handleSwap = async () => {
+  const handleSyncViewingKeys = () => {
+    setIsModalOpen(true);
+  };
+
+  // first, we estimate the full swap details
+
+  const handleEstimate = async () => {
     if (secretjs && amountIn && inputToken && outputToken) {
       const amountInDecimal = new Decimal(amountIn);
       const tokenPoolMap = buildTokenPoolMap(fullPoolsData);
@@ -484,19 +502,144 @@ const SwapPage = () => {
       );
 
       if (bestPathEstimation) {
-        console.log("--- Best Path Estimation in handleSwap ---");
+        console.log("--- Best Path Estimation in handleEstimate ---");
         console.log("Best Path Estimation:", bestPathEstimation);
         console.log("Final Output:", bestPathEstimation.finalOutput.toString());
         console.log("Ideal Output:", bestPathEstimation.idealOutput.toString());
         console.log("LP Fee:", bestPathEstimation.totalLpFee.toString());
         console.log("Total Price Impact:", bestPathEstimation.totalPriceImpact);
         console.log("Total Gas Cost:", bestPathEstimation.totalGasCost);
-        console.log("--- End Best Path Estimation in handleSwap ---");
+        console.log("--- End Best Path Estimation in handleEstimate ---");
 
         setBestPathEstimation(bestPathEstimation);
       } else {
         setEstimatedOutput("Error in estimating the best route");
       }
+    }
+  };
+
+  // then, we allow the user to execute the swap
+
+  // function getViewingKey(tokenAddress: string): string | undefined {
+  //   return useViewingKeyStore.getState().getViewingKey(tokenAddress);
+  // }
+
+  const handleSwap = async () => {
+    if (!secretjs) {
+      console.error("SecretNetworkClient is not initialized");
+      return;
+    }
+
+    const path = bestPathEstimation?.path;
+    if (!path) {
+      console.error("No path found for swap execution");
+      return;
+    }
+
+    if (!inputViewingKey || !outputViewingKey) {
+      alert("Viewing keys are missing. Please sync them before swapping.");
+      return;
+    }
+
+    try {
+      // Fetch the account information to get the sequence number and account number
+      const accountInfo = await secretjs.query.auth.account({
+        address: walletAddress!,
+      });
+
+      const baseAccount = accountInfo as {
+        "@type": "/cosmos.auth.v1beta1.BaseAccount";
+        sequence?: string;
+        account_number?: string;
+      };
+
+      // Check if sequence number is available
+      const sequence = baseAccount.sequence
+        ? parseInt(baseAccount.sequence, 10)
+        : null;
+      const accountNumber = baseAccount.account_number
+        ? parseInt(baseAccount.account_number, 10)
+        : null;
+
+      for (let i = 0; i < path.pools.length; i++) {
+        const poolAddress = path.pools[i];
+        const inputToken = path.tokens[i];
+        const outputToken = path.tokens[i + 1];
+
+        console.log(`Executing swap ${i + 1} on pool ${poolAddress}`);
+        console.log(`Swapping ${inputToken} for ${outputToken}`);
+
+        const decimals = getTokenDecimals(inputToken);
+        if (decimals === undefined) {
+          throw new Error(
+            `Decimals for token ${inputToken} could not be determined`
+          );
+        }
+
+        const swapMsg = {
+          swap: {
+            offer_asset: {
+              info: {
+                token: {
+                  contract_addr: inputToken,
+                  token_code_hash:
+                    "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+                  viewing_key: inputViewingKey,
+                },
+              },
+              amount: bestPathEstimation.finalOutput
+                .mul(Decimal.pow(10, decimals))
+                .toFixed(0),
+            },
+            belief_price: "0",
+            max_spread: "0.5",
+            to: walletAddress,
+          },
+        };
+
+        console.log("Swapping with message:", JSON.stringify(swapMsg, null, 2));
+
+        const txOptions: TxOptions = {
+          gasLimit: 200_000,
+          gasPriceInFeeDenom: 0.25,
+          feeDenom: "uscrt",
+          explicitSignerData:
+            sequence !== null && accountNumber !== null
+              ? {
+                  accountNumber: accountNumber,
+                  sequence: sequence + i, // Handle sequence increment only if available
+                  chainId: "secret-4", // Replace with your actual chain ID
+                }
+              : undefined,
+        };
+
+        const result = await secretjs.tx.compute.executeContract(
+          {
+            sender: walletAddress!,
+            contract_address: poolAddress,
+            code_hash:
+              "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+            msg: swapMsg,
+            sent_funds: [],
+          },
+          txOptions
+        );
+
+        console.log("Transaction Result:", result);
+
+        if (result.code !== 0) {
+          throw new Error(`Swap failed at step ${i + 1}: ${result.rawLog}`);
+        }
+
+        console.log(`Swap ${i + 1} executed successfully!`);
+      }
+
+      alert("Swap completed successfully!");
+      setEstimatedOutput("Swap completed successfully!");
+    } catch (error) {
+      console.error("Error during swap execution:", error);
+      alert("Swap failed. Check the console for more details.");
+      setEstimatedOutput("Error during swap execution. Please try again.");
     }
   };
 
@@ -522,11 +665,12 @@ const SwapPage = () => {
                 className="px-4 py-2 border border-gray-700 bg-adamant-app-input rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg text-white"
               />
               <button
-                onClick={handleSwap}
+                onClick={handleEstimate}
                 className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
               >
                 Estimate Swap
               </button>
+
               {bestPathEstimation && ( // prettier-ignore
                 <SwapResult
                   bestRoute={bestPathEstimation.path.tokens
@@ -552,8 +696,40 @@ const SwapPage = () => {
             </>
           )}
           <p className="text-2xl text-center text-white">{estimatedOutput}</p>
+          {bestPathEstimation && (
+            <>
+              <button
+                onClick={handleSyncViewingKeys}
+                className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
+              >
+                Sync Viewing Keys
+              </button>
+              {inputViewingKey && outputViewingKey ? (
+                <button
+                  onClick={handleSwap}
+                  className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
+                >
+                  Execute Swap
+                </button>
+              ) : (
+                <p className="text-xl text-center text-red-400">
+                  Viewing keys are required to execute the swap. Sync them
+                  first.
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
+      {isModalOpen && inputToken !== "" && outputToken !== "" && (
+        <ViewingKeyModal
+          tokenIn={inputToken}
+          tokenOut={outputToken}
+          onClose={() => setIsModalOpen(false)}
+          // secretjs={secretjs!}
+          // walletAddress={walletAddress!}
+        />
+      )}
     </div>
   );
 };

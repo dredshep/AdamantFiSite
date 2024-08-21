@@ -11,6 +11,7 @@ interface ExperimentalKeplrType {
   suggestChain(chainInfo: ChainInfo): Promise<void>;
   experimentalSuggestChain(chainInfo: ChainInfo): Promise<void>;
   getKey(chainId: string): Promise<Key>;
+  getRegisteredSecret20Tokens(chainId: string): Promise<string[]>;
 }
 
 // interface OfflineSigner {

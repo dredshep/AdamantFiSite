@@ -1,29 +1,31 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
-interface ViewingKeyStoreState {
-  viewingKeys: Record<string, string>; // Maps token address to viewing key
-  setViewingKey: (address: string, key: string) => void;
-  getViewingKey: (address: string) => string | undefined;
-  removeAllViewingKeys: () => void;
+interface ViewingKeyStore {
+  viewingKeys: { [tokenAddress: string]: string };
+  setViewingKey: (tokenAddress: string, viewingKey: string) => void;
+  getViewingKey: (tokenAddress: string) => string | undefined;
 }
 
-export const useViewingKeyStore = create<ViewingKeyStoreState>((set, get) => ({
-  viewingKeys: {},
-
-  setViewingKey: (address, key) => {
-    set((state) => ({
-      viewingKeys: {
-        ...state.viewingKeys,
-        [address]: key,
+export const useViewingKeyStore = create<ViewingKeyStore>()(
+  persist(
+    (set, get) => ({
+      viewingKeys: {},
+      setViewingKey: (tokenAddress: string, viewingKey: string) => {
+        set((state) => ({
+          viewingKeys: {
+            ...state.viewingKeys,
+            [tokenAddress]: viewingKey,
+          },
+        }));
       },
-    }));
-  },
-
-  getViewingKey: (address) => {
-    return get().viewingKeys[address];
-  },
-
-  removeAllViewingKeys: () => {
-    set({ viewingKeys: {} });
-  },
-}));
+      getViewingKey: (tokenAddress: string) => {
+        return get().viewingKeys[tokenAddress];
+      },
+    }),
+    {
+      name: "viewing-key-store",
+      storage: createJSONStorage(() => sessionStorage),
+    }
+  )
+);

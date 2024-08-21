@@ -52,5 +52,11 @@ export const getTokenName = (address: string): string | undefined => {
 
 // Get token decimals by address
 export const getTokenDecimals = (address: string): number | undefined => {
+  if (address === "uscrt") {
+    return 6;
+  }
+  if (address === "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek") {
+    return 6;
+  }
   return tokenData.get(address)?.decimals;
 };
