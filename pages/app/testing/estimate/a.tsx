@@ -9,6 +9,7 @@ import SwapResult from "@/components/app/Testing/SwapResult";
 import ViewingKeyModal from "@/components/app/Testing/ViewingKeyModal";
 import { useViewingKeyStore } from "@/store/viewingKeyStore";
 import { SecretString } from "@/types";
+import AllowanceBox from "@/components/app/Testing/AllowanceBox";
 
 interface PoolQueryResponse {
   assets: {
@@ -655,6 +656,44 @@ const SwapPage = () => {
             setTo={setOutputToken}
             outputOptions={outputOptions}
           />
+          {inputToken !== "" &&
+            walletAddress &&
+            inputViewingKey &&
+            outputViewingKey &&
+            (() => {
+              // Find the pool that contains the inputToken
+              const pool = fullPoolsData.find((pool) =>
+                pool.query_result.assets.some(
+                  (asset) => asset.info.token?.contract_addr === inputToken
+                )
+              );
+
+              // If pool is found, extract the spenderAddress and tokenCodeHash
+              if (pool) {
+                const tokenAsset = pool.query_result.assets.find(
+                  (asset) => asset.info.token?.contract_addr === inputToken
+                );
+
+                const tokenCodeHash =
+                  tokenAsset?.info.token?.token_code_hash || "";
+                const spenderAddress = pool.contract_address;
+
+                return (
+                  <AllowanceBox
+                    secretjs={secretjs!}
+                    tokenAddress={inputToken}
+                    spenderAddress={spenderAddress as SecretString}
+                    walletAddress={walletAddress as SecretString}
+                    tokenCodeHash={tokenCodeHash}
+                    requiredAmount={amountIn}
+                    viewingKey={inputViewingKey || ""}
+                  />
+                );
+              } else {
+                return <p>Pool not found for the selected token.</p>;
+              }
+            })()}
+
           {inputToken && outputToken && (
             <>
               <input
