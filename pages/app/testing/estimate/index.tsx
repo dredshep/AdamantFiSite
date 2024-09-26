@@ -8,6 +8,7 @@ import SelectComponent2 from "@/components/app/Testing/SelectComponent2";
 import SwapResult from "@/components/app/Testing/SwapResult";
 import ViewingKeyModal from "@/components/app/Testing/ViewingKeyModal";
 import { useViewingKeyStore } from "@/store/viewingKeyStore";
+import { useTxStore } from "@/store/txStore";
 import { SecretString, Hop } from "@/types";
 import AllowanceBox from "@/components/app/Testing/AllowanceBox";
 import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
@@ -527,6 +528,8 @@ const SwapPage = () => {
   // }
 
   const handleSwap = async () => {
+    const { setPending, setResult } = useTxStore.getState();
+
     if (!secretjs) {
       console.error("SecretNetworkClient is not initialized");
       return;
@@ -544,6 +547,8 @@ const SwapPage = () => {
     }
 
     try {
+      setPending(true);
+
       // Fetch the account information to get the sequence number and account number
       const accountInfo = await secretjs.query.auth.account({
         address: walletAddress!,
@@ -710,6 +715,8 @@ const SwapPage = () => {
           txOptions,
         );
       }
+
+      setResult(result);
 
       console.log("Transaction Result:", result);
 
