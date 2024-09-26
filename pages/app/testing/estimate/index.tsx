@@ -1,6 +1,6 @@
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 import { useState, useEffect } from "react";
-import { SecretNetworkClient, TxOptions } from "secretjs";
+import { SecretNetworkClient, TxOptions, TxResponse } from "secretjs";
 import Decimal from "decimal.js";
 import { getTokenDecimals, getTokenName } from "@/utils/apis/tokenInfo";
 import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
@@ -8,8 +8,9 @@ import SelectComponent2 from "@/components/app/Testing/SelectComponent2";
 import SwapResult from "@/components/app/Testing/SwapResult";
 import ViewingKeyModal from "@/components/app/Testing/ViewingKeyModal";
 import { useViewingKeyStore } from "@/store/viewingKeyStore";
-import { SecretString } from "@/types";
+import { SecretString, Hop } from "@/types";
 import AllowanceBox from "@/components/app/Testing/AllowanceBox";
+import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
 
 interface PoolQueryResponse {
   assets: {
@@ -261,11 +262,13 @@ const calculateSingleHopOutput = (
   console.log(`Input Token: ${inputToken}`);
   console.log(`Output Token: ${outputToken}`);
   console.log(
-    `Raw Input Reserve: ${rawInputReserve.amount.toString()} (Decimals: ${rawInputReserve.decimals
+    `Raw Input Reserve: ${rawInputReserve.amount.toString()} (Decimals: ${
+      rawInputReserve.decimals
     })`,
   );
   console.log(
-    `Raw Output Reserve: ${rawOutputReserve.amount.toString()} (Decimals: ${rawOutputReserve.decimals
+    `Raw Output Reserve: ${rawOutputReserve.amount.toString()} (Decimals: ${
+      rawOutputReserve.decimals
     })`,
   );
   console.log(`Amount In: ${amountIn.toString()}`);
@@ -395,7 +398,7 @@ const getPoolData = async (
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
       const decimals =
         asset.info.token?.contract_addr ===
-          "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
+        "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
           ? 6
           : getTokenDecimals(asset.info.token.contract_addr) || 0;
       console.log({ decimals });
@@ -560,56 +563,98 @@ const SwapPage = () => {
         ? parseInt(baseAccount.account_number, 10)
         : null;
 
-      for (let i = 0; i < path.pools.length; i++) {
-        const poolAddress = path.pools[i];
-        const inputToken = path.tokens[i];
-        const outputToken = path.tokens[i + 1];
+      let txOptions: TxOptions = {
+        gasLimit: 500_000,
+        gasPriceInFeeDenom: 0.25,
+        feeDenom: "uscrt",
+        // TODO: explicitSignerData is probably not needed. I think secretjs handles this.
+        explicitSignerData:
+          sequence !== null && accountNumber !== null
+            ? {
+                accountNumber: accountNumber,
+                sequence: sequence,
+                chainId: "secret-4",
+              }
+            : undefined,
+      };
 
-        console.log(`Executing swap ${i + 1} on pool ${poolAddress}`);
-        console.log(`Swapping ${inputToken} for ${outputToken}`);
+      const decimalsIn = getTokenDecimals(inputToken);
+      if (decimalsIn === undefined) {
+        throw new Error(
+          `Decimals for token ${inputToken} could not be determined`,
+        );
+      }
+      const decimalsOut = getTokenDecimals(outputToken);
+      if (decimalsOut === undefined) {
+        throw new Error(
+          `Decimals for token ${outputToken} could not be determined`,
+        );
+      }
 
-        const decimals = getTokenDecimals(inputToken);
-        if (decimals === undefined) {
-          throw new Error(
-            `Decimals for token ${inputToken} could not be determined`,
-          );
+      const send_amount = new Decimal(amountIn)
+        .times(Decimal.pow(10, decimalsIn))
+        .toFixed(0);
+
+      const expected_return = bestPathEstimation.finalOutput
+        .times(Decimal.pow(10, decimalsOut))
+        .toFixed(0);
+
+      console.log("Expected Return:", expected_return);
+
+      let sendMsg: Snip20SendOptions;
+      let result: TxResponse;
+      const hops: Hop[] = [];
+
+      if (path.pools.length >= 2) {
+        console.log("Multiple hops. Using Router contract.");
+
+        for (let i = 0; i < path.pools.length; i++) {
+          const poolAddress = path.pools[i];
+          const inputToken = path.tokens[i];
+          const outputToken = path.tokens[i + 1];
+
+          const hop: Hop = {
+            from_token: {
+              snip20: {
+                address: inputToken,
+                // FIXME: hardcoded sSCRT code_hash
+                code_hash:
+                  "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
+              },
+            },
+            pair_address: poolAddress,
+            // FIXME: hardcoded sSCRT <> SEFI pair_code_hash
+            pair_code_hash:
+              "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+          };
+
+          console.debug(`Hop ${i + 1}`, hop);
+
+          hops.push(hop);
+
+          console.log(`Hop ${i + 1} on pool ${poolAddress}`);
+          console.log(`Swapping ${inputToken} for ${outputToken}`);
         }
 
-        const swapMsg = {
-          swap: {
-            belief_price: bestPathEstimation.finalOutput.toString(),
-            max_spread: bestPathEstimation.totalPriceImpact,
-            to: walletAddress,
-          },
-        };
-
-        const sendMsg = {
+        sendMsg = {
           send: {
-            recipient: poolAddress,
-            amount: "100000",
-            msg: btoa(JSON.stringify(swapMsg)),
+            // NOTE: Router Contract
+            recipient: "secret1xy5r5j4zp0v5fzza5r9yhmv7nux06rfp2yfuuv",
+            amount: send_amount,
+            msg: btoa(
+              JSON.stringify({
+                to: walletAddress,
+                hops,
+                expected_return,
+              }),
+            ),
           },
         };
 
         console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
-        console.log("Callback message:", JSON.stringify(swapMsg, null, 2));
-
-        const txOptions: TxOptions = {
-          gasLimit: 500_000,
-          gasPriceInFeeDenom: 0.1,
-          feeDenom: "uscrt",
-          explicitSignerData:
-            sequence !== null && accountNumber !== null
-              ? {
-                accountNumber: accountNumber,
-                sequence: sequence + i, // Handle sequence increment only if available
-                chainId: "secret-4", // Replace with your actual chain ID
-              }
-              : undefined,
-        };
 
         // FIXME: hardcoded contract_address and code_hash to sSCRT
-        const result = await secretjs.tx.snip20.send(
+        result = await secretjs.tx.snip20.send(
           {
             sender: walletAddress!,
             contract_address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
@@ -620,15 +665,59 @@ const SwapPage = () => {
           },
           txOptions,
         );
+      } else {
+        console.log("Single hop. Using Pair contract directly.");
 
-        console.log("Transaction Result:", result);
+        const poolAddress = path.pools[0];
+        const inputToken = path.tokens[0];
+        const outputToken = path.tokens[1];
 
-        if (result.code !== 0) {
-          throw new Error(`Swap failed at step ${i + 1}: ${result.rawLog}`);
-        }
+        console.log(`Executing swap on pool ${poolAddress}`);
+        console.log(`Swapping ${inputToken} for ${outputToken}`);
 
-        console.log(`Swap ${i + 1} executed successfully!`);
+        const swapMsg = {
+          swap: {
+            belief_price: expected_return,
+            max_spread: bestPathEstimation.totalPriceImpact,
+            to: walletAddress,
+          },
+        };
+
+        sendMsg = {
+          send: {
+            recipient: poolAddress,
+            amount: send_amount,
+            msg: btoa(JSON.stringify(swapMsg)),
+          },
+        };
+
+        console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
+        console.log("Callback message:", JSON.stringify(swapMsg, null, 2));
+
+        // gasLimit could be changed depending on single swap or multi hop
+        txOptions.gasLimit = 500_000;
+
+        // FIXME: hardcoded contract_address and code_hash to sSCRT
+        result = await secretjs.tx.snip20.send(
+          {
+            sender: walletAddress!,
+            contract_address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+            code_hash:
+              "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
+            msg: sendMsg,
+            sent_funds: [],
+          },
+          txOptions,
+        );
       }
+
+      console.log("Transaction Result:", result);
+
+      if (result.code !== 0) {
+        throw new Error(`Swap failed: ${result.rawLog}`);
+      }
+
+      console.log(`Swap executed successfully!`);
 
       alert("Swap completed successfully!");
       setEstimatedOutput("Swap completed successfully!");
@@ -760,8 +849,8 @@ const SwapPage = () => {
           tokenIn={inputToken}
           tokenOut={outputToken}
           onClose={() => setIsModalOpen(false)}
-        // secretjs={secretjs!}
-        // walletAddress={walletAddress!}
+          // secretjs={secretjs!}
+          // walletAddress={walletAddress!}
         />
       )}
     </div>
