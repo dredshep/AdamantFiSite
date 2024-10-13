@@ -34,3 +34,15 @@ export async function queryFactoryPairs() {
 
   return pairs;
 }
+
+// NOTE: This could be used to refresh Pairs data automatically
+
+// (function startPeriodicUpdate() {
+//   setInterval(() => {
+//     queryFactoryPairs().catch((err) =>
+//       console.error("Error during periodic fetch:", err),
+//     );
+//   }, CACHE_DURATION);
+//
+//   console.log("Periodic Pair updates enabled.");
+// })();
