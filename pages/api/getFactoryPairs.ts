@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { queryFactoryPairs } from "@/utils/apis/factoryPairs";
+import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
 import { handleApiError } from "@/utils/apis/handleApiError";
 
 export default async function getFactoryPairs(
