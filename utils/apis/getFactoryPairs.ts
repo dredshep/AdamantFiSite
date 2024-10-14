@@ -5,6 +5,11 @@ let cachedPairs: Pair[] | null = null;
 let cacheTimestamp: number | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+const secretjs = new SecretNetworkClient({
+  url: "https://rpc.ankr.com/http/scrt_cosmos",
+  chainId: "secret-4",
+});
+
 export async function queryFactoryPairs() {
   if (
     cachedPairs &&
@@ -14,11 +19,6 @@ export async function queryFactoryPairs() {
     console.log("Returning cached pairs.");
     return cachedPairs;
   }
-
-  const secretjs = new SecretNetworkClient({
-    url: "https://rpc.ankr.com/http/scrt_cosmos",
-    chainId: "secret-4",
-  });
 
   const { pairs }: PairsResponse = await secretjs.query.compute.queryContract({
     contract_address: "secret1fjqlk09wp7yflxx7y433mkeskqdtw3yqerkcgp",
