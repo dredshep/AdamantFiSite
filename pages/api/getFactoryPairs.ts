@@ -8,6 +8,9 @@ export default async function getFactoryPairs(
 ) {
   try {
     const data = await queryFactoryPairs();
+
+    console.debug(data.map((data) => data.contract_addr));
+
     res.status(200).json(data);
   } catch (error) {
     handleApiError(error, res);
