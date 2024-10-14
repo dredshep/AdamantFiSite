@@ -1,7 +1,7 @@
 import { PoolResponse } from "@/types/api/Pair";
 import { SecretNetworkClient } from "secretjs";
 
-// TODO: centralize SecretNetworkClient creation
+// TODO: have a single client somewhere to import instead.
 const secretjs = new SecretNetworkClient({
   url: "https://rpc.ankr.com/http/scrt_cosmos",
   chainId: "secret-4",

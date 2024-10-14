@@ -5,6 +5,7 @@ let cachedPairs: Pair[] | null = null;
 let cacheTimestamp: number | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// TODO: have a single client somewhere to import instead.
 const secretjs = new SecretNetworkClient({
   url: "https://rpc.ankr.com/http/scrt_cosmos",
   chainId: "secret-4",
@@ -34,15 +35,3 @@ export async function queryFactoryPairs() {
 
   return pairs;
 }
-
-// NOTE: This could be used to refresh Pairs data automatically
-
-// (function startPeriodicUpdate() {
-//   setInterval(() => {
-//     queryFactoryPairs().catch((err) =>
-//       console.error("Error during periodic fetch:", err),
-//     );
-//   }, CACHE_DURATION);
-//
-//   console.log("Periodic Pair updates enabled.");
-// })();
