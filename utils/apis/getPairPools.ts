@@ -1,9 +1,6 @@
 import { queryFactoryPairs } from "./getFactoryPairs";
 import { queryPool } from "./getPairPool";
 import { PoolResponse } from "@/types/api/Pair";
-import pLimit from "p-limit";
-
-const limit = pLimit(5); // Limit concurrent requests
 
 let cachedPools: PoolResponse[] | null = null;
 let cacheTimestamp: number | null = null;
@@ -20,9 +17,17 @@ export async function queryPools() {
   }
 
   const pairs = await queryFactoryPairs();
-  const data = await Promise.all(
-    pairs.map((pair) => limit(async () => await queryPool(pair.contract_addr))),
-  );
+
+  const data: PoolResponse[] = [];
+  for (const pair of pairs) {
+    try {
+      console.log(`querying pool for ${pair.contract_addr}`);
+      const poolData = await queryPool(pair.contract_addr);
+      data.push(poolData);
+    } catch (error) {
+      console.error(`Error querying pool for ${pair.contract_addr}:`, error);
+    }
+  }
 
   cachedPools = data;
   cacheTimestamp = Date.now();
