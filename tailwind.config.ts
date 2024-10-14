@@ -30,7 +30,7 @@ const config = {
       colors: {
         adamant: {
           accentText: "#A78E5A",
-          accentBg: "#a88f5b",
+          accentBg: "#cfd0d2",
           dark: "#8A754A",
           contrastDark: "#3F331D",
           gradientBright: "#A68C57",
@@ -41,13 +41,13 @@ const config = {
             light: "#0D0C22",
             buttonDark: "#100F20",
             buttonLight: "#151426",
-            border: "#30364E",
+            border: "#313131",
           },
           app: {
-            box: "#30364e",
+            box: "#313131",
             boxHighlight: "#444a5f",
-            input: "#181b27",
-            selectTrigger: "#242732",
+            input: "#10131f",
+            selectTrigger: "#232631",
             buttonDisabled: "#888ea6",
           },
         },
@@ -68,6 +68,7 @@ const config = {
       },
     },
   },
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
 

@@ -38,7 +38,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 normal-case font-normal text-base">
-      <div className="bg-adamant-app-box rounded-lg w-1/3 py-6">
+      <div className="bg-[#202033] bg-opacity-95 rounded-lg w-1/3 py-6">
         <div className="flex justify-between items-center px-6">
           <h2 className="text-lg leading-[21px]">Select a token</h2>
           <X onClick={onClose} className="cursor-pointer text-gray-400 w-4" />

@@ -1,12 +1,9 @@
-import { Jura } from "next/font/google";
 import Logo from "@/components/SVG/logo";
 import CoolBox from "@/components/site/CoolBox";
 import InfoBox from "@/components/site/InfoBox";
 import Footer from "@/components/site/Footer";
 import Head from "next/head";
 import Link from "next/link";
-
-const jura = Jura({ subsets: ["latin"] });
 
 const coolBoxes = (
   <div className="flex flex-wrap gap-8">
@@ -61,11 +58,7 @@ const infoBoxes = (
 
 export default function Home() {
   return (
-    <div
-      className={
-        jura.className + " bg-tubeshapes-dark bg-cover min-h-screen text-white"
-      }
-    >
+    <div className={"bg-tubeshapes-dark bg-cover min-h-screen text-white"}>
       <Head>
         <title>Adamant Finance - Secure & Private DeFi Solutions</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />

@@ -33,7 +33,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     <>
       <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
 
-      <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-adamant-app-box rounded-lg w-1/3 py-6 outline-none z-10 text-base font-medium normal-case">
+      <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-adamant-app-box  rounded-lg w-1/3 py-6 outline-none z-10 text-base font-medium normal-case">
         <div className="flex justify-between items-center px-6">
           <Dialog.Title className="text-lg leading-[21px] font-bold">
             Select a token

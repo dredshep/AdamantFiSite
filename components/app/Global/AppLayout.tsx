@@ -1,9 +1,12 @@
 import React, { ReactNode } from "react";
 import Head from "next/head";
-import { Jura } from "next/font/google";
+import { Roboto } from "next/font/google";
 import Navbar from "@/components/app/Global/Navbar";
 
-const jura = Jura({ subsets: ["latin"] });
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700", "900"],
+});
 
 type LayoutProps = {
   children: ReactNode;
@@ -13,7 +16,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div
       className={
-        jura.className +
+        roboto.className +
         " bg-tubeshapes-light bg-cover bg-fixed min-h-screen text-white"
       }
     >

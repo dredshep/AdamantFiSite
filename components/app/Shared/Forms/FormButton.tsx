@@ -18,12 +18,12 @@ const FormButton: React.FC<FormButtonProps> = ({
         "bg-adamant-accentBg hover:brightness-125 transition-all duration-150 ease-in-out hover:saturate-150 active:saturate-200 active:brightness-150":
           !disabled,
         "bg-adamant-app-buttonDisabled cursor-not-allowed": disabled,
-        "text-lg rounded-b-xl text-black py-3 font-bold w-full": true,
+        "text-lg rounded-md text-black py-3 font-medium w-full": true,
       })}
       disabled={disabled}
       onClick={onClick}
     >
-      {text.toUpperCase()}
+      {text}
     </button>
   );
 };

@@ -1,3 +1,5 @@
+import classNames from "classnames";
+
 export default function TokenInputBaseInput({
   amount,
   handleChange,
@@ -7,7 +9,14 @@ export default function TokenInputBaseInput({
 }) {
   return (
     <input
-      className="rounded-l-xl text-2xl font-bold py-2 px-[21px] bg-adamant-app-input w-full outline-none hover:bg-adamant-app-selectTrigger focus:bg-adamant-app-selectTrigger"
+      className={classNames(
+        "rounded-l-xl text-2xl font-light w-full outline-none ",
+        // "focus:bg-adamant-app-selectTrigger focus:bg-opacity-30",
+        // "hover:bg-adamant-app-selectTrigger hover:bg-opacity-30",
+        "py-2",
+        // "px-[21px]",
+        "bg-transparent"
+      )}
       placeholder="0.0"
       value={amount}
       onChange={handleChange}

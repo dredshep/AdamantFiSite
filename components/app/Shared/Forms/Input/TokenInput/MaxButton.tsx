@@ -1,11 +1,25 @@
-const MaxButton = ({ onClick }: { onClick: () => void }) => {
+import { useStore } from "@/store/swapStore";
+
+interface MaxButtonProps {
+  inputIdentifier: "swap.pay" | "swap.receive";
+  balance: number;
+}
+
+const MaxButton: React.FC<MaxButtonProps> = ({ inputIdentifier, balance }) => {
+  const { setTokenInputProperty } = useStore();
+
+  const handleMax = () => {
+    setTokenInputProperty(inputIdentifier, "amount", balance.toString());
+  };
+
   return (
     <button
-      className="bg-adamant-app-input text-sm font-bold text-white px-4 hover:bg-adamant-app-selectTrigger"
-      onClick={onClick}
+      className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md  px-2"
+      onClick={handleMax}
     >
-      MAX
+      max
     </button>
   );
 };
+
 export default MaxButton;
