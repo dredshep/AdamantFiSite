@@ -13,7 +13,16 @@ export interface Asset {
   amount: string;
 }
 
+// Query
+
 export interface PoolResponse {
-  assets: Asset[];
+  assets: Asset[]; // 2 assets
   total_share: string;
+}
+
+// Execute
+
+export interface ProvideLiquidity {
+  assets: Asset[]; // 2 assets
+  slippage_tolerance?: string;
 }
