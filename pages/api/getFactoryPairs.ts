@@ -4,7 +4,7 @@ import { handleApiError } from "@/utils/apis/handleApiError";
 
 export default async function getFactoryPairs(
   _req: NextApiRequest,
-  res: NextApiResponse,
+  res: NextApiResponse
 ) {
   try {
     const data = await queryFactoryPairs();

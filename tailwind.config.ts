@@ -44,7 +44,7 @@ const config = {
             border: "#313131",
           },
           app: {
-            box: "#313131",
+            box: "#272632",
             boxHighlight: "#444a5f",
             input: "#10131f",
             selectTrigger: "#232631",

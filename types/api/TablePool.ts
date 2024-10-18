@@ -1,14 +1,14 @@
 export type TablePool = {
-  userAddress: string;
+  contract_address: string;
   name: string;
   network: string;
-  price: string;
-  change: string;
-  tvl: string;
-  volume: string;
+  // price: string;
+  // change: string;
+  // total_value_locked: string;
+  // volume: string;
 
-  marketCap: string;
-  fdv: string;
-  dailyVolume: string;
+  // marketCap: string;
+  // fdv: string;
+  // dailyVolume: string;
   about: string;
 };

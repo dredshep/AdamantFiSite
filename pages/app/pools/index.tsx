@@ -11,11 +11,26 @@ import { useEffect, useState } from "react";
 import { getTablePools } from "@/utils/apis/getTablePools";
 
 export default function PoolsPage() {
-  const [tokens, setTokens] = useState<TablePool[]>([]);
+  const [pools, setPools] = useState<TablePool[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (() => getTablePools().then(setTokens))();
+    getTablePools().then((data) => {
+      console.log({ data });
+      setPools(data);
+      setLoading(false);
+    });
   }, []);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-screen">
+          Loading...
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -32,43 +47,45 @@ export default function PoolsPage() {
             { title: "Price" },
             { title: "Change" },
             { title: "TVL" },
-            { title: "Volume" },
-            { title: "Graph" },
           ]}
         />
         <div className="rounded-b-[10px] overflow-hidden">
-          {tokens.map((pool, index) => (
-            <Link
-              key={index}
-              className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
-              href={`/app/pool/${pool.userAddress}`}
-            >
-              <FinancialDataRow
-                cells={[
-                  {
-                    content: (
-                      <TokenDisplay
-                        seed={pool.userAddress as SecretString}
-                        name={pool.name}
-                        network={pool.network}
-                      />
-                    ),
-                    minWidth: "240px",
-                  },
-                  { content: pool.price, bold: true },
-                  {
-                    content: pool.change,
-                    modifier: pool.change.startsWith("-")
-                      ? "negative"
-                      : "positive",
-                  },
-                  { content: pool.tvl },
-                  { content: pool.volume },
-                  { content: "Graph Placeholder" },
-                ]}
-              />
-            </Link>
-          ))}
+          {pools && Array.isArray(pools) ? (
+            pools.map((pool, index) => (
+              <Link
+                key={index}
+                className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
+                href={`/app/pool/${pool.contract_address}`}
+              >
+                <FinancialDataRow
+                  cells={[
+                    {
+                      content: (
+                        <TokenDisplay
+                          seed={pool.contract_address as SecretString}
+                          name={pool.name}
+                          network={pool.network}
+                        />
+                      ),
+                      minWidth: "240px",
+                    },
+                    // { content: pool.price, bold: true },
+                    // {
+                    //   content: pool.change,
+                    //   modifier: pool.change.startsWith("-")
+                    //     ? "negative"
+                    //     : "positive",
+                    // },
+                    // { content: pool.total_value_locked },
+                  ]}
+                />
+              </Link>
+            ))
+          ) : (
+            <div className="text-center mt-8">
+              <p>No pools found.</p>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>

@@ -1,24 +1,19 @@
-import React, { useEffect, useState } from "react";
-import { useStore } from "@/store/swapStore";
+import React, { useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Token, TokenInputs } from "@/types";
-import { X } from "lucide-react";
-import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelectionItem";
 import TokenSelectionSearchBar from "./TokenSelectionSearchBar";
+import { useStore } from "@/store/swapStore";
+import TokenSelectionItem from "../TokenSelectionItem";
 
 interface TokenSelectionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
   inputIdentifier: keyof TokenInputs;
 }
 
 const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
-  isOpen,
-  onClose,
   inputIdentifier,
 }) => {
   const { setTokenInputProperty } = useStore();
   const [searchTerm, setSearchTerm] = useState("");
-
   const tokens = useStore((state) => state.swappableTokens);
 
   const handleTokenSelect = (selectedToken: Token) => {
@@ -27,21 +22,22 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
       "tokenAddress",
       selectedToken.address
     );
-    onClose();
   };
-
-  useEffect(() => {
-    console.log({ isOpen });
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 normal-case font-normal text-base">
-      <div className="bg-[#202033] bg-opacity-95 rounded-lg w-1/3 py-6">
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
+      <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#202033] bg-opacity-95 rounded-lg w-1/3 py-6 max-w-md min-h-[300px] text-white">
         <div className="flex justify-between items-center px-6">
-          <h2 className="text-lg leading-[21px]">Select a token</h2>
-          <X onClick={onClose} className="cursor-pointer text-gray-400 w-4" />
+          <Dialog.Title className="text-lg leading-[21px]">
+            Select a token
+          </Dialog.Title>
+          {/* <Dialog.Description>
+            Here, you pick a token you want to swap.
+          </Dialog.Description> */}
+          <Dialog.Close asChild>
+            Close
+            {/* <button onClick={onClose}>Close</button> */}
+          </Dialog.Close>
         </div>
         <TokenSelectionSearchBar
           searchTerm={searchTerm}
@@ -69,8 +65,8 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             )) ||
             "No swappable tokens available. Check your internet connection."}
         </div>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Portal>
   );
 };
 

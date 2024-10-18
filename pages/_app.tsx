@@ -30,7 +30,9 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [setSwappableTokens, initializeTokens]);
   return (
     // <Theme color="black" grayColor="olive" accentColor="amber">
-    <Component {...pageProps} />
+    <div className="bg-[#151321] min-h-screen text-white">
+      <Component {...pageProps} />
+    </div>
     // {/* </Theme> */}
   );
 }
