@@ -3,24 +3,35 @@ import { Pair } from "./shared";
 
 // Execute
 
-export type ExecuteMsg = ProvideLiquidity | Swap;
+export type ExecuteMsg =
+  | {
+      provide_liquidity: {
+        assets: [Asset, Asset];
+        slippage_tolerance?: string;
+      };
+    }
+  | {
+      swap: {
+        offer_asset: Asset;
+        expected_return?: string;
+        belief_price?: string;
+        max_spread?: string;
+        to?: string;
+      };
+    };
 
-export interface ProvideLiquidity {
-  provide_liquidity: {
-    assets: [Asset, Asset];
-    slippage_tolerance?: string;
-  };
-}
-
-export interface Swap {
-  swap: {
-    offer_asset: Asset;
-    expected_return?: string;
-    belief_price?: string;
-    max_spread?: string;
-    to?: string;
-  };
-}
+export type Cw20HookMsg =
+  | {
+      swap: {
+        expected_return?: string;
+        belief_price?: string;
+        max_spread?: string;
+        to?: string;
+      };
+    }
+  | {
+      withdraw_liquidity: {};
+    };
 
 // Query
 
