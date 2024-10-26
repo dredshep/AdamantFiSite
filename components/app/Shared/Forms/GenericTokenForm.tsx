@@ -3,7 +3,7 @@ import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
 import TokenInput from "@/components/app/Shared/Forms/Input/TokenInput";
 import DynamicField from "@/components/app/Shared/Forms/Input/DynamicField";
 import FormButton from "@/components/app/Shared/Forms/FormButton";
-import { SharedSettings, TokenInputs } from "@/types"; // Assume these are correctly defined elsewhere
+import { SharedSettings, SwapTokenInputs } from "@/types"; // Assume these are correctly defined elsewhere
 
 type CaseType = "normal-case" | "uppercase";
 
@@ -14,7 +14,7 @@ interface BaseFieldDefinition {
 
 interface InputFieldDefinition extends BaseFieldDefinition {
   type: "input";
-  identifier: keyof TokenInputs;
+  identifier: keyof SwapTokenInputs;
   balance: number;
   maxable?: boolean;
 }

@@ -1,9 +1,8 @@
 import React from "react";
 import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
-import { SecretString, TokenInputs } from "@/types";
+import { PoolTokenInputs, SecretString, SwapTokenInputs } from "@/types";
 import * as Dialog from "@radix-ui/react-dialog";
 import TokenSelectionModal from "../Select/TokenSelectionModal";
-import MaxButton from "./TokenInput/MaxButton";
 import InputLabel from "./InputLabel";
 
 interface TokenInputBaseProps {
@@ -13,19 +12,23 @@ interface TokenInputBaseProps {
   tokenAddress: SecretString;
   balance: string;
   onMaxClick: () => void;
-  // onTokenSelect: () => void;
   showEstimatedPrice?: boolean;
   estimatedPrice?: string;
-  inputIdentifier: keyof TokenInputs;
+  inputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
+  label: string;
+  hasMax: boolean;
 }
+
 function TopRightBalance({
-  hasMax,
   balance,
   tokenSymbol,
+  onMaxClick,
+  hasMax,
 }: {
-  hasMax: boolean;
   balance: number;
   tokenSymbol: string;
+  onMaxClick: () => void;
+  hasMax: boolean;
 }) {
   return (
     <div className="flex gap-2.5 normal-case text-gray-400 items-center">
@@ -35,31 +38,40 @@ function TopRightBalance({
           {balance.toFixed(2)} {tokenSymbol}
         </div>
       </div>
-      {hasMax && <MaxButton inputIdentifier="swap.pay" balance={balance} />}
+      {hasMax && (
+        <button
+          className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md px-2"
+          onClick={onMaxClick}
+        >
+          max
+        </button>
+      )}
     </div>
   );
 }
+
 const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   inputValue,
   onInputChange,
   tokenSymbol,
   tokenAddress,
   balance,
-  // onMaxClick,
-  // onTokenSelect,
+  onMaxClick,
   showEstimatedPrice = false,
   estimatedPrice = "",
   inputIdentifier,
+  label,
+  hasMax,
 }) => {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex justify-between">
-        {/* <div className="flex justify-between"> */}
-        <InputLabel label="Buy" caseType="normal-case" />
+        <InputLabel label={label} caseType="normal-case" />
         <TopRightBalance
-          hasMax={inputIdentifier === "swap.pay"}
           balance={Number(balance ?? 0)}
           tokenSymbol={tokenSymbol}
+          hasMax={hasMax}
+          onMaxClick={onMaxClick}
         />
       </div>
       <div className="flex items-center bg-adamant-app-input bg-opacity-50 rounded-lg p-4">
@@ -75,7 +87,19 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             <PlaceholderImageFromSeed seed={tokenAddress} size={24} />
             {tokenSymbol}
           </Dialog.Trigger>
-          <TokenSelectionModal inputIdentifier={inputIdentifier} />
+          {inputIdentifier.startsWith("swap") ? (
+            <TokenSelectionModal
+              inputIdentifier={inputIdentifier as keyof SwapTokenInputs}
+            />
+          ) : (
+            // <TokenSelectionModal
+            //   inputIdentifier={inputIdentifier as keyof PoolTokenInputs}
+            // />
+            // <PoolSelectionModal
+            //   inputIdentifier={inputIdentifier as keyof PoolTokenInputs}
+            // />
+            <div className="text-sm text-gray-400">Not implemented</div>
+          )}
         </Dialog.Root>
       </div>
       {showEstimatedPrice && (

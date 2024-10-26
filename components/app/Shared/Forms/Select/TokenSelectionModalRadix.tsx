@@ -4,12 +4,12 @@ import { Cross1Icon } from "@radix-ui/react-icons"; // Assuming usage of Radix I
 import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelectionItem";
 import TokenSelectionSearchBar from "@/components/app/Shared/Forms/Select/TokenSelectionModal/TokenSelectionSearchBar";
 import { useStore } from "@/store/swapStore";
-import { Token, TokenInputs } from "@/types";
+import { Token, SwapTokenInputs } from "@/types";
 
 interface TokenSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  inputIdentifier: keyof TokenInputs;
+  inputIdentifier: keyof SwapTokenInputs;
 }
 
 const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({

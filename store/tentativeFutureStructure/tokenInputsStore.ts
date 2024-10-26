@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import { TokenInputState, TokenInputs } from "@/types";
+import { TokenInputState, SwapTokenInputs } from "@/types";
 
 interface TokenInputsStoreState {
-  tokenInputs: TokenInputs;
+  tokenInputs: SwapTokenInputs;
   setTokenInputProperty: <T extends keyof TokenInputState>(
-    inputIdentifier: keyof TokenInputs,
+    inputIdentifier: keyof SwapTokenInputs,
     property: T,
     value: TokenInputState[T]
   ) => void;

@@ -1,19 +1,19 @@
 import { Token } from "@/types/Token";
 import { WalletState } from "@/types/store/WalletState";
 import { SharedSettings } from "@/types/store/SharedSettings";
-import { TokenInputs } from "@/types/store/TokenInputs";
+import { SwapTokenInputs } from "@/types/store/TokenInputs";
 import { TokenInputState } from "@/types/store/TokenInputState";
 import { SecretString } from "../SecretString";
 
 export interface StoreState {
-  tokenInputs: TokenInputs;
+  tokenInputs: SwapTokenInputs;
   sharedSettings: SharedSettings;
   wallet: WalletState;
   chainId: string;
   swappableTokens: Token[] | null;
   connectionRefused: boolean;
   setTokenInputProperty: <T extends keyof TokenInputState>(
-    inputIdentifier: keyof TokenInputs,
+    inputIdentifier: keyof SwapTokenInputs,
     property: T,
     value: TokenInputState[T]
   ) => void;

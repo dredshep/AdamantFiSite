@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Token, TokenInputs } from "@/types";
+import { Token, SwapTokenInputs } from "@/types";
 import TokenSelectionSearchBar from "./TokenSelectionSearchBar";
 import { useStore } from "@/store/swapStore";
 import TokenSelectionItem from "../TokenSelectionItem";
 
 interface TokenSelectionModalProps {
-  inputIdentifier: keyof TokenInputs;
+  inputIdentifier: keyof SwapTokenInputs;
 }
 
 const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({

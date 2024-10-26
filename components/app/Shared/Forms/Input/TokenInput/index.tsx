@@ -1,13 +1,13 @@
 import React from "react";
 import { useStore } from "@/store/swapStore";
 import TokenInputBase from "@/components/app/Shared/Forms/Input/TokenInputBase";
-import { TokenInputs } from "@/types";
+import { SwapTokenInputs } from "@/types";
 import { useTokenStore } from "@/store/tokenStore";
 // import TokenSelectionModal from "@/components/app/Shared/Forms/Select/TokenSelectionModal";
 // import * as Dialog from "@radix-ui/react-dialog";
 
 interface TokenInputProps {
-  inputIdentifier: keyof TokenInputs;
+  inputIdentifier: keyof SwapTokenInputs;
   balance: number;
 }
 

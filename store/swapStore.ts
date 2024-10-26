@@ -4,7 +4,7 @@ import {
   SharedSettings,
   StoreState,
   TokenInputState,
-  TokenInputs,
+  SwapTokenInputs,
 } from "@/types";
 import updateState from "@/store/utils/updateState";
 
@@ -32,7 +32,7 @@ export const useStore = create<StoreState>((set) => ({
   chainId: "secret-4",
   connectionRefused: false,
   setTokenInputProperty: <T extends keyof TokenInputState>(
-    inputIdentifier: keyof TokenInputs,
+    inputIdentifier: keyof SwapTokenInputs,
     property: T,
     value: TokenInputState[T]
   ) =>
