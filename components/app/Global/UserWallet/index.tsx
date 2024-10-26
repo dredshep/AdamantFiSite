@@ -18,7 +18,7 @@ const UserWallet: React.FC = () => {
   const isConnected = address !== null;
   useEffect(() => {
     if (!connectionRefused) {
-      keplrConnect();
+      void keplrConnect();
     }
   }, [connectionRefused]);
 
@@ -47,8 +47,8 @@ const UserWallet: React.FC = () => {
         </>
       ) : (
         <button
-          onClick={() => keplrConnect()}
-          className="cursor-pointer text-black bg-white px-8 pt-2 pb-2 rounded-lg font-bold leading-6 fle hover:bg-adamant-accentBg transition-all ease-in-out"
+          onClick={() => void keplrConnect()}
+          className="cursor-pointer text-black bg-white px-8 pt-2 pb-2 rounded-lg font-bold leading-6 flex hover:bg-adamant-accentBg transition-all ease-in-out"
         >
           CONNECT
         </button>

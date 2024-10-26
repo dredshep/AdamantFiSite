@@ -16,12 +16,15 @@ const SyncViewingKeyButton = ({
         return;
       }
 
-      if (!process.env.NEXT_PUBLIC_CHAIN_ID) {
+      if (
+        typeof process.env["NEXT_PUBLIC_CHAIN_ID"] === "undefined" ||
+        process.env["NEXT_PUBLIC_CHAIN_ID"].length === 0
+      ) {
         alert("Chain ID not set in environment.");
         return;
       }
       // Request the user's permission to fetch the viewing key
-      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!; // Ensure this is set in your environment
+      const chainId = process.env["NEXT_PUBLIC_CHAIN_ID"];
       const viewingKey = await (
         window.keplr as unknown as {
           getSecret20ViewingKey: (
@@ -45,7 +48,7 @@ const SyncViewingKeyButton = ({
   return (
     <button
       className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-      onClick={handleSyncViewingKey}
+      onClick={() => void handleSyncViewingKey()}
     >
       Sync Key
     </button>

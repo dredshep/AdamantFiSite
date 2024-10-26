@@ -1,6 +1,6 @@
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 import { useState, useEffect } from "react";
-import { SecretNetworkClient, TxOptions } from "secretjs";
+import { SecretNetworkClient, TxOptions, TxResultCode } from "secretjs";
 import Decimal from "decimal.js";
 import { getTokenDecimals, getTokenName } from "@/utils/apis/tokenInfo";
 import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
@@ -44,10 +44,10 @@ const buildTokenPoolMap = (pools: typeof fullPoolsData): TokenPoolMap => {
       .filter((asset) => asset.info.token !== undefined)
       .forEach((asset) => {
         const tokenAddr = asset.info.token!.contract_addr;
-        if (!tokenPoolMap[tokenAddr]) {
+        if (!(tokenAddr in tokenPoolMap)) {
           tokenPoolMap[tokenAddr] = [];
         }
-        tokenPoolMap[tokenAddr].push(pool.contract_address);
+        tokenPoolMap[tokenAddr]?.push(pool.contract_address);
       });
   });
 
@@ -79,7 +79,7 @@ const findAllReachableTokens = (
 
     visited.add(currentToken);
 
-    const pools = tokenPoolMap[currentToken] || [];
+    const pools = tokenPoolMap[currentToken] ?? [];
     pools.forEach((poolAddress) => {
       const poolTokens = fullPoolsData
         .find((pool) => pool.contract_address === poolAddress)
@@ -124,7 +124,7 @@ const findPaths = (
 
     visited.add(currentToken);
 
-    const pools = tokenPoolMap[currentToken] || [];
+    const pools = tokenPoolMap[currentToken] ?? [];
     pools.forEach((poolAddress) => {
       const poolTokens = fullPoolsData
         .find((pool) => pool.contract_address === poolAddress)
@@ -183,6 +183,14 @@ const estimateBestPath = async (
         console.log(`Input Token: ${inputToken}`);
         console.log(`Output Token: ${outputToken}`);
 
+        if (
+          typeof inputToken !== "string" ||
+          typeof outputToken !== "string" ||
+          typeof poolAddress !== "string"
+        ) {
+          throw new Error("Invalid token addresses");
+        }
+
         const { output, idealOutput, priceImpact, lpFee } =
           await estimateSingleHopOutput(
             secretjs,
@@ -239,6 +247,19 @@ const estimateBestPath = async (
   return bestEstimation;
 };
 
+const isValidReserve = (
+  reserve: unknown
+): reserve is { amount: Decimal; decimals: number } => {
+  return (
+    reserve !== null &&
+    typeof reserve === "object" &&
+    "amount" in reserve &&
+    reserve.amount instanceof Decimal &&
+    "decimals" in reserve &&
+    typeof reserve.decimals === "number"
+  );
+};
+
 const calculateSingleHopOutput = (
   amountIn: Decimal,
   poolData: PoolData,
@@ -253,8 +274,8 @@ const calculateSingleHopOutput = (
   const rawInputReserve = poolData.reserves[inputToken];
   const rawOutputReserve = poolData.reserves[outputToken];
 
-  if (!rawInputReserve || !rawOutputReserve) {
-    throw new Error("Invalid token addresses");
+  if (!isValidReserve(rawInputReserve) || !isValidReserve(rawOutputReserve)) {
+    throw new Error("Invalid token addresses or malformed reserve data");
   }
 
   console.log(`\n--- Calculation Start ---`);
@@ -382,12 +403,13 @@ const getPoolData = async (
   secretjs: SecretNetworkClient,
   poolAddress: string
 ): Promise<PoolData> => {
-  const response = (await secretjs.query.compute.queryContract({
-    contract_address: poolAddress,
-    code_hash:
-      "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
-    query: { pool: {} },
-  })) as PoolQueryResponse;
+  const response: PoolQueryResponse =
+    await secretjs.query.compute.queryContract({
+      contract_address: poolAddress,
+      code_hash:
+        "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+      query: { pool: {} },
+    });
 
   if (typeof response !== "object" || response === null) {
     throw new Error("Invalid response from pool contract");
@@ -399,7 +421,7 @@ const getPoolData = async (
         asset.info.token?.contract_addr ===
         "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
           ? 6
-          : getTokenDecimals(asset.info.token.contract_addr) || 0;
+          : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
       console.log({ decimals });
       acc[asset.info.token.contract_addr] = {
         amount: new Decimal(asset.amount),
@@ -455,13 +477,17 @@ const SwapPage = () => {
 
       await window.keplr.enable("secret-4");
 
-      const offlineSigner = (window as KeplrWindow).getOfflineSigner?.(
-        "secret-4"
-      );
+      const offlineSigner = (
+        window as unknown as KeplrWindow
+      ).getOfflineSigner?.("secret-4");
       const accounts = await offlineSigner?.getAccounts();
 
-      if (!accounts || accounts.length === 0) {
+      if (!accounts || accounts.length === 0 || accounts[0] === undefined) {
         alert("No accounts found");
+        return;
+      }
+      if (!offlineSigner) {
+        alert("No offline signer found");
         return;
       }
 
@@ -476,7 +502,7 @@ const SwapPage = () => {
       setSecretjs(client);
     };
 
-    connectKeplr();
+    void connectKeplr();
   }, []);
 
   const handleSyncViewingKeys = () => {
@@ -537,7 +563,7 @@ const SwapPage = () => {
       return;
     }
 
-    if (!inputViewingKey || !outputViewingKey) {
+    if (inputViewingKey === undefined || outputViewingKey === undefined) {
       alert("Viewing keys are missing. Please sync them before swapping.");
       return;
     }
@@ -555,12 +581,14 @@ const SwapPage = () => {
       };
 
       // Check if sequence number is available
-      const sequence = baseAccount.sequence
-        ? parseInt(baseAccount.sequence, 10)
-        : null;
-      const accountNumber = baseAccount.account_number
-        ? parseInt(baseAccount.account_number, 10)
-        : null;
+      const sequence =
+        baseAccount.sequence != null && baseAccount.sequence !== ""
+          ? parseInt(baseAccount.sequence, 10)
+          : null;
+      const accountNumber =
+        baseAccount.account_number != null && baseAccount.account_number !== ""
+          ? parseInt(baseAccount.account_number, 10)
+          : null;
 
       for (let i = 0; i < path.pools.length; i++) {
         const poolAddress = path.pools[i];
@@ -569,7 +597,9 @@ const SwapPage = () => {
 
         console.log(`Executing swap ${i + 1} on pool ${poolAddress}`);
         console.log(`Swapping ${inputToken} for ${outputToken}`);
-
+        if (typeof inputToken !== "string") {
+          throw new Error(`Input token is not a string (undefined)`);
+        }
         const decimals = getTokenDecimals(inputToken);
         if (decimals === undefined) {
           throw new Error(
@@ -604,16 +634,21 @@ const SwapPage = () => {
           gasLimit: 200_000,
           gasPriceInFeeDenom: 0.25,
           feeDenom: "uscrt",
-          explicitSignerData:
-            sequence !== null && accountNumber !== null
-              ? {
+          // Only include explicitSignerData if both sequence and accountNumber are available
+          ...(sequence !== null && accountNumber !== null
+            ? {
+                explicitSignerData: {
                   accountNumber: accountNumber,
-                  sequence: sequence + i, // Handle sequence increment only if available
-                  chainId: "secret-4", // Replace with your actual chain ID
-                }
-              : undefined,
+                  sequence: sequence + i,
+                  chainId: "secret-4",
+                },
+              }
+            : {}),
         };
 
+        if (typeof poolAddress !== "string") {
+          throw new Error("Pool address is undefined");
+        }
         const result = await secretjs.tx.compute.executeContract(
           {
             sender: walletAddress!,
@@ -628,7 +663,7 @@ const SwapPage = () => {
 
         console.log("Transaction Result:", result);
 
-        if (result.code !== 0) {
+        if (result.code !== TxResultCode.Success) {
           throw new Error(`Swap failed at step ${i + 1}: ${result.rawLog}`);
         }
 
@@ -657,9 +692,9 @@ const SwapPage = () => {
             outputOptions={outputOptions}
           />
           {inputToken !== "" &&
-            walletAddress &&
-            inputViewingKey &&
-            outputViewingKey &&
+            typeof walletAddress === "string" &&
+            inputViewingKey !== undefined &&
+            outputViewingKey !== undefined &&
             (() => {
               // Find the pool that contains the inputToken
               const pool = fullPoolsData.find((pool) =>
@@ -675,7 +710,7 @@ const SwapPage = () => {
                 );
 
                 const tokenCodeHash =
-                  tokenAsset?.info.token?.token_code_hash || "";
+                  tokenAsset?.info.token?.token_code_hash ?? "";
                 const spenderAddress = pool.contract_address;
 
                 return (
@@ -700,11 +735,11 @@ const SwapPage = () => {
                 type="number"
                 value={amountIn}
                 onChange={(e) => setAmountIn(e.target.value)}
-                placeholder={`Amount of ${getTokenName(inputToken) || "Token"}`}
+                placeholder={`Amount of ${getTokenName(inputToken) ?? "Token"}`}
                 className="px-4 py-2 border border-gray-700 bg-adamant-app-input rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg text-white"
               />
               <button
-                onClick={handleEstimate}
+                onClick={() => void handleEstimate()}
                 className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
               >
                 Estimate Swap
@@ -743,9 +778,10 @@ const SwapPage = () => {
               >
                 Sync Viewing Keys
               </button>
-              {inputViewingKey && outputViewingKey ? (
+              {inputViewingKey !== undefined &&
+              outputViewingKey !== undefined ? (
                 <button
-                  onClick={handleSwap}
+                  onClick={() => void handleSwap()}
                   className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
                 >
                   Execute Swap

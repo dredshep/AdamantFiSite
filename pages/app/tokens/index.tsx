@@ -1,6 +1,6 @@
 import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
 import AppLayout from "@/components/app/Global/AppLayout";
-import { SecretString, TableToken } from "@/types";
+import { TableToken } from "@/types";
 import Link from "next/link";
 import {
   TableHeaders,
@@ -19,7 +19,7 @@ export default function TokensPage() {
       console.log({ tableTokens });
       setTokens(tableTokens);
     }
-    main();
+    void main();
   }, []);
 
   return (
@@ -53,7 +53,7 @@ export default function TokensPage() {
                   {
                     content: (
                       <TokenDisplay
-                        seed={token.address as SecretString}
+                        seed={token.address}
                         name={token.name}
                         network={token.network}
                       />

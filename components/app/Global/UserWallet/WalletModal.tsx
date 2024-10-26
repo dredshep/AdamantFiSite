@@ -17,10 +17,10 @@ const WalletModal: React.FC = () => {
   const tokens = listAllTokens();
   const balance =
     getTokenByAddress("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek")
-      ?.balance || "N/A";
+      ?.balance ?? "N/A";
   const copyAddressToClipboard = () => {
-    if (!address) return;
-    navigator.clipboard.writeText(address).then(() => {
+    if (address === null) return;
+    void navigator.clipboard.writeText(address).then(() => {
       toast.success("Address copied to clipboard!");
     });
   };
@@ -38,12 +38,12 @@ const WalletModal: React.FC = () => {
       <div className="flex items-center justify-between mb-4 p-6">
         <div className="flex items-center">
           <PlaceholderImageFromSeed
-            seed={address || "secret1 no address"}
+            seed={address ?? "secret1 no address"}
             size={48}
           />
           <div className="mx-3">
             <div className="font-bold">
-              {truncatedAddress || "secret1 no address"}
+              {truncatedAddress ?? "secret1 no address"}
             </div>
           </div>
           <RiFileCopyLine

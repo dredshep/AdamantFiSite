@@ -1,6 +1,6 @@
 import { SecretString } from "@/types";
 import React, { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
+import { SecretNetworkClient, TxResultCode } from "secretjs";
 
 interface AllowanceBoxProps {
   secretjs: SecretNetworkClient;
@@ -61,7 +61,7 @@ const AllowanceBox: React.FC<AllowanceBoxProps> = ({
       }
     };
 
-    fetchAllowance();
+    void fetchAllowance();
   }, [
     secretjs.query.snip20,
     tokenAddress,
@@ -90,7 +90,7 @@ const AllowanceBox: React.FC<AllowanceBoxProps> = ({
           { gasLimit: 200_000 }
         );
 
-      if (increaseAllowanceResponse.code === 0) {
+      if (increaseAllowanceResponse.code === TxResultCode.Success) {
         alert("Allowance successfully increased!");
         setCurrentAllowance(parseFloat(newAllowance)); // Update state after successful increase
         setIsAllowanceSufficient(true);
@@ -148,7 +148,7 @@ const AllowanceBox: React.FC<AllowanceBoxProps> = ({
             />
 
             <button
-              onClick={increaseAllowance}
+              onClick={() => void increaseAllowance()}
               className="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition w-full"
             >
               Update

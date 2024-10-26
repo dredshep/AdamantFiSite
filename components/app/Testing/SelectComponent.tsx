@@ -17,11 +17,7 @@ const SelectComponent = ({
   const [selectedTo, setSelectedTo] = useState("");
   const [tokenNames, setTokenNames] = useState<{ [key: string]: string }>({});
 
-  // on change run the func
   useEffect(() => {
-    // if (onChange) {
-    //   onChange(selectedFrom, selectedTo);
-    // }
     if (setFrom) {
       setFrom(selectedFrom);
     }
@@ -31,40 +27,45 @@ const SelectComponent = ({
   }, [selectedFrom, selectedTo, setFrom, setTo]);
 
   const pools = fullPoolsData;
-  //   const poolAddresses = pools.map((pool) => pool.contract_address);
+
   const findToOptions = useCallback(
     (fromAddress: string) => {
       return pools
         .filter((pool) =>
           pool.query_result.assets.some((asset) => {
             const address =
-              asset.info.token?.contract_addr || asset.info.native_token?.denom;
+              asset.info.token?.contract_addr ??
+              asset.info.native_token?.denom ??
+              "";
             return address === fromAddress;
           })
         )
         .flatMap((pool) =>
           pool.query_result.assets.filter((asset) => {
             const address =
-              asset.info.token?.contract_addr || asset.info.native_token?.denom;
-            return address !== fromAddress && typeof address === "string";
+              asset.info.token?.contract_addr ??
+              asset.info.native_token?.denom ??
+              "";
+            return address !== fromAddress && address !== "";
           })
         );
     },
     [pools]
   );
+
   useEffect(() => {
     const toOptions = findToOptions(selectedFrom);
     const toAddresses = toOptions.map(
       (asset) =>
-        asset.info.token?.contract_addr ||
-        asset.info.native_token?.denom ||
+        asset.info.token?.contract_addr ??
+        asset.info.native_token?.denom ??
         "not found"
     );
     setToTokens(toAddresses);
     console.log(
       JSON.stringify(
         {
-          fromName: tokenNames[selectedFrom],
+          fromName: tokenNames[selectedFrom] ?? "",
           fromAddress: selectedFrom,
           toAddresses,
         },
@@ -72,7 +73,7 @@ const SelectComponent = ({
         2
       )
     );
-  }, [selectedFrom, findToOptions, tokenNames, selectedTo]);
+  }, [selectedFrom, findToOptions, tokenNames]);
 
   // Fetch and set token data on component mount
   useEffect(() => {
@@ -86,9 +87,11 @@ const SelectComponent = ({
         .flatMap((pool) => pool.query_result.assets)
         .map((asset) => {
           const address =
-            asset.info.token?.contract_addr || asset.info.native_token?.denom;
+            asset.info.token?.contract_addr ??
+            asset.info.native_token?.denom ??
+            "";
           // Map each asset to [address, name] pair or null
-          return address ? [address, getTokenName(address) || ""] : null;
+          return address ? [address, getTokenName(address) ?? ""] : null;
         })
         // Filter out null values
         .filter((item): item is [string, string] => item !== null)
@@ -106,20 +109,19 @@ const SelectComponent = ({
         .flatMap((pool) => pool.query_result.assets)
         .map(
           (asset) =>
-            asset.info.token?.contract_addr || asset.info.native_token?.denom
+            asset.info.token?.contract_addr ??
+            asset.info.native_token?.denom ??
+            ""
         )
         .filter(
-          (addressOrDenom): addressOrDenom is string =>
-            addressOrDenom !== undefined
-        )
-        .filter((address) => {
-          return address !== "uscrt";
-        });
+          (addressOrDenom) =>
+            addressOrDenom !== "" && addressOrDenom !== "uscrt"
+        );
 
       setFromTokens(Array.from(new Set(fromOptions)));
     };
 
-    fetchAndSetTokenData();
+    void fetchAndSetTokenData();
   }, [apiUrl]);
 
   const handleFromSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -137,19 +139,25 @@ const SelectComponent = ({
       .flatMap((pool) =>
         pool.query_result.assets.map((asset) => {
           const addr =
-            asset.info.token?.contract_addr || asset.info.native_token?.denom;
-          return addr && addr !== fromToken && tokenNames[addr] ? addr : null;
+            asset.info.token?.contract_addr ??
+            asset.info.native_token?.denom ??
+            "";
+          return addr !== "" &&
+            addr !== fromToken &&
+            tokenNames[addr] !== null &&
+            tokenNames[addr] !== undefined
+            ? addr
+            : null;
         })
       )
       .filter((addr): addr is string => addr !== null)
       .filter((addr) => addr !== "uscrt");
 
-    // setToTokens(Array.from(new Set(toOptions)));
-    setSelectedTo(""); // Reset the selected 'to' token
+    setSelectedTo("");
     console.log({
       inputFrom: fromToken,
-      from: tokenNames[selectedFrom],
-      to: tokenNames[event.target.value],
+      from: tokenNames[selectedFrom] ?? "",
+      to: tokenNames[event.target.value] ?? "",
       toOptions,
     });
   };
@@ -170,7 +178,7 @@ const SelectComponent = ({
           <option value="">Select From</option>
           {fromTokens.map((address) => (
             <option key={address} value={address}>
-              {tokenNames[address] ?? JSON.stringify(address ?? "asdasd")}
+              {tokenNames[address] ?? JSON.stringify(address ?? "")}
             </option>
           ))}
         </select>

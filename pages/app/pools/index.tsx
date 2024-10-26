@@ -15,7 +15,7 @@ export default function PoolsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getTablePools().then((data) => {
+    void getTablePools().then((data) => {
       console.log({ data });
       setPools(data);
       setLoading(false);
@@ -50,7 +50,7 @@ export default function PoolsPage() {
           ]}
         />
         <div className="rounded-b-[10px] overflow-hidden">
-          {pools && Array.isArray(pools) ? (
+          {Array.isArray(pools) ? (
             pools.map((pool, index) => (
               <Link
                 key={index}

@@ -52,7 +52,7 @@ const checkSyncStatus = async (
   getViewingKey: (address: string) => string | undefined
 ) => {
   try {
-    const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
+    const chainId = process.env["NEXT_PUBLIC_CHAIN_ID"]!;
     if (!window.keplr) return;
     const viewingKey = await (
       window.keplr as unknown as Keplr
@@ -92,13 +92,13 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
   const [outputKeySynced, setOutputKeySynced] = useState<boolean>(false);
 
   useEffect(() => {
-    checkSyncStatus(
+    void checkSyncStatus(
       tokenIn,
       setIsInputRegistered,
       setInputKeySynced,
       getViewingKey
     );
-    checkSyncStatus(
+    void checkSyncStatus(
       tokenOut,
       setIsOutputRegistered,
       setOutputKeySynced,
@@ -115,13 +115,13 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
         alert("Keplr extension not detected.");
         return;
       }
-      if (!process.env.NEXT_PUBLIC_CHAIN_ID) {
+      if (!("NEXT_PUBLIC_CHAIN_ID" in process.env)) {
         alert("Chain ID not set in environment.");
         return;
       }
 
       await (window as unknown as KeplrWindow).keplr!.suggestToken(
-        process.env.NEXT_PUBLIC_CHAIN_ID,
+        process.env["NEXT_PUBLIC_CHAIN_ID"]!,
         tokenAddress
       );
       setRegistered(true);
@@ -142,12 +142,12 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
         return;
       }
 
-      if (!process.env.NEXT_PUBLIC_CHAIN_ID) {
+      if (!("NEXT_PUBLIC_CHAIN_ID" in process.env)) {
         alert("Chain ID not set in environment.");
         return;
       }
 
-      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
+      const chainId = process.env["NEXT_PUBLIC_CHAIN_ID"]!;
       const viewingKey = await (
         window.keplr as unknown as Keplr
       ).getSecret20ViewingKey(chainId, tokenAddress);
@@ -201,7 +201,7 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
               </h3>
               <TokenActionButton
                 action={() =>
-                  handleRegisterToken(tokenIn, setIsInputRegistered)
+                  void handleRegisterToken(tokenIn, setIsInputRegistered)
                 }
                 isActionCompleted={isInputRegistered}
                 actionText="Register Input Token"
@@ -215,7 +215,9 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
                 }
               />
               <TokenActionButton
-                action={() => handleSyncViewingKey(tokenIn, setInputKeySynced)}
+                action={() =>
+                  void handleSyncViewingKey(tokenIn, setInputKeySynced)
+                }
                 isActionCompleted={inputKeySynced}
                 actionText="Sync Input Token Key"
                 completedText="Input Token Key Synced"
@@ -236,7 +238,7 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
               </h3>
               <TokenActionButton
                 action={() =>
-                  handleRegisterToken(tokenOut, setIsOutputRegistered)
+                  void handleRegisterToken(tokenOut, setIsOutputRegistered)
                 }
                 isActionCompleted={isOutputRegistered}
                 actionText="Register Output Token"
@@ -251,7 +253,7 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
               />
               <TokenActionButton
                 action={() =>
-                  handleSyncViewingKey(tokenOut, setOutputKeySynced)
+                  void handleSyncViewingKey(tokenOut, setOutputKeySynced)
                 }
                 isActionCompleted={outputKeySynced}
                 actionText="Sync Output Token Key"

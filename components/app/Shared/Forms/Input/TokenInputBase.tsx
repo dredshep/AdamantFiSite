@@ -61,19 +61,6 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           balance={Number(balance ?? 0)}
           tokenSymbol={tokenSymbol}
         />
-        {/* </div> */}
-        {/* <div className="flex gap-2 tracking-wide text-sm font-light text-gray-400">
-          <div>Available: </div>
-          <div>
-            {balance} {tokenSymbol}
-          </div>
-        </div> */}
-        {/* <button
-          className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md px-2"
-          onClick={onMaxClick}
-        >
-          max
-        </button> */}
       </div>
       <div className="flex items-center bg-adamant-app-input bg-opacity-50 rounded-lg p-4">
         <input

@@ -19,7 +19,7 @@ export const getStaticProps: GetStaticProps = async () => {
   const res = await fetch(
     "https://api-bridge-mainnet.azurewebsites.net/tokens/?page=0&size=1000"
   );
-  const data: TokensResponse = await res.json();
+  const data = (await res.json()) as TokensResponse;
 
   return {
     props: {

@@ -1,3 +1,21 @@
 {
-    "eslint.lintTask.enable": true
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "eslint.nodePath": "./node_modules",
+  "eslint.run": "onType",
+  "eslint.options": {
+    "overrideConfigFile": ".eslintrc.js"
+  },
+  "eslint.validate": [
+    "javascript",
+    "typescript",
+    "javascriptreact",
+    "typescriptreact"
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+  "eslint.lintTask.enable": true,
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

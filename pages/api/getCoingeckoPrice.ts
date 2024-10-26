@@ -7,7 +7,16 @@ export default async function getCoingeckoPrice(
   res: NextApiResponse
 ) {
   const { symbol } = req.query;
-  if (!symbol) {
+  if (
+    typeof symbol === undefined ||
+    (Array.isArray(symbol) && symbol.length === 0) ||
+    typeof symbol !== "string" ||
+    symbol.length === 0 ||
+    (Array.isArray(symbol) &&
+      symbol.length === 1 &&
+      typeof symbol[0] === "string" &&
+      symbol[0].length === 0)
+  ) {
     res.status(400).json({ error: "Missing symbol. Example: ?symbol=bitcoin" });
     return;
   }

@@ -42,7 +42,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
         // onTokenSelect={() => setIsModalOpen(true)}
         showEstimatedPrice={true}
         estimatedPrice={`$${(
-          parseFloat(amount) * parseFloat(token.usdPrice || "0")
+          parseFloat(amount) * parseFloat(token.usdPrice ?? "0")
         ).toFixed(2)}`}
       />
     </>

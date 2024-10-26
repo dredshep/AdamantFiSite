@@ -23,7 +23,7 @@ const TwoTokenFormBox: React.FC<TwoTokenFormBoxProps> = ({
   tabs,
   liquidityPrompt,
 }) => {
-  const [activeTab, setActiveTab] = useState(tabs[0].label);
+  const [activeTab, setActiveTab] = useState(tabs[0]?.label ?? "");
 
   return (
     <>
@@ -46,7 +46,7 @@ const TwoTokenFormBox: React.FC<TwoTokenFormBoxProps> = ({
         </div>
         {/* Placeholder for additional info related to selected tokens */}
 
-        {liquidityPrompt && <AddLiquidityPrompt />}
+        {typeof liquidityPrompt === "boolean" && <AddLiquidityPrompt />}
       </div>
       <div className="bg-adamant-app-box leading-none rounded-xl text-xl uppercase mt-2">
         {tabs.find((tab) => tab.label === activeTab)?.Component({})}

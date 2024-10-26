@@ -1,8 +1,6 @@
 import React from "react";
-import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
 import TokenInput from "@/components/app/Shared/Forms/Input/TokenInput";
 import FormButton from "@/components/app/Shared/Forms/FormButton";
-import MaxButton from "@/components/app/Shared/Forms/Input/TokenInput/MaxButton";
 import { useSwapForm } from "@/hooks/useSwapForm";
 
 const SwapForm: React.FC = () => {

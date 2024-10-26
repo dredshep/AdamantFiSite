@@ -13,12 +13,12 @@ async function fetchTokensFromAPI(url: string): Promise<AzureTokensToken[]> {
     throw new Error(`API call failed with HTTP status ${response.status}`);
   }
 
-  const data: AzureTokensResponse = await response.json();
+  const data = (await response.json()) as AzureTokensResponse;
   return data.tokens;
 }
 
 async function handler(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse<{ tokens: AzureTokensToken[] } | { error: string }>
 ) {
   const apiUrl1 = "https://api-bridge-mainnet.azurewebsites.net/tokens";
@@ -40,11 +40,9 @@ async function handler(
     if (error instanceof Error) {
       res.status(500).json({ error: error.message || "Something went wrong" });
     } else {
-      res
-        .status(500)
-        .json({
-          error: "An unknown error occurred at @pages/api/tokens_legacy.ts",
-        });
+      res.status(500).json({
+        error: "An unknown error occurred at @pages/api/tokens_legacy.ts",
+      });
     }
   }
 }

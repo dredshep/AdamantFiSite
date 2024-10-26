@@ -39,9 +39,7 @@ const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
         tokenAddress={token.address}
         balance={token.balance.toString()}
         onMaxClick={handleMaxClick}
-        onTokenSelect={() => {
-          /* Implement token selection logic */
-        }}
+        inputIdentifier={inputIdentifier as "pool.tokenA" | "pool.tokenB"}
       />
     </div>
   );

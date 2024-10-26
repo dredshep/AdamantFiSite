@@ -31,12 +31,13 @@ const getPoolData = async (
   secretjs: SecretNetworkClient,
   poolAddress: string
 ): Promise<PoolData> => {
-  const response = (await secretjs.query.compute.queryContract({
-    contract_address: poolAddress,
-    code_hash:
-      "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
-    query: { pool: {} },
-  })) as PoolQueryResponse;
+  const response: PoolQueryResponse =
+    await secretjs.query.compute.queryContract({
+      contract_address: poolAddress,
+      code_hash:
+        "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+      query: { pool: {} },
+    });
 
   if (typeof response !== "object" || response === null) {
     throw new Error("Invalid response from pool contract");
@@ -48,8 +49,7 @@ const getPoolData = async (
         asset.info.token?.contract_addr ===
         "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
           ? 6
-          : getTokenDecimals(asset.info.token.contract_addr) || 0;
-      console.log({ decimals });
+          : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
       acc[asset.info.token.contract_addr] = {
         amount: new Decimal(asset.amount),
         decimals,
@@ -134,16 +134,23 @@ const SwapPage = () => {
 
       await window.keplr.enable("secret-4");
 
-      const offlineSigner = (window as KeplrWindow).getOfflineSigner?.(
-        "secret-4"
-      );
+      const offlineSigner = (
+        window as unknown as KeplrWindow
+      ).getOfflineSigner?.("secret-4");
       const accounts = await offlineSigner?.getAccounts();
 
-      if (!accounts || accounts.length === 0) {
+      if (!offlineSigner) {
+        alert("No offline signer found");
+        return;
+      }
+      if (
+        !accounts ||
+        accounts.length === 0 ||
+        typeof accounts[0]?.address !== "string"
+      ) {
         alert("No accounts found");
         return;
       }
-
       const client = new SecretNetworkClient({
         chainId: "secret-4",
         url: "https://lcd.mainnet.secretsaturn.net",
@@ -154,7 +161,7 @@ const SwapPage = () => {
       setSecretjs(client);
     };
 
-    connectKeplr();
+    void connectKeplr();
   }, []);
 
   const handleSwap = async () => {
@@ -207,11 +214,11 @@ const SwapPage = () => {
                 type="number"
                 value={amountIn}
                 onChange={(e) => setAmountIn(e.target.value)}
-                placeholder={`Amount of ${getTokenName(inputToken) || "Token"}`}
+                placeholder={`Amount of ${getTokenName(inputToken) ?? "Token"}`}
                 className="px-4 py-2 border border-gray-700 bg-adamant-app-input rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg text-white"
               />
               <button
-                onClick={handleSwap}
+                onClick={() => void handleSwap()}
                 className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
               >
                 Estimate Swap

@@ -23,19 +23,31 @@ const QueryPools = () => {
         window as unknown as KeplrWindow
       ).getOfflineSigner?.("secret-4");
       const accounts = await offlineSigner?.getAccounts();
+      if (typeof offlineSigner === "undefined") {
+        setError("No offline signer found");
+        return;
+      }
+      if (
+        typeof accounts === "undefined" ||
+        accounts.length === 0 ||
+        typeof accounts[0] === "undefined"
+      ) {
+        setError("No accounts found");
+        return;
+      }
 
       const client = new SecretNetworkClient({
         chainId: "secret-4",
         url: "https://rpc.ankr.com/http/scrt_cosmos",
         wallet: offlineSigner,
-        walletAddress: accounts?.[0].address,
+        walletAddress: accounts[0].address,
       });
 
       setSecretjs(client);
       setAddress(accounts?.[0].address);
     };
 
-    connectKeplr();
+    void connectKeplr();
   }, []);
 
   const handleQueryPools = async () => {
@@ -66,12 +78,12 @@ const QueryPools = () => {
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="p-20">
         <h1 className="text-4xl font-bold">Query Pools</h1>
-        {address ? (
+        {typeof address !== "undefined" && address.length > 0 ? (
           <div>
             <p className="text-lg">Connected as: {address}</p>
             <button
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
-              onClick={handleQueryPools}
+              onClick={() => void handleQueryPools()}
             >
               Query Pools
             </button>
@@ -102,7 +114,9 @@ const QueryPools = () => {
                 {JSON.stringify(pools.length, null, 2)}
               </pre>
             )}
-            {error && <p className="text-lg text-red-500 mt-4">{error}</p>}
+            {error !== null && error !== undefined && error.length > 0 && (
+              <p className="text-lg text-red-500 mt-4">{error}</p>
+            )}
           </div>
         ) : (
           <p className="text-lg">Connecting to Keplr...</p>

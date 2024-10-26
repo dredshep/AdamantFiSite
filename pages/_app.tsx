@@ -26,7 +26,7 @@ export default function App({ Component, pageProps }: AppProps) {
       initializeTokens(indexedTokens);
     };
 
-    fetchTokens();
+    void fetchTokens();
   }, [setSwappableTokens, initializeTokens]);
   return (
     // <Theme color="black" grayColor="olive" accentColor="amber">

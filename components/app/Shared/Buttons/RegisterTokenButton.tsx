@@ -12,13 +12,13 @@ const RegisterTokenButton = ({ tokenAddress }: RegisterTokenButtonProps) => {
         alert("Keplr extension not detected.");
         return;
       }
-      if (!process.env.NEXT_PUBLIC_CHAIN_ID) {
+      if (!("NEXT_PUBLIC_CHAIN_ID" in process.env)) {
         alert("Chain ID not set in environment.");
         return;
       }
 
       await (window as unknown as KeplrWindow).keplr!.suggestToken(
-        process.env.NEXT_PUBLIC_CHAIN_ID,
+        process.env["NEXT_PUBLIC_CHAIN_ID"]!,
         tokenAddress
       );
       alert("Token registration requested.");
@@ -31,7 +31,7 @@ const RegisterTokenButton = ({ tokenAddress }: RegisterTokenButtonProps) => {
   return (
     <button
       className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-      onClick={handleRegisterToken}
+      onClick={() => void handleRegisterToken()}
     >
       Register Token
     </button>

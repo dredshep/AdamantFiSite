@@ -19,11 +19,12 @@ export const getTokenDetails = async (
       token_info: {},
     };
 
-    const response = (await secretjs.query.compute.queryContract({
-      contract_address: tokenInfo.contract_addr,
-      code_hash: tokenInfo.token_code_hash,
-      query: queryMsg,
-    })) as { token_info: { decimals: number } };
+    const response: { token_info: { decimals: number } } =
+      await secretjs.query.compute.queryContract({
+        contract_address: tokenInfo.contract_addr,
+        code_hash: tokenInfo.token_code_hash,
+        query: queryMsg,
+      });
 
     console.log(
       "Query result:",
@@ -31,8 +32,9 @@ export const getTokenDetails = async (
     );
 
     if (
-      response &&
-      response.token_info &&
+      response !== undefined &&
+      response !== null &&
+      response.token_info !== undefined &&
       typeof response.token_info.decimals === "number"
     ) {
       return {

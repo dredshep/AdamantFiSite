@@ -101,6 +101,15 @@ const QueryPools = () => {
       ).getOfflineSigner?.("secret-4");
       const accounts = await offlineSigner?.getAccounts();
 
+      if (
+        !offlineSigner ||
+        !accounts ||
+        accounts.length === 0 ||
+        typeof accounts[0]?.address !== "string"
+      ) {
+        alert("No offline signer or accounts found");
+        return;
+      }
       const client = new SecretNetworkClient({
         chainId: "secret-4",
         url: "https://rpc.ankr.com/http/scrt_cosmos",
@@ -109,10 +118,10 @@ const QueryPools = () => {
       });
 
       setSecretjs(client);
-      setAddress(accounts?.[0].address);
+      setAddress(accounts[0].address);
     };
 
-    connectKeplr();
+    void connectKeplr();
   }, []);
 
   const handleQueryPools = async () => {
@@ -149,16 +158,18 @@ const QueryPools = () => {
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="p-20">
         <h1 className="text-4xl font-bold">Query Pools</h1>
-        {address ? (
+        {typeof address === "string" ? (
           <div>
             <p className="text-lg">Connected as: {address}</p>
             <button
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
-              onClick={handleQueryPools}
+              onClick={() => void handleQueryPools()}
             >
               Query Pools
             </button>
-            {poolsData?.length ?? 0 > 0 ? (
+            {typeof poolsData !== "undefined" &&
+            poolsData?.length &&
+            poolsData.length > 0 ? (
               <div>
                 <h2 className="text-2xl font-bold mt-4">Pools Data</h2>
                 <pre className="text-lg bg-gray-800 p-4 mt-4">
@@ -168,7 +179,9 @@ const QueryPools = () => {
             ) : (
               <pre className="text-lg bg-gray-800 p-4 mt-4">No data</pre>
             )}
-            {error && <p className="text-lg text-red-500 mt-4">{error}</p>}
+            {typeof error === "string" && (
+              <p className="text-lg text-red-500 mt-4">{error}</p>
+            )}
           </div>
         ) : (
           <p className="text-lg">Connecting to Keplr...</p>

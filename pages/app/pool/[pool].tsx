@@ -36,7 +36,7 @@ export default function PoolPage() {
       try {
         const [poolsData, pairData] = await Promise.all([
           getTablePools(),
-          pool && typeof pool === "string" ? queryPool(pool) : null,
+          typeof pool === "string" && pool.length > 0 ? queryPool(pool) : null,
         ]);
         setPools(poolsData);
         if (pairData) {
@@ -49,7 +49,7 @@ export default function PoolPage() {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [pool]);
 
   const details = pools.find((p) => p.contract_address === pool);
@@ -86,6 +86,19 @@ export default function PoolPage() {
     balance: parseFloat(asset.amount), // This is the pool balance, not the user's balance
     address: asset.info.token.contract_addr as SecretString,
   }));
+  if (typeof token1 === "undefined" || typeof token2 === "undefined") {
+    console.error(
+      "Expected 2 tokens, got token 1:",
+      token1,
+      "token 2:",
+      token2
+    );
+    return (
+      <AppLayout>
+        <div>Error: Invalid token data.</div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

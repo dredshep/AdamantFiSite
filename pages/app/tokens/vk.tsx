@@ -28,7 +28,7 @@ export default function TokensPage() {
       }
       await window.keplr.enable(chainId);
     }
-    main();
+    void main();
   }, []);
 
   return (

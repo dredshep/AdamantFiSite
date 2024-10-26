@@ -9,8 +9,9 @@ const TinyVegaChart: React.FC<TinyVegaChartProps> = ({ tokenAddress }) => {
   const [spec, setSpec] = useState<VisualizationSpec>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useResizeObserver(containerRef, ([entry]) =>
-    updateSpecWidth(entry.contentRect.width)
+  useResizeObserver(
+    containerRef,
+    ([entry]) => entry && updateSpecWidth(entry.contentRect.width)
   );
 
   useEffect(() => {
@@ -21,7 +22,7 @@ const TinyVegaChart: React.FC<TinyVegaChartProps> = ({ tokenAddress }) => {
       setSpec(newSpec);
     };
 
-    fetchDataAndUpdateSpec();
+    void fetchDataAndUpdateSpec();
   }, [tokenAddress]);
 
   const updateSpecWidth = (width: number) => {

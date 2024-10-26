@@ -3,7 +3,7 @@ import { fetchFromCoinGecko } from "@/utils/apis/coingecko-utils";
 import { handleApiError } from "@/utils/apis/handleApiError";
 
 export default async function getCoingeckoCoinList(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse
 ) {
   try {

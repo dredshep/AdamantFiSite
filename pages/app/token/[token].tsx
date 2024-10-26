@@ -36,7 +36,7 @@ const TokenPage = () => {
   const { token } = router.query;
   const [tokenDetails, setTokenDetails] = React.useState<Token[]>([]);
   useEffect(() => {
-    getSwappableTokens().then((data) => {
+    void getSwappableTokens().then((data) => {
       setTokenDetails(data);
     });
   }, []);
