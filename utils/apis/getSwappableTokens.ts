@@ -1,5 +1,5 @@
 import { SwappableToken } from "@/types/Token";
-import { transformTwoSwappableToken } from "./transformToSwappableToken";
+import { transformToSwappableToken } from "./transformToSwappableToken";
 import getUrl from "./getUrl";
 import { AzureTokensToken } from "@/types/api/azure/tokens";
 import { SecretToken } from "@/types/api/azure/secret_tokens";
@@ -21,5 +21,5 @@ export const getSwappableTokens = async (): Promise<SwappableToken[]> => {
   }
 
   // Since the API response might include both types of tokens, we should handle them uniformly
-  return transformTwoSwappableToken(tokens);
+  return transformToSwappableToken(tokens);
 };

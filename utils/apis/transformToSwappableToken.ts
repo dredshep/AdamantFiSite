@@ -6,7 +6,7 @@ import {
 } from "@/types/api/azure/tokens";
 import { SwappableToken } from "@/types/Token"; // Assuming Token type is defined in a separate file
 
-export function transformTwoSwappableToken(
+export function transformToSwappableToken(
   tokens: (AzureTokensToken | SecretToken)[]
 ): SwappableToken[] {
   return tokens.map((token) => {
