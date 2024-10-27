@@ -30,18 +30,22 @@ export const usePoolDepositForm = () => {
       );
       setTokens(convertedTokens);
     };
-    fetchTokens();
+    void fetchTokens();
   }, []);
 
   useEffect(() => {
-    if (tokens.length >= 2) {
+    if (
+      tokens.length >= 2 &&
+      tokens[0] !== undefined &&
+      tokens[1] !== undefined
+    ) {
       const inputIdentifier1 = `pool.${tokens[0].symbol}`;
       const inputIdentifier2 = `pool.${tokens[1].symbol}`;
       const amount1 = new BigNumber(
-        tokenInputs[inputIdentifier1]?.amount || "0"
+        tokenInputs[inputIdentifier1]?.amount ?? "0"
       );
       const amount2 = new BigNumber(
-        tokenInputs[inputIdentifier2]?.amount || "0"
+        tokenInputs[inputIdentifier2]?.amount ?? "0"
       );
 
       // Calculate APR (this is a placeholder, replace with actual calculation)
@@ -55,11 +59,15 @@ export const usePoolDepositForm = () => {
   }, [tokenInputs, tokens]);
 
   const handleDepositClick = () => {
-    if (tokens.length >= 2) {
+    if (
+      tokens.length >= 2 &&
+      tokens[0] !== undefined &&
+      tokens[1] !== undefined
+    ) {
       const inputIdentifier1 = `pool.${tokens[0].symbol}`;
       const inputIdentifier2 = `pool.${tokens[1].symbol}`;
-      const amount1 = tokenInputs[inputIdentifier1]?.amount || "0";
-      const amount2 = tokenInputs[inputIdentifier2]?.amount || "0";
+      const amount1 = tokenInputs[inputIdentifier1]?.amount ?? "0";
+      const amount2 = tokenInputs[inputIdentifier2]?.amount ?? "0";
 
       const priceImpact = calculatePriceImpact(amount1);
       const txFee = calculateTxFee(amount1);
