@@ -4,13 +4,14 @@ import { PoolResponse, QueryMsg } from "@/types/secretswap/pair";
 
 export async function queryPool(
   secretjs: SecretNetworkClient,
-  pair_contract: ContractInfo,
+  contract_address: string,
+  code_hash?: string,
 ): Promise<PoolResponse> {
   const query: QueryMsg = { pool: {} };
 
   const data: PoolResponse = await secretjs.query.compute.queryContract({
-    contract_address: pair_contract.address,
-    code_hash: pair_contract.code_hash,
+    contract_address,
+    code_hash,
     query,
   });
 
