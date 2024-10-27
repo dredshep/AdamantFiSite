@@ -45,7 +45,7 @@ export type QueryMsg =
   | { config: {} }
   | { pair_settings: {} }
   | { pair: { asset_infos: [AssetInfo, AssetInfo] } }
-  | { pairs: {} };
+  | { pairs: { start_after?: [AssetInfo, AssetInfo]; limit?: number } };
 
 export type PairResponse = Pair;
 
