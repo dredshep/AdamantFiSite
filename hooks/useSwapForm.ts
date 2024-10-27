@@ -32,12 +32,12 @@ export const useSwapForm = () => {
   const [minReceive, setMinReceive] = useState("70");
 
   useEffect(() => {
-    fetchSwappableTokens().then(setSwappableTokens);
+    void fetchSwappableTokens().then(setSwappableTokens);
   }, []);
 
   useEffect(() => {
-    if (payToken?.address) {
-      fetchChartData(payToken.address).then(setChartData);
+    if (payToken?.address !== undefined) {
+      void fetchChartData(payToken.address).then(setChartData);
     }
   }, [payToken?.address]);
 
