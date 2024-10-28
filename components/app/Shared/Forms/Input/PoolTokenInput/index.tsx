@@ -2,7 +2,7 @@ import React from "react";
 import { usePoolStore } from "@/store/forms/poolStore";
 import TokenInputBase from "@/components/app/Shared/Forms/Input/TokenInputBase";
 import { PoolTokenInputs, SecretString } from "@/types";
-import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
+// import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
 
 interface PoolTokenInputProps {
   inputIdentifier: string;
@@ -31,7 +31,7 @@ const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
 
   return (
     <div>
-      <InputLabel label={label} caseType="normal-case" />
+      {/* <InputLabel label={label} caseType="normal-case" /> */}
       <TokenInputBase
         inputValue={tokenInputs[inputIdentifier]?.amount ?? ""}
         onInputChange={handleInputChange}

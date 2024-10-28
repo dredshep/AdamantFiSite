@@ -14,7 +14,7 @@ const secretjs = new SecretNetworkClient({
 export async function queryFactoryPairs() {
   if (
     cachedPairs &&
-    cacheTimestamp &&
+    cacheTimestamp !== null &&
     Date.now() - cacheTimestamp < CACHE_DURATION
   ) {
     console.log("Returning cached pairs.");

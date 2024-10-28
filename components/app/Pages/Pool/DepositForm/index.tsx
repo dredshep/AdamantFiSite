@@ -1,35 +1,59 @@
 import React from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import FormButton from "@/components/app/Shared/Forms/FormButton";
 import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
 import PoolTokenInput from "@/components/app/Shared/Forms/Input/PoolTokenInput";
-import { SecretString } from "@/types";
-interface DepositFormProps {
-  token1: {
-    symbol: string;
-    balance: number;
-    address: SecretString;
-  };
-  token2: {
-    symbol: string;
-    balance: number;
-    address: SecretString;
-  };
-}
+import PoolSelectionModal from "@/components/app/Shared/Forms/Select/PoolSelectionModal";
 
-const DepositForm: React.FC<DepositFormProps> = ({ token1, token2 }) => {
-  const { apr, estimatedLPTokens, handleDepositClick } = usePoolDepositForm();
+const DepositForm: React.FC = () => {
+  const { selectedPool, apr, estimatedLPTokens, handleDepositClick } =
+    usePoolDepositForm();
+
+  if (!selectedPool) {
+    return (
+      <div className="flex flex-col gap-6 py-2.5 px-2.5 flex-1 justify-center items-center">
+        <Dialog.Root>
+          <Dialog.Trigger asChild>
+            <button className="bg-adamant-primary hover:bg-adamant-primary/90 text-white font-medium py-2 px-4 rounded-lg">
+              Select a Pool
+            </button>
+          </Dialog.Trigger>
+          <PoolSelectionModal />
+        </Dialog.Root>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 py-2.5 px-2.5 flex-1 justify-between">
       <div className="flex flex-col gap-6">
+        <div className="flex justify-between items-center px-2.5">
+          <span className="text-white font-medium">Selected Pool:</span>
+          <Dialog.Root>
+            <Dialog.Trigger asChild>
+              <button className="text-adamant-primary hover:text-adamant-primary/90">
+                Change
+              </button>
+            </Dialog.Trigger>
+            <PoolSelectionModal />
+          </Dialog.Root>
+        </div>
         <PoolTokenInput
-          inputIdentifier={`pool.${token1.symbol}`}
-          token={token1}
+          inputIdentifier={`pool.${selectedPool.token0!.symbol}`}
+          token={{
+            symbol: selectedPool.token0!.symbol,
+            balance: Number(selectedPool.token0!.balance),
+            address: selectedPool.token0!.address,
+          }}
           label="Deposit"
         />
         <PoolTokenInput
-          inputIdentifier={`pool.${token2.symbol}`}
-          token={token2}
+          inputIdentifier={`pool.${selectedPool.token1!.symbol}`}
+          token={{
+            symbol: selectedPool.token1!.symbol,
+            balance: Number(selectedPool.token1!.balance),
+            address: selectedPool.token1!.address,
+          }}
           label="And"
         />
         <div className="flex flex-col gap-2 px-2.5 text-gray-400 text-sm">

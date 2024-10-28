@@ -8,6 +8,16 @@ import {
 } from "@/types";
 import updateState from "@/store/utils/updateState";
 
+// Extend StoreState interface to include setPoolTokens
+declare module "@/types" {
+  interface StoreState {
+    setPoolTokens: (
+      token0Address: SecretString,
+      token1Address: SecretString
+    ) => void;
+  }
+}
+
 export const useStore = create<StoreState>((set) => ({
   tokenInputs: {
     "swap.pay": {
@@ -63,4 +73,21 @@ export const useStore = create<StoreState>((set) => ({
   setSwappableTokens: (tokens) => set({ swappableTokens: tokens }),
   setChainId: (chainId) => set({ chainId }),
   setConnectionRefused: (refused) => set({ connectionRefused: refused }),
+  setPoolTokens: (token0Address: SecretString, token1Address: SecretString) =>
+    set((state) => ({
+      ...state, // Keep all other state
+      tokenInputs: {
+        ...state.tokenInputs,
+        "swap.pay": {
+          ...state.tokenInputs["swap.pay"],
+          tokenAddress: token0Address,
+          amount: "",
+        },
+        "swap.receive": {
+          ...state.tokenInputs["swap.receive"],
+          tokenAddress: token1Address,
+          amount: "",
+        },
+      },
+    })),
 }));

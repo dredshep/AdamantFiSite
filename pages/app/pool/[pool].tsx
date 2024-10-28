@@ -8,6 +8,10 @@ import Link from "next/link";
 import { Breadcrumb } from "@/components/app/Breadcrumb";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import DepositForm from "@/components/app/Pages/Pool/DepositForm";
+import { usePoolStore } from "@/store/forms/poolStore";
+import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
+import { useStore as useSwapStore } from "@/store/swapStore";
 
 interface PairPoolData {
   assets: {
@@ -26,6 +30,8 @@ interface PairPoolData {
 export default function PoolPage() {
   const router = useRouter();
   const { pool } = router.query;
+  const { setSelectedPool } = usePoolStore();
+  const { setPoolTokens } = useSwapStore();
 
   const [pools, setPools] = useState<TablePool[]>([]);
   const [pairPoolData, setPairPoolData] = useState<PairPoolData | null>(null);
@@ -34,13 +40,51 @@ export default function PoolPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [poolsData, pairData] = await Promise.all([
+        if (typeof pool !== "string") return;
+
+        const [poolsData, pairData, factoryPairs, tokens] = await Promise.all([
           getTablePools(),
-          typeof pool === "string" && pool.length > 0 ? queryPool(pool) : null,
+          queryPool(pool),
+          queryFactoryPairs(),
+          getSwappableTokens(),
         ]);
+
         setPools(poolsData);
-        if (pairData) {
+        if (pairData !== null && typeof pairData === "object") {
           setPairPoolData(pairData);
+        }
+
+        // Find the corresponding pair and set it in both stores
+        const pair = factoryPairs.find((p) => p.contract_addr === pool);
+        if (pair !== undefined) {
+          const token0Address = pair.asset_infos[0]?.token?.contract_addr;
+          const token1Address = pair.asset_infos[1]?.token?.contract_addr;
+
+          if (
+            typeof token0Address === "string" &&
+            token0Address.length > 0 &&
+            typeof token1Address === "string" &&
+            token1Address.length > 0
+          ) {
+            const token0 = tokens.find((t) => t.address === token0Address);
+            const token1 = tokens.find((t) => t.address === token1Address);
+
+            if (token0 !== undefined && token1 !== undefined) {
+              // Set pool for deposit form
+              setSelectedPool({
+                address: pool,
+                token0,
+                token1,
+                pairInfo: pair,
+              });
+
+              // Set tokens for swap form, casting addresses to SecretString
+              setPoolTokens(
+                token0Address as SecretString,
+                token1Address as SecretString
+              );
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -50,7 +94,7 @@ export default function PoolPage() {
     };
 
     void fetchData();
-  }, [pool]);
+  }, [pool, setSelectedPool, setPoolTokens]);
 
   const details = pools.find((p) => p.contract_address === pool);
 
@@ -156,7 +200,7 @@ export default function PoolPage() {
           {/* Deposit Form */}
           <div className="mt-4 bg-adamant-app-box p-4 rounded-xl flex-1 flex flex-col">
             <h2 className="text-xl font-bold mb-4">Deposit</h2>
-            <DepositForm token1={token1} token2={token2} />
+            <DepositForm />
           </div>
         </div>
 

@@ -98,7 +98,8 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             // <PoolSelectionModal
             //   inputIdentifier={inputIdentifier as keyof PoolTokenInputs}
             // />
-            <div className="text-sm text-gray-400">Not implemented</div>
+            // <div className="text-sm text-gray-400">Not implemented</div>
+            <></>
           )}
         </Dialog.Root>
       </div>

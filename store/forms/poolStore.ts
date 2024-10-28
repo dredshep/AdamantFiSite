@@ -1,36 +1,29 @@
 import { create } from "zustand";
+import { SwappableToken } from "@/types/Token";
+import { Pair } from "@/types/api/Factory";
 
-interface PoolState {
-  tokenInputs: {
-    [key: string]: {
-      amount: string;
-      balance: number;
-    };
-  };
-  setTokenInputAmount: (inputIdentifier: string, amount: string) => void;
-  setMax: (inputIdentifier: string) => void;
+interface SelectedPool {
+  address: string;
+  token0?: SwappableToken;
+  token1?: SwappableToken;
+  pairInfo: Pair;
 }
 
-export const usePoolStore = create<PoolState>((set) => ({
+interface PoolStore {
+  selectedPool?: SelectedPool;
+  tokenInputs: Record<string, { amount: string }>;
+  setSelectedPool: (pool: SelectedPool) => void;
+  setTokenInputAmount: (identifier: string, amount: string) => void;
+}
+
+export const usePoolStore = create<PoolStore>((set) => ({
   tokenInputs: {},
-  setTokenInputAmount: (inputIdentifier, amount) =>
+  setSelectedPool: (pool) => set({ selectedPool: pool }),
+  setTokenInputAmount: (identifier, amount) =>
     set((state) => ({
       tokenInputs: {
         ...state.tokenInputs,
-        [inputIdentifier]: {
-          ...state.tokenInputs[inputIdentifier],
-          amount,
-        },
-      },
-    })),
-  setMax: (inputIdentifier) =>
-    set((state) => ({
-      tokenInputs: {
-        ...state.tokenInputs,
-        [inputIdentifier]: {
-          ...state.tokenInputs[inputIdentifier],
-          amount: state.tokenInputs[inputIdentifier].balance.toString(),
-        },
+        [identifier]: { amount },
       },
     })),
 }));
