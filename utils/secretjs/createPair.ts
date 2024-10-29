@@ -4,26 +4,26 @@ import { ExecuteMsg } from "@/types/secretswap/factory";
 
 // NOTE: Sample inputs
 
-const token0: Token = {
-  token: {
-    contract_addr: "TBD",
-    token_code_hash: "TBD",
-    viewing_key: "AdamantFi",
-  },
-};
-const token1: Token = {
-  token: {
-    contract_addr: "TBD",
-    token_code_hash: "TBD",
-    viewing_key: "AdamantFi",
-  },
-};
+// const token0: Token = {
+//   token: {
+//     contract_addr: "TBD",
+//     token_code_hash: "TBD",
+//     viewing_key: "AdamantFi",
+//   },
+// };
+// const token1: Token = {
+//   token: {
+//     contract_addr: "TBD",
+//     token_code_hash: "TBD",
+//     viewing_key: "AdamantFi",
+//   },
+// };
 
 export async function createPair(
   secretjs: SecretNetworkClient,
   factory_contract: ContractInfo,
   token0: Token,
-  token1: Token,
+  token1: Token
 ) {
   const create_pair: ExecuteMsg = {
     create_pair: { asset_infos: [token0, token1] },

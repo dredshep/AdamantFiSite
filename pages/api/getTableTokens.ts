@@ -18,7 +18,7 @@ const transformTokensToTableFormat = (tokens: Token[]): TableToken[] => {
 };
 
 // API Route that uses the transformation
-const getTableTokens = async (req: NextApiRequest, res: NextApiResponse) => {
+const getTableTokens = async (_req: NextApiRequest, res: NextApiResponse) => {
   try {
     const swappableTokens = await getSwappableTokens(); // Fetch the tokens from the other API
     const tableTokens = transformTokensToTableFormat(swappableTokens); // Transform them to table format

@@ -40,7 +40,7 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
 
   getTokenByAddress: (address) => {
     const { tokens } = get();
-    return tokens ? tokens[address] : null;
+    return tokens !== null && tokens[address] ? tokens[address] : null;
   },
 
   getTokenBySymbol: (symbol) => {

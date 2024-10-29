@@ -10,7 +10,7 @@ interface SwapResultItemProps {
   tooltipId: string;
   tooltipContent: string;
   valueClassName?: string;
-  icon?: JSX.Element;
+  icon?: JSX.Element | undefined;
 }
 
 // SwapResultItem functional component
@@ -37,7 +37,8 @@ const SwapResultItem: React.FC<SwapResultItemProps> = ({
         >
           {value}
         </span>
-        {icon && React.cloneElement(icon, { "data-tooltip-id": tooltipId })}{" "}
+        {icon !== undefined &&
+          React.cloneElement(icon, { "data-tooltip-id": tooltipId })}
         {/* Apply the tooltip to the icon */}
       </div>
       <Tooltip id={tooltipId} place="top" content={tooltipContent} />

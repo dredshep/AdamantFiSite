@@ -50,7 +50,8 @@ export const GenericTokenForm: React.FC<GenericTokenFormProps> = ({
               <TokenInput
                 inputIdentifier={field.identifier} // Directly use the correct type
                 // maxable={field.maxable}
-                balance={field.balance}
+                // balance={field.balance}
+                formType="swap"
               />
             )}
             {field.type === "setting" && (

@@ -7,7 +7,7 @@ import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
 // import { Pair } from "@/types/api/Factory";
 
 const getTablePools = async (
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse<TablePool[] | { error: string }>
 ) => {
   try {

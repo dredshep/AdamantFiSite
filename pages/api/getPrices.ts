@@ -23,7 +23,7 @@ export async function getPrices(): Promise<PriceData> {
 }
 
 export default async function handler(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse<PriceData | { error: string }>
 ) {
   try {

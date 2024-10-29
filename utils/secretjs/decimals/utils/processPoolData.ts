@@ -15,7 +15,7 @@ export const processPoolsData = async (
   onError: (error: string) => void,
   setTokenDetails: Dispatch<SetStateAction<TokenData[]>>
 ): Promise<void> => {
-  if (!secretjs) return;
+  if (secretjs === undefined) return;
 
   const sSCRTAddress = "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek";
 
@@ -52,8 +52,16 @@ export const processPoolsData = async (
 
   const promises = fullPoolsData.flatMap((pool) => {
     const pairNames = pool.pair.split("-");
+    if (pairNames.length !== pool.query_result.assets.length) {
+      onError("Invalid pool data: pair names and assets length mismatch");
+      return [];
+    }
+    if (pairNames.some((name) => name === undefined)) {
+      onError("Invalid pool data: pair names contain undefined");
+      return [];
+    }
     return pool.query_result.assets.map((asset, index) =>
-      fetchTokenDetails(asset, pairNames[index])
+      fetchTokenDetails(asset, pairNames[index]!)
     );
   });
 

@@ -4,33 +4,33 @@ import { ExecuteMsg } from "@/types/secretswap/pair";
 
 // NOTE: Sample inputs
 
-const asset0: Asset = {
-  info: {
-    token: {
-      contract_addr: "TBD",
-      token_code_hash: "TBD",
-      viewing_key: "AdamantFi",
-    },
-  },
-  amount: "1000000",
-};
-const asset1: Asset = {
-  info: {
-    token: {
-      contract_addr: "TBD",
-      token_code_hash: "TBD",
-      viewing_key: "AdamantFi",
-    },
-  },
-  amount: "1000000",
-};
+// const asset0: Asset = {
+//   info: {
+//     token: {
+//       contract_addr: "TBD",
+//       token_code_hash: "TBD",
+//       viewing_key: "AdamantFi",
+//     },
+//   },
+//   amount: "1000000",
+// };
+// const asset1: Asset = {
+//   info: {
+//     token: {
+//       contract_addr: "TBD",
+//       token_code_hash: "TBD",
+//       viewing_key: "AdamantFi",
+//     },
+//   },
+//   amount: "1000000",
+// };
 
 export async function provideLiquidity(
   secretjs: SecretNetworkClient,
   pair_contract: ContractInfo,
   asset0: Asset,
   asset1: Asset,
-  slippage_tolerance?: string,
+  slippage_tolerance?: string
 ) {
   const provide_liquidity: ExecuteMsg = {
     provide_liquidity: {
