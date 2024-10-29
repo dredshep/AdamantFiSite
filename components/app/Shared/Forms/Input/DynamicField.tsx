@@ -1,19 +1,21 @@
 import React, { useState } from "react";
 import { FaCheck } from "react-icons/fa"; // Importing check icon
-import { useStore } from "@/store/swapStore"; // Adjust the import path as necessary
-import { StoreState } from "@/types";
+import { useSwapStore } from "@/store/swapStore"; // Adjust the import path as necessary
+import { SwapStoreState } from "@/types";
 import { RiPencilFill } from "react-icons/ri";
 
 interface DynamicFieldProps {
-  fieldIdentifier: keyof StoreState["sharedSettings"];
+  fieldIdentifier: keyof SwapStoreState["sharedSettings"];
 }
 
 const DynamicField: React.FC<DynamicFieldProps> = ({ fieldIdentifier }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isValid, setIsValid] = useState(true); // State to track validity
-  const fieldValue = useStore((state) => state.sharedSettings[fieldIdentifier]);
-  const setSharedSetting = useStore((state) => state.setSharedSetting);
+  const fieldValue = useSwapStore(
+    (state) => state.sharedSettings[fieldIdentifier]
+  );
+  const setSharedSetting = useSwapStore((state) => state.setSharedSetting);
 
   const validateInput = (value: string): boolean => {
     const parsedValue = parseFloat(value);

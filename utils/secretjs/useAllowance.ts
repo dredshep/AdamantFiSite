@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
+import { CreateClientOptions, SecretNetworkClient } from "secretjs";
 
 export default function useAllowance() {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
@@ -14,16 +14,20 @@ export default function useAllowance() {
       const chainId = "secret-4"; // Use the correct chain ID for your network
       await window.keplr.enable(chainId);
       const offlineSigner = window.keplr.getOfflineSignerOnlyAmino(chainId);
-      const secretjsClient = new SecretNetworkClient({
+      const accounts = await offlineSigner.getAccounts();
+      const opts = {
         // mainnet secret network rpc url
         url: "https://scrt.public-rpc.com",
         chainId,
         wallet: offlineSigner,
-        walletAddress: (await offlineSigner.getAccounts())[0].address,
-      });
+      } as CreateClientOptions;
+      if (accounts[0] !== undefined) {
+        opts.walletAddress = accounts[0].address;
+      }
+      const secretjsClient = new SecretNetworkClient(opts);
       setSecretjs(secretjsClient);
     };
-    main();
+    void main();
   }, []);
 
   return { secretjs, error };

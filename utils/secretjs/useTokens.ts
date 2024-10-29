@@ -15,7 +15,7 @@ export function useTokens(chainId: string) {
       }
     }
 
-    fetchTokens();
+    void fetchTokens();
   }, []);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useTokens(chainId: string) {
       await window.keplr.enable(chainId);
     }
 
-    enableKeplr();
+    void enableKeplr();
   }, [chainId]);
 
   return tokens;

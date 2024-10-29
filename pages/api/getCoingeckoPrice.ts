@@ -1,5 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { fetchFromCoinGecko } from "@/utils/apis/coingecko-utils";
+import {
+  fetchFromCoinGecko,
+  CoinGeckoEndpoint,
+} from "@/utils/apis/coingecko-utils";
 import { handleApiError } from "@/utils/apis/handleApiError";
 
 export default async function getCoingeckoPrice(
@@ -22,9 +25,10 @@ export default async function getCoingeckoPrice(
   }
 
   try {
-    const data = await fetchFromCoinGecko(
-      `/coins/markets?vs_currency=usd&ids=${symbol}`
-    );
+    const data = await fetchFromCoinGecko(CoinGeckoEndpoint.CoinMarket, {
+      vs_currency: "usd",
+      ids: symbol,
+    });
     res.status(200).json(data);
   } catch (error) {
     handleApiError(error, res);

@@ -1,4 +1,4 @@
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 
 interface MaxButtonProps {
   inputIdentifier: "swap.pay" | "swap.receive";
@@ -6,7 +6,7 @@ interface MaxButtonProps {
 }
 
 const MaxButton: React.FC<MaxButtonProps> = ({ inputIdentifier, balance }) => {
-  const { setTokenInputProperty } = useStore();
+  const { setTokenInputProperty } = useSwapStore();
 
   const handleMax = () => {
     setTokenInputProperty(inputIdentifier, "amount", balance.toString());

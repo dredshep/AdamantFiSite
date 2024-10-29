@@ -1,11 +1,11 @@
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 
 const keplrDisconnect = () => {
-  useStore.getState().disconnectWallet();
+  useSwapStore.getState().disconnectWallet();
 
-  useStore.getState().updateBalance("SCRT", "0");
-  useStore.getState().updateBalance("ADMT", "0");
-  useStore.getState().setConnectionRefused(true);
+  useSwapStore.getState().updateBalance("SCRT", "0");
+  useSwapStore.getState().updateBalance("ADMT", "0");
+  useSwapStore.getState().setConnectionRefused(true);
 
   console.log("Disconnected from Keplr.");
 };

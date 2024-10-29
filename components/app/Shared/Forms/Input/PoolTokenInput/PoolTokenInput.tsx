@@ -1,14 +1,15 @@
 import React from "react";
 import { usePoolStore } from "@/store/forms/poolStore";
 import PoolMaxButton from "@/components/app/Shared/Forms/Input/TokenInput/PoolMaxButton";
+import { PoolTokenInputs } from "@/types";
 
 interface PoolTokenInputProps {
-  inputIdentifier: string;
+  poolInputIdentifier: keyof PoolTokenInputs;
   balance: number;
 }
 
 const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
-  inputIdentifier,
+  poolInputIdentifier: inputIdentifier,
   // balance,
 }) => {
   const { tokenInputs, setTokenInputAmount } = usePoolStore();
@@ -25,7 +26,7 @@ const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
         className="w-full bg-transparent text-2xl font-medium focus:outline-none"
         placeholder="0.0"
       />
-      <PoolMaxButton inputIdentifier={inputIdentifier} />
+      <PoolMaxButton poolInputIdentifier={inputIdentifier} />
     </div>
   );
 };

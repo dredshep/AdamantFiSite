@@ -14,7 +14,7 @@ interface TokenInputBaseProps {
   onMaxClick: () => void;
   showEstimatedPrice?: boolean;
   estimatedPrice?: string;
-  inputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
+  swapInputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
   label: string;
   hasMax: boolean;
 }
@@ -59,7 +59,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   onMaxClick,
   showEstimatedPrice = false,
   estimatedPrice = "",
-  inputIdentifier,
+  swapInputIdentifier: inputIdentifier,
   label,
   hasMax,
 }) => {

@@ -6,6 +6,11 @@ export interface SwapTokenInputs {
 }
 
 export interface PoolTokenInputs {
-  "pool.tokenA": TokenInputState;
-  "pool.tokenB": TokenInputState;
+  "pool.deposit.tokenA": TokenInputState;
+  "pool.deposit.tokenB": TokenInputState;
+  "pool.withdraw.tokenA": TokenInputState;
+  "pool.withdraw.tokenB": TokenInputState;
+  "pool.withdraw.lpToken": TokenInputState;
+  // "pool.create.tokenA": TokenInputState;
+  // "pool.create.tokenB": TokenInputState;
 }

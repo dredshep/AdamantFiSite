@@ -39,7 +39,7 @@ const DepositForm: React.FC = () => {
           </Dialog.Root>
         </div>
         <PoolTokenInput
-          inputIdentifier={`pool.${selectedPool.token0!.symbol}`}
+          poolInputIdentifier={`pool.${selectedPool.token0!.symbol}`}
           token={{
             symbol: selectedPool.token0!.symbol,
             balance: Number(selectedPool.token0!.balance),
@@ -48,7 +48,7 @@ const DepositForm: React.FC = () => {
           label="Deposit"
         />
         <PoolTokenInput
-          inputIdentifier={`pool.${selectedPool.token1!.symbol}`}
+          poolInputIdentifier={`pool.${selectedPool.token1!.symbol}`}
           token={{
             symbol: selectedPool.token1!.symbol,
             balance: Number(selectedPool.token1!.balance),

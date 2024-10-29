@@ -5,7 +5,7 @@ import { PoolTokenInputs, SecretString } from "@/types";
 // import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
 
 interface PoolTokenInputProps {
-  inputIdentifier: string;
+  poolInputIdentifier: keyof PoolTokenInputs;
   token: {
     symbol: string;
     balance: number;
@@ -15,7 +15,7 @@ interface PoolTokenInputProps {
 }
 
 const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
-  inputIdentifier,
+  poolInputIdentifier: inputIdentifier,
   token,
   label,
 }) => {
@@ -39,7 +39,7 @@ const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
         tokenAddress={token.address}
         balance={token.balance.toString()}
         onMaxClick={handleMaxClick}
-        inputIdentifier={inputIdentifier as keyof PoolTokenInputs}
+        swapInputIdentifier={inputIdentifier}
         hasMax={true}
         label={label}
       />

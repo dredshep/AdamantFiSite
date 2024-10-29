@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Token, SwapTokenInputs } from "@/types";
 import TokenSelectionSearchBar from "./TokenSelectionSearchBar";
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import TokenSelectionItem from "../TokenSelectionItem";
 
 interface TokenSelectionModalProps {
@@ -12,9 +12,9 @@ interface TokenSelectionModalProps {
 const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   inputIdentifier,
 }) => {
-  const { setTokenInputProperty } = useStore();
+  const { setTokenInputProperty } = useSwapStore();
   const [searchTerm, setSearchTerm] = useState("");
-  const tokens = useStore((state) => state.swappableTokens);
+  const tokens = useSwapStore((state) => state.swappableTokens);
 
   const handleTokenSelect = (selectedToken: Token) => {
     setTokenInputProperty(

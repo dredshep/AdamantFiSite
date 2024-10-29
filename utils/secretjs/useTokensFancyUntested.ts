@@ -28,7 +28,7 @@ export function useTokens(chainId: string) {
       }
     };
 
-    fetchTokens();
+    void fetchTokens();
 
     return () => {
       isMounted = false;
@@ -51,7 +51,7 @@ export function useTokens(chainId: string) {
       }
     };
 
-    enableKeplr();
+    void enableKeplr();
 
     return () => {
       isMounted = false;

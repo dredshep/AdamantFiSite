@@ -1,14 +1,21 @@
 import { Token } from "@/types/Token";
-import { WalletState } from "@/types/store/WalletState";
+// import { WalletState } from "@/types/store/WalletState";
 import { SharedSettings } from "@/types/store/SharedSettings";
 import { SwapTokenInputs } from "@/types/store/TokenInputs";
 import { TokenInputState } from "@/types/store/TokenInputState";
 import { SecretString } from "../SecretString";
 
-export interface StoreState {
-  tokenInputs: SwapTokenInputs;
+export interface SwapStoreState {
+  [key: string]: unknown;
+
+  swapTokenInputs: SwapTokenInputs;
   sharedSettings: SharedSettings;
-  wallet: WalletState;
+  wallet: {
+    address: SecretString | null;
+    SCRTBalance: string;
+    ADMTBalance: string;
+    // other properties
+  };
   chainId: string;
   swappableTokens: Token[] | null;
   connectionRefused: boolean;

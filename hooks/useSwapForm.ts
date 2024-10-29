@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { SwappableToken } from "@/types/Token";
 import {
@@ -15,7 +15,7 @@ export const useSwapForm = () => {
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>(
     []
   );
-  const { tokenInputs } = useStore.getState();
+  const { swapTokenInputs: tokenInputs } = useSwapStore.getState();
   const payDetails = tokenInputs["swap.pay"];
   const payToken = useTokenStore(
     (state) => state.tokens?.[payDetails.tokenAddress]
@@ -24,8 +24,8 @@ export const useSwapForm = () => {
   const receiveToken = useTokenStore(
     (state) => state.tokens?.[receiveDetails.tokenAddress]
   );
-  const slippage = useStore((state) => state.sharedSettings.slippage);
-  const gas = useStore((state) => state.sharedSettings.gas);
+  const slippage = useSwapStore((state) => state.sharedSettings.slippage);
+  const gas = useSwapStore((state) => state.sharedSettings.gas);
 
   const [priceImpact, setPriceImpact] = useState("0.7");
   const [txFee, setTxFee] = useState("0.1");

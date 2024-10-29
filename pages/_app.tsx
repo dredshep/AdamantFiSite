@@ -4,12 +4,12 @@ import type { AppProps } from "next/app";
 // import { Theme } from "@radix-ui/themes";
 import { useEffect } from "react";
 import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { SwappableToken } from "@/types";
 
 export default function App({ Component, pageProps }: AppProps) {
-  const setSwappableTokens = useStore((state) => state.setSwappableTokens);
+  const setSwappableTokens = useSwapStore((state) => state.setSwappableTokens);
   const initializeTokens = useTokenStore((state) => state.initializeTokens);
 
   useEffect(() => {

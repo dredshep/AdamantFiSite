@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { SwappableToken } from "@/types/Token";
 import { Pair } from "@/types/api/Factory";
+import { PoolTokenInputs, TokenInputState } from "@/types";
 
 interface SelectedPool {
   address: string;
@@ -11,19 +12,37 @@ interface SelectedPool {
 
 interface PoolStore {
   selectedPool?: SelectedPool;
-  tokenInputs: Record<string, { amount: string }>;
+  tokenInputs: PoolTokenInputs;
   setSelectedPool: (pool: SelectedPool) => void;
-  setTokenInputAmount: (identifier: string, amount: string) => void;
+  setTokenInputAmount: (
+    identifier: keyof PoolTokenInputs,
+    amount: string
+  ) => void;
 }
 
+const defaultTokenInputState: TokenInputState = {
+  tokenAddress: "secret1empty",
+  amount: "",
+  balance: "",
+};
+
 export const usePoolStore = create<PoolStore>((set) => ({
-  tokenInputs: {},
+  tokenInputs: {
+    "pool.deposit.tokenA": defaultTokenInputState,
+    "pool.deposit.tokenB": defaultTokenInputState,
+    "pool.withdraw.tokenA": defaultTokenInputState,
+    "pool.withdraw.tokenB": defaultTokenInputState,
+    "pool.withdraw.lpToken": defaultTokenInputState,
+  },
   setSelectedPool: (pool) => set({ selectedPool: pool }),
   setTokenInputAmount: (identifier, amount) =>
     set((state) => ({
       tokenInputs: {
         ...state.tokenInputs,
-        [identifier]: { amount },
+        [identifier]: {
+          ...state.tokenInputs[identifier],
+          amount,
+        },
       },
     })),
 }));

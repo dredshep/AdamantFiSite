@@ -1,8 +1,8 @@
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
 
 const AddLiquidityPrompt = () => {
-  const { tokenInputs } = useStore();
+  const { swapTokenInputs: tokenInputs } = useSwapStore();
   const { tokens } = useTokenStore();
   const receiveTokenAddress = tokenInputs["swap.receive"].tokenAddress;
   const payTokenAddress = tokenInputs["swap.pay"].tokenAddress;

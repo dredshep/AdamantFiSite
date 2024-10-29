@@ -1,33 +1,35 @@
 // hooks/useKeplrConnection.ts
 import { useEffect } from "react";
-import { useStore } from "@/store/swapStore";
-
-type CustomWindow = typeof window & {
-  keplr: any;
-};
+import { useSwapStore } from "@/store/swapStore";
+import { Window as KeplrWindow } from "@keplr-wallet/types";
+import { SecretString } from "@/types";
 
 const useKeplrConnect = (manual: boolean) => {
   useEffect(() => {
     // check if user already rejected connection
-    let attemptedConnection = false;
+    // let attemptedConnection: boolean | undefined;
 
     const attemptConnection = async () => {
-      const { keplr }: CustomWindow = window as CustomWindow;
-      const connectionRefused = useStore.getState().connectionRefused;
+      const { keplr }: KeplrWindow = window as unknown as KeplrWindow;
+      const connectionRefused = useSwapStore.getState().connectionRefused;
 
       // if not manually connecting and user already rejected connection, do not attempt connection
       if (keplr && !manual && connectionRefused) {
-        attemptedConnection = true;
+        // attemptedConnection = true;
         try {
           const chainId = "secret-4";
           await keplr.enable(chainId);
           const offlineSigner = keplr.getOfflineSigner(chainId);
           const accounts = await offlineSigner.getAccounts();
 
-          if (accounts && accounts.length > 0) {
+          if (
+            accounts !== undefined &&
+            accounts.length > 0 &&
+            accounts[0] !== undefined
+          ) {
             const { address } = accounts[0];
             // Update the store with the user's address
-            useStore.getState().connectWallet(address);
+            useSwapStore.getState().connectWallet(address as SecretString);
 
             // Here, you might also want to fetch and update the SCRT and ADMT balances
             // For example:
@@ -37,20 +39,26 @@ const useKeplrConnect = (manual: boolean) => {
         } catch (error) {
           console.error("Error connecting to Keplr:", error);
           // set connection refused to true so we only connect again if the user clicks the connect button
-          useStore.getState().setConnectionRefused(true);
+          useSwapStore.getState().setConnectionRefused(true);
         }
       }
     };
 
     if (manual) {
-      attemptConnection();
+      void attemptConnection();
     }
 
     // Optional: Listen for account change
-    window.addEventListener("keplr_keystorechange", attemptConnection);
+    window.addEventListener(
+      "keplr_keystorechange",
+      () => void attemptConnection()
+    );
 
     return () => {
-      window.removeEventListener("keplr_keystorechange", attemptConnection);
+      window.removeEventListener(
+        "keplr_keystorechange",
+        () => void attemptConnection()
+      );
     };
   }, [manual]); // Ensure this runs whenever the manual param changes
 };

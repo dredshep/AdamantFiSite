@@ -3,14 +3,14 @@ import React, { useEffect } from "react";
 import { RxCaretDown } from "react-icons/rx";
 import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import keplrConnect from "@/utils/wallet/keplrConnect";
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import keplrDisconnect from "@/utils/wallet/keplrDisconnect";
 import { useModalStore } from "@/store/modalStore";
 import WalletModal from "./WalletModal";
 import { useWalletStore } from "@/store/walletStore";
 
 const UserWallet: React.FC = () => {
-  const { connectionRefused } = useStore();
+  const { connectionRefused } = useSwapStore();
   const { isWalletModalOpen, openWalletModal } = useModalStore();
   const { address, ADMTBalance, SCRTBalance } = useWalletStore();
   const truncatedAddress =

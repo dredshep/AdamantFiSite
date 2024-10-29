@@ -1,53 +1,109 @@
 import React from "react";
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import TokenInputBase from "@/components/app/Shared/Forms/Input/TokenInputBase";
-import { SwapTokenInputs } from "@/types";
+import { PoolTokenInputs, SwapTokenInputs } from "@/types";
 import { useTokenStore } from "@/store/tokenStore";
-// import TokenSelectionModal from "@/components/app/Shared/Forms/Select/TokenSelectionModal";
-// import * as Dialog from "@radix-ui/react-dialog";
+import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
+import { usePoolStore } from "@/store/forms/poolStore";
 
+type FormType = "swap" | "pool";
 interface TokenInputProps {
-  inputIdentifier: keyof SwapTokenInputs;
-  balance: number;
+  inputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
+  formType: FormType;
 }
+
+type TokenData = {
+  tokenAddress: string;
+  amount: string;
+  balance: string;
+};
+
+// Type guard functions
+const isSwapInput = (
+  id: keyof SwapTokenInputs | keyof PoolTokenInputs
+): id is keyof SwapTokenInputs => {
+  return id.startsWith("swap.");
+};
+
+const isPoolInput = (
+  id: keyof SwapTokenInputs | keyof PoolTokenInputs
+): id is keyof PoolTokenInputs => {
+  return id.startsWith("pool.");
+};
 
 const TokenInput: React.FC<TokenInputProps> = ({
   inputIdentifier,
-  balance,
+  formType,
 }) => {
-  const { tokenInputs, setTokenInputProperty } = useStore();
-  const { tokenAddress, amount } = tokenInputs[inputIdentifier];
-  const token = useTokenStore().tokens?.[tokenAddress];
-  // const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const { swapTokenInputs: swapTokenInputs, setTokenInputProperty } =
+    useSwapStore();
+  const { selectedPool } = usePoolStore();
+  const { tokenInputs: poolTokenInputs, setTokenInputAmount } =
+    usePoolDepositForm(selectedPool?.address);
+
+  // Get typed token data
+  const getTokenData = (): TokenData => {
+    if (formType === "swap" && isSwapInput(inputIdentifier)) {
+      const data = swapTokenInputs[inputIdentifier];
+      return {
+        tokenAddress: data.tokenAddress,
+        amount: data.amount,
+        balance: String(data.balance || "0"),
+      };
+    } else if (formType === "pool" && isPoolInput(inputIdentifier)) {
+      const data = poolTokenInputs[inputIdentifier];
+      return {
+        tokenAddress: data.tokenAddress,
+        amount: data.amount,
+        balance: String(data.balance || "0"),
+      };
+    }
+    throw new Error("Invalid input identifier");
+  };
+
+  const tokenData = getTokenData();
+  const token = useTokenStore().tokens?.[tokenData.tokenAddress];
 
   const handleInputChange = (value: string) => {
-    setTokenInputProperty(inputIdentifier, "amount", value);
+    if (formType === "swap" && isSwapInput(inputIdentifier)) {
+      setTokenInputProperty(inputIdentifier, "amount", value);
+    } else {
+      setTokenInputAmount(inputIdentifier as keyof PoolTokenInputs, value);
+    }
   };
 
   const handleMaxClick = () => {
-    setTokenInputProperty(inputIdentifier, "amount", balance.toString());
+    const balanceStr = String(tokenData.balance);
+    if (formType === "swap" && isSwapInput(inputIdentifier)) {
+      setTokenInputProperty(inputIdentifier, "amount", balanceStr);
+    } else {
+      setTokenInputAmount(inputIdentifier as keyof PoolTokenInputs, balanceStr);
+    }
   };
 
-  return token ? (
-    // <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
-    <>
-      <TokenInputBase
-        inputIdentifier={inputIdentifier}
-        inputValue={amount}
-        onInputChange={handleInputChange}
-        tokenSymbol={token.symbol}
-        tokenAddress={token.address}
-        balance={balance.toString()}
-        onMaxClick={handleMaxClick}
-        // onTokenSelect={() => setIsModalOpen(true)}
-        showEstimatedPrice={true}
-        estimatedPrice={`$${(
-          parseFloat(amount) * parseFloat(token.usdPrice ?? "0")
-        ).toFixed(2)}`}
-      />
-    </>
-  ) : //{/* </Dialog.Root> */}
-  null;
+  if (!token) {
+    return null;
+  }
+
+  const estimatedPrice = `$${(
+    parseFloat(tokenData.amount || "0") * parseFloat(token.usdPrice ?? "0")
+  ).toFixed(2)}`;
+
+  return (
+    <TokenInputBase
+      swapInputIdentifier={inputIdentifier}
+      inputValue={tokenData.amount}
+      onInputChange={handleInputChange}
+      tokenSymbol={token.symbol}
+      tokenAddress={token.address}
+      balance={tokenData.balance}
+      onMaxClick={handleMaxClick}
+      showEstimatedPrice={true}
+      estimatedPrice={estimatedPrice}
+      label={formType === "swap" ? "Swap" : "Pool"}
+      hasMax={true}
+    />
+  );
 };
 
 export default TokenInput;

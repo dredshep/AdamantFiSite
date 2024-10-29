@@ -21,7 +21,7 @@ export interface IncToken {
   address: string;
   decimals: number;
   name: string;
-  price: any;
+  price: number;
 }
 
 export interface RewardsToken {
@@ -29,5 +29,5 @@ export interface RewardsToken {
   address: string;
   decimals: number;
   name: string;
-  price: any;
+  price: number;
 }

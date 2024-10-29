@@ -8,7 +8,7 @@ const fetchTokenPrice = async (tokenAddress: string): Promise<number> => {
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  const data = await response.json();
+  const data = (await response.json()) as { price: number };
   return data.price;
 };
 
@@ -40,7 +40,7 @@ export const useTokenPrice = (tokenAddress: string) => {
       }
     };
 
-    fetchPrice();
+    void fetchPrice();
   }, [tokenAddress, getPrice, setPriceInStore]);
 
   return { price, loading, error };

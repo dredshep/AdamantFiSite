@@ -1,12 +1,22 @@
 import { readFileSync } from "fs";
 
 const azureTokens = readFileSync("azure_tokens.json", "utf8");
-const secretTokens = readFileSync("secret_tokens.json", "utf8");
+// const secretTokens = readFileSync("secret_tokens.json", "utf8");
 const coinList = readFileSync("coinList.json", "utf8");
 
-const azureTokensJson = JSON.parse(azureTokens);
-const secretTokensJson = JSON.parse(secretTokens);
-const coinListJson = JSON.parse(coinList);
+type AzureTokensJson = {
+  tokens: AzureToken[];
+};
+// type SecretTokensJson = {
+//   tokens: SecretToken[];
+// };
+type CoinListJson = {
+  coins: Coin[];
+};
+
+const azureTokensJson = JSON.parse(azureTokens) as AzureTokensJson;
+// const secretTokensJson = JSON.parse(secretTokens) as SecretTokensJson;
+const coinListJson = JSON.parse(coinList) as CoinListJson;
 
 // azureToken names are .tokens.map(token => token.name, token.src_coin and token.display_props.label; the symbol is token.symbol
 // secretToken names are .tokens.map(token => token.name, symbol is token.display_props.symbol
@@ -20,12 +30,12 @@ type AzureToken = {
   };
   symbol: string;
 };
-type SecretToken = {
-  name: string;
-  display_props: {
-    symbol: string;
-  };
-};
+// type SecretToken = {
+//   name: string;
+//   display_props: {
+//     symbol: string;
+//   };
+// };
 
 type Coin = {
   name: string;
@@ -33,18 +43,18 @@ type Coin = {
   id: string;
 };
 
-const azureTokenNames = azureTokensJson.tokens.map(
-  (token: AzureToken) => token.name
-);
-const azureTokenSymbols = azureTokensJson.tokens.map(
-  (token: AzureToken) => token.symbol
-);
-const azureTokenLabels = azureTokensJson.tokens.map(
-  (token: AzureToken) => token.display_props.label
-);
-const coinNames = coinListJson.map((coin: Coin) => coin.name);
-const coinSymbols = coinListJson.map((coin: Coin) => coin.symbol);
-const coinIds = coinListJson.map((coin: Coin) => coin.id);
+// const azureTokenNames = azureTokensJson.tokens.map(
+//   (token: AzureToken) => token.name
+// );
+// const azureTokenSymbols = azureTokensJson.tokens.map(
+//   (token: AzureToken) => token.symbol
+// );
+// const azureTokenLabels = azureTokensJson.tokens.map(
+//   (token: AzureToken) => token.display_props.label
+// );
+// const coinNames = coinListJson.map((coin: Coin) => coin.name);
+// const coinSymbols = coinListJson.map((coin: Coin) => coin.symbol);
+// const coinIds = coinListJson.map((coin: Coin) => coin.id);
 
 /*
 Task: Create a function that takes in a list of Azure tokens and returns a list of all the tokens that have a matching symbol, label or name in the CoinGecko coin list. The function should return an array of objects with the following structure: { azureToken: AzureToken, matchedCoin: Coin }. If there is no match, the matchedCoin property should be null. The function should also handle cases where the Azure token name or symbol does not match any coin in the CoinGecko coin list. Afterwards, log the result of the function to the console.
@@ -70,7 +80,7 @@ export function matchAzureTokensWithCoinGecko(
 
 const matchedTokens = matchAzureTokensWithCoinGecko(
   azureTokensJson.tokens,
-  coinListJson
+  coinListJson.coins
 );
 
 console.log(matchedTokens.map((token) => token.matchedCoin));

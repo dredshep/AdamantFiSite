@@ -3,7 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Cross1Icon } from "@radix-ui/react-icons"; // Assuming usage of Radix Icons for the X icon
 import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelectionItem";
 import TokenSelectionSearchBar from "@/components/app/Shared/Forms/Select/TokenSelectionModal/TokenSelectionSearchBar";
-import { useStore } from "@/store/swapStore";
+import { useSwapStore } from "@/store/swapStore";
 import { Token, SwapTokenInputs } from "@/types";
 
 interface TokenSelectionModalProps {
@@ -16,9 +16,9 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   onClose,
   inputIdentifier,
 }) => {
-  const { setTokenInputProperty } = useStore();
+  const { setTokenInputProperty } = useSwapStore();
   const [searchTerm, setSearchTerm] = useState("");
-  const tokens = useStore((state) => state.swappableTokens);
+  const tokens = useSwapStore((state) => state.swappableTokens);
 
   const handleTokenSelect = (selectedToken: Token) => {
     setTokenInputProperty(
