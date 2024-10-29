@@ -35,8 +35,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
   inputIdentifier,
   formType,
 }) => {
-  const { swapTokenInputs: swapTokenInputs, setTokenInputProperty } =
-    useSwapStore();
+  const { swapTokenInputs, setTokenInputProperty } = useSwapStore();
   const { selectedPool } = usePoolStore();
   const { tokenInputs: poolTokenInputs, setTokenInputAmount } =
     usePoolDepositForm(selectedPool?.address);
@@ -45,6 +44,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
   const getTokenData = (): TokenData => {
     if (formType === "swap" && isSwapInput(inputIdentifier)) {
       const data = swapTokenInputs[inputIdentifier];
+      if (data === undefined) throw new Error("Invalid swap input data");
       return {
         tokenAddress: data.tokenAddress,
         amount: data.amount,
@@ -52,8 +52,13 @@ const TokenInput: React.FC<TokenInputProps> = ({
       };
     } else if (formType === "pool" && isPoolInput(inputIdentifier)) {
       const data = poolTokenInputs[inputIdentifier];
+      if (data === undefined) throw new Error("Invalid pool input data");
+      // For pool inputs, use the token address from the selected pool
+      const isTokenA = inputIdentifier.endsWith("tokenA");
       return {
-        tokenAddress: data.tokenAddress,
+        tokenAddress: isTokenA
+          ? selectedPool?.token0?.address ?? ""
+          : selectedPool?.token1?.address ?? "",
         amount: data.amount,
         balance: String(data.balance || "0"),
       };
