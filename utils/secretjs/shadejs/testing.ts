@@ -1,3 +1,1 @@
-import {msgSwap, getPossiblePaths, BatchPairsInfo} from "@shadeprotocol/shadejs";
-
-
+// import {msgSwap, getPossiblePaths, BatchPairsInfo} from "@shadeprotocol/shadejs";
