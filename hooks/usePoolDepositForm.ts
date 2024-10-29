@@ -1,8 +1,8 @@
 import { usePoolStore } from "@/store/forms/poolStore";
 import { calculatePriceImpact, calculateTxFee } from "@/utils/swap";
-import { PoolTokenInputs, TablePool } from "@/types";
+import { PoolTokenInputs } from "@/types";
 import { toast } from "react-toastify";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getTablePools } from "@/utils/apis/getTablePools";
 import { queryPool } from "@/utils/apis/getPairPool";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
@@ -22,72 +22,96 @@ interface PairPoolData {
   total_share: string;
 }
 
+interface PoolDetails {
+  contract_address: string;
+  name: string;
+  about: string;
+}
+
+interface PoolQueryResult {
+  pools: PoolDetails[];
+  pairPoolData: PairPoolData;
+  poolDetails: PoolDetails | undefined;
+}
+
+type LoadingState = {
+  status: "loading" | "error" | "success";
+  message?: string | undefined;
+};
+
 export const usePoolDepositForm = (
   poolAddress: string | string[] | undefined
 ) => {
-  const {
-    tokenInputs,
-    selectedPool,
-    setTokenInputAmount,
-    setSelectedPool,
-    // setPoolTokens,
-  } = usePoolStore();
-  const [pools, setPools] = useState<TablePool[]>([]);
-  const [pairPoolData, setPairPoolData] = useState<PairPoolData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } =
+    usePoolStore();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (typeof poolAddress !== "string") return;
+  const query = useQuery<PoolQueryResult>({
+    queryKey: ["pool-data", poolAddress],
+    queryFn: async () => {
+      if (typeof poolAddress !== "string") {
+        throw new Error("Invalid pool address");
+      }
 
-        const [poolsData, pairData, factoryPairs, tokens] = await Promise.all([
-          getTablePools(),
-          queryPool(poolAddress),
-          queryFactoryPairs(),
-          getSwappableTokens(),
-        ]);
+      const [poolsData, pairData, factoryPairs, tokens] = await Promise.all([
+        getTablePools(),
+        queryPool(poolAddress),
+        queryFactoryPairs(),
+        getSwappableTokens(),
+      ]);
 
-        setPools(poolsData);
-        if (pairData !== null && typeof pairData === "object") {
-          setPairPoolData(pairData);
-        }
+      // Find and set the corresponding pair
+      const pair = factoryPairs.find((p) => p.contract_addr === poolAddress);
+      if (pair) {
+        const token0Address = pair.asset_infos[0]?.token?.contract_addr;
+        const token1Address = pair.asset_infos[1]?.token?.contract_addr;
 
-        // Find the corresponding pair and set it in both stores
-        const pair = factoryPairs.find((p) => p.contract_addr === poolAddress);
-        if (pair !== undefined) {
-          const token0Address = pair.asset_infos[0]?.token?.contract_addr;
-          const token1Address = pair.asset_infos[1]?.token?.contract_addr;
+        if (
+          typeof token0Address === "string" &&
+          typeof token1Address === "string" &&
+          token0Address.length > 0 &&
+          token1Address.length > 0
+        ) {
+          const token0 = tokens.find((t) => t.address === token0Address);
+          const token1 = tokens.find((t) => t.address === token1Address);
 
-          if (
-            typeof token0Address === "string" &&
-            token0Address.length > 0 &&
-            typeof token1Address === "string" &&
-            token1Address.length > 0
-          ) {
-            const token0 = tokens.find((t) => t.address === token0Address);
-            const token1 = tokens.find((t) => t.address === token1Address);
-
-            if (token0 !== undefined && token1 !== undefined) {
-              // Set pool for deposit form
-              setSelectedPool({
-                address: poolAddress,
-                token0,
-                token1,
-                pairInfo: pair,
-              });
-            }
+          if (token0 && token1) {
+            setSelectedPool({
+              address: poolAddress,
+              token0,
+              token1,
+              pairInfo: pair,
+            });
           }
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    void fetchData();
-  }, [poolAddress, setSelectedPool]);
+      if (pairData === undefined || typeof pairData !== "object") {
+        throw new Error("Invalid pair data received");
+      }
+
+      const typedPairData = pairData as PairPoolData;
+
+      return {
+        pools: poolsData,
+        pairPoolData: typedPairData,
+        poolDetails: poolsData.find((p) => p.contract_address === poolAddress),
+      };
+    },
+    enabled: typeof poolAddress === "string",
+  });
+
+  const loadingState: LoadingState = {
+    status: query.isLoading
+      ? "loading"
+      : query.error instanceof Error
+      ? "error"
+      : "success",
+    message: query.isLoading
+      ? "Loading pool data..."
+      : query.error instanceof Error
+      ? query.error.message
+      : undefined,
+  };
 
   const setMax = (inputIdentifier: keyof PoolTokenInputs) => {
     setTokenInputAmount(inputIdentifier, tokenInputs[inputIdentifier].balance);
@@ -120,16 +144,14 @@ export const usePoolDepositForm = (
     }
   };
 
-  const poolDetails = pools.find((p) => p.contract_address === poolAddress);
-
   return {
     tokenInputs,
     setTokenInputAmount,
     setMax,
     selectedPool,
     handleDepositClick,
-    loading,
-    poolDetails,
-    pairPoolData,
+    loadingState,
+    poolDetails: query.data?.poolDetails,
+    pairPoolData: query.data?.pairPoolData,
   };
 };

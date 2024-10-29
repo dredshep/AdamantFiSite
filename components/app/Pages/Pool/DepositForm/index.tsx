@@ -4,10 +4,13 @@ import FormButton from "@/components/app/Shared/Forms/FormButton";
 import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
 import PoolTokenInput from "@/components/app/Shared/Forms/Input/PoolTokenInput";
 import PoolSelectionModal from "@/components/app/Shared/Forms/Select/PoolSelectionModal";
+import { usePoolStore } from "@/store/forms/poolStore";
 
 const DepositForm: React.FC = () => {
-  const { selectedPool, apr, estimatedLPTokens, handleDepositClick } =
-    usePoolDepositForm();
+  // const { selectedPool, apr, estimatedLPTokens, handleDepositClick } =
+  //   usePoolDepositForm();
+  const { selectedPool } = usePoolStore();
+  const { handleDepositClick } = usePoolDepositForm(selectedPool?.address);
 
   if (!selectedPool) {
     return (
@@ -39,7 +42,7 @@ const DepositForm: React.FC = () => {
           </Dialog.Root>
         </div>
         <PoolTokenInput
-          poolInputIdentifier={`pool.${selectedPool.token0!.symbol}`}
+          poolInputIdentifier={`pool.deposit.tokenA`}
           token={{
             symbol: selectedPool.token0!.symbol,
             balance: Number(selectedPool.token0!.balance),
@@ -48,7 +51,7 @@ const DepositForm: React.FC = () => {
           label="Deposit"
         />
         <PoolTokenInput
-          poolInputIdentifier={`pool.${selectedPool.token1!.symbol}`}
+          poolInputIdentifier={`pool.deposit.tokenB`}
           token={{
             symbol: selectedPool.token1!.symbol,
             balance: Number(selectedPool.token1!.balance),
@@ -56,7 +59,7 @@ const DepositForm: React.FC = () => {
           }}
           label="And"
         />
-        <div className="flex flex-col gap-2 px-2.5 text-gray-400 text-sm">
+        {/* <div className="flex flex-col gap-2 px-2.5 text-gray-400 text-sm">
           <div className="flex justify-between">
             <span>APR:</span>
             <span>{apr}%</span>
@@ -65,7 +68,7 @@ const DepositForm: React.FC = () => {
             <span>Estimated LP Tokens:</span>
             <span>{estimatedLPTokens}</span>
           </div>
-        </div>
+        </div> */}
       </div>
       <FormButton onClick={handleDepositClick} text="Provide Liquidity" />
     </div>

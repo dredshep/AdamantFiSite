@@ -7,17 +7,92 @@ import { Breadcrumb } from "@/components/app/Breadcrumb";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import DepositForm from "@/components/app/Pages/Pool/DepositForm";
 import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { AlertCircle } from "lucide-react";
+
+type TopBoxesProps = {
+  poolAddress: string;
+};
+
+function TopBoxes({ poolAddress }: TopBoxesProps) {
+  const { pairPoolData } = usePoolDepositForm(poolAddress);
+  if (!pairPoolData) return null;
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {/* Chart */}
+      <div className="bg-adamant-app-box p-4 rounded-xl">
+        <h2 className="text-xl font-bold mb-4">Chart</h2>
+        {/* Implement chart component */}
+      </div>
+
+      {/* Statistics Box */}
+      <div className="bg-adamant-app-box p-4 rounded-xl">
+        <h2 className="text-xl font-bold mb-4">Statistics</h2>
+        <table className="w-full">
+          <tbody>
+            <tr>
+              <td>Total Share</td>
+              <td>{pairPoolData?.total_share}</td>
+            </tr>
+            {pairPoolData?.assets.map((asset, index) => (
+              <tr key={index}>
+                <td>Asset {index + 1}</td>
+                <td>{asset.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* My Positions */}
+      <div className="bg-adamant-app-box p-4 rounded-xl">
+        <h2 className="text-xl font-bold mb-4">My Positions</h2>
+        {/* Implement positions component */}
+      </div>
+
+      {/* Unclaimed Rewards */}
+      <div className="bg-adamant-app-box p-4 rounded-xl">
+        <h2 className="text-xl font-bold mb-4">Unclaimed Rewards</h2>
+        {/* Implement unclaimed rewards component */}
+      </div>
+    </div>
+  );
+}
 
 export default function PoolPage() {
   const router = useRouter();
   const { pool } = router.query;
-  const { loading, poolDetails, pairPoolData } = usePoolDepositForm(pool);
+  const { loadingState, poolDetails, pairPoolData } = usePoolDepositForm(pool);
 
-  if (loading) {
+  if (loadingState.status === "loading") {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center h-screen">
-          Loading...
+        <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
+          <LoadingSpinner size={40} />
+          <div className="text-lg font-medium text-gray-200">
+            {loadingState.message}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (loadingState.status === "error") {
+    return (
+      <AppLayout>
+        <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
+          <div className="bg-red-500/10 p-6 rounded-xl flex flex-col items-center gap-4">
+            <AlertCircle className="w-12 h-12 text-red-500" />
+            <div className="text-lg font-medium text-red-500">
+              {loadingState.message ?? "Something went wrong"}
+            </div>
+            <Link
+              href="/app/pools"
+              className="mt-2 bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
+            >
+              Back to Pools
+            </Link>
+          </div>
         </div>
       </AppLayout>
     );
@@ -68,44 +143,7 @@ export default function PoolPage() {
           linkText="Pools"
           currentText={poolDetails.name}
         />
-        <div className="grid grid-cols-2 gap-4">
-          {/* Chart */}
-          <div className="bg-adamant-app-box p-4 rounded-xl">
-            <h2 className="text-xl font-bold mb-4">Chart</h2>
-            {/* Implement chart component */}
-          </div>
-
-          {/* Statistics Box */}
-          <div className="bg-adamant-app-box p-4 rounded-xl">
-            <h2 className="text-xl font-bold mb-4">Statistics</h2>
-            <table className="w-full">
-              <tbody>
-                <tr>
-                  <td>Total Share</td>
-                  <td>{pairPoolData.total_share}</td>
-                </tr>
-                {pairPoolData.assets.map((asset, index) => (
-                  <tr key={index}>
-                    <td>Asset {index + 1}</td>
-                    <td>{asset.amount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* My Positions */}
-          <div className="bg-adamant-app-box p-4 rounded-xl">
-            <h2 className="text-xl font-bold mb-4">My Positions</h2>
-            {/* Implement positions component */}
-          </div>
-
-          {/* Unclaimed Rewards */}
-          <div className="bg-adamant-app-box p-4 rounded-xl">
-            <h2 className="text-xl font-bold mb-4">Unclaimed Rewards</h2>
-            {/* Implement unclaimed rewards component */}
-          </div>
-        </div>
+        <TopBoxes poolAddress={pool as string} />
         <div className="flex gap-4">
           {/* Swap Form */}
           <div className="mt-4 bg-adamant-app-box p-4 rounded-xl flex-1">

@@ -45,7 +45,8 @@ const SwapForm: React.FC = () => {
           </div> */}
           <TokenInput
             inputIdentifier="swap.pay"
-            balance={Number(payToken?.balance ?? 0)}
+            formType="swap"
+            // balance={Number(payToken?.balance ?? 0)}
           />
           <BottomRightPrice
             amount={parseFloat(payDetails.amount)}
@@ -55,7 +56,8 @@ const SwapForm: React.FC = () => {
         <div className="flex flex-col gap-2.5 bg-adamant-app-input bg-opacity-50 rounded-lg p-4">
           <TokenInput
             inputIdentifier="swap.receive"
-            balance={Number(receiveToken?.balance ?? 0)}
+            formType="swap"
+            // balance={Number(receiveToken?.balance ?? 0)}
           />
           <BottomRightPrice
             amount={
