@@ -15,7 +15,7 @@ interface TokenInputs extends PoolTokenInputs {
   [key: string]: { amount: string; balance: string };
 }
 
-export function usePoolDepositForm(
+export function usePoolForm(
   poolAddress: string | string[] | undefined
 ): UsePoolDepositFormResult {
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } =
@@ -104,6 +104,42 @@ export function usePoolDepositForm(
     });
   };
 
+  const handleWithdrawClick = (): void => {
+    if (!selectedPool?.token0 || !selectedPool?.token1) return;
+
+    const inputIdentifier1 = `pool.withdraw.tokenA`;
+    const inputIdentifier2 = `pool.withdraw.tokenB`;
+
+    const amount1 = safeTokenInputs[inputIdentifier1]?.amount ?? "0";
+    const amount2 = safeTokenInputs[inputIdentifier2]?.amount ?? "0";
+
+    if (amount1 === "0" || amount2 === "0") {
+      toast.error("Please enter an amount for both tokens");
+      return;
+    }
+
+    const priceImpact = calculatePriceImpact(amount1);
+    const txFee = calculateTxFee(amount1);
+
+    console.log("Withdraw clicked", {
+      pool: selectedPool.address,
+      token0: selectedPool.token0.symbol,
+      amount1,
+      token1: selectedPool.token1.symbol,
+      amount2,
+      priceImpact,
+      txFee,
+    });
+  };
+
+  const handleClick = (intent: "deposit" | "withdraw"): void => {
+    if (intent === "deposit") {
+      handleDepositClick();
+    } else if (intent === "withdraw") {
+      handleWithdrawClick();
+    }
+  };
+
   const typedSelectedPool = selectedPool
     ? {
         address: selectedPool.address,
@@ -122,9 +158,10 @@ export function usePoolDepositForm(
       setTokenInputAmount(key as keyof typeof tokenInputs, value),
     setMax,
     selectedPool: typedSelectedPool,
-    handleDepositClick,
+    // handleDepositClick,
     loadingState,
     poolDetails: data?.poolDetails,
     pairPoolData: data?.pairPoolData,
+    handleClick,
   };
 }

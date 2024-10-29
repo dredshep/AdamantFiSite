@@ -6,16 +6,17 @@ import Link from "next/link";
 import { Breadcrumb } from "@/components/app/Breadcrumb";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 import DepositForm from "@/components/app/Pages/Pool/DepositForm";
-import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
+import { usePoolForm } from "@/hooks/usePoolForm";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AlertCircle } from "lucide-react";
+import WithdrawForm from "@/components/app/Pages/Pool/WithdrawForm";
 
 type TopBoxesProps = {
   poolAddress: string;
 };
 
 function TopBoxes({ poolAddress }: TopBoxesProps) {
-  const { pairPoolData } = usePoolDepositForm(poolAddress);
+  const { pairPoolData } = usePoolForm(poolAddress);
   if (!pairPoolData) return null;
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -62,7 +63,7 @@ function TopBoxes({ poolAddress }: TopBoxesProps) {
 export default function PoolPage() {
   const router = useRouter();
   const { pool } = router.query;
-  const { loadingState, poolDetails, pairPoolData } = usePoolDepositForm(pool);
+  const { loadingState, poolDetails, pairPoolData } = usePoolForm(pool);
 
   if (loadingState.status === "loading") {
     return (
@@ -155,6 +156,7 @@ export default function PoolPage() {
           <div className="mt-4 bg-adamant-app-box p-4 rounded-xl flex-1 flex flex-col">
             <h2 className="text-xl font-bold mb-4">Deposit</h2>
             <DepositForm />
+            <WithdrawForm />
           </div>
         </div>
 

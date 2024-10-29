@@ -1,4 +1,4 @@
-import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
+import { usePoolForm } from "@/hooks/usePoolForm";
 import { PoolTokenInputs } from "@/types";
 import { usePoolStore } from "@/store/forms/poolStore";
 
@@ -10,7 +10,7 @@ const PoolMaxButton: React.FC<PoolMaxButtonProps> = ({
   poolInputIdentifier: inputIdentifier,
 }) => {
   const { selectedPool } = usePoolStore();
-  const { setMax } = usePoolDepositForm(selectedPool?.address);
+  const { setMax } = usePoolForm(selectedPool?.address);
 
   const handleMax = () => {
     setMax(inputIdentifier);

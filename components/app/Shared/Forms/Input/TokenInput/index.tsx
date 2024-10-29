@@ -3,7 +3,7 @@ import { useSwapStore } from "@/store/swapStore";
 import TokenInputBase from "@/components/app/Shared/Forms/Input/TokenInputBase";
 import { PoolTokenInputs, SwapTokenInputs } from "@/types";
 import { useTokenStore } from "@/store/tokenStore";
-import { usePoolDepositForm } from "@/hooks/usePoolDepositForm";
+import { usePoolForm } from "@/hooks/usePoolForm";
 import { usePoolStore } from "@/store/forms/poolStore";
 
 type FormType = "swap" | "pool";
@@ -37,8 +37,9 @@ const TokenInput: React.FC<TokenInputProps> = ({
 }) => {
   const { swapTokenInputs, setTokenInputProperty } = useSwapStore();
   const { selectedPool } = usePoolStore();
-  const { tokenInputs: poolTokenInputs, setTokenInputAmount } =
-    usePoolDepositForm(selectedPool?.address);
+  const { tokenInputs: poolTokenInputs, setTokenInputAmount } = usePoolForm(
+    selectedPool?.address
+  );
 
   // Get typed token data
   const getTokenData = (): TokenData => {

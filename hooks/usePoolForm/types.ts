@@ -56,7 +56,8 @@ export interface UsePoolDepositFormResult {
   setTokenInputAmount: (key: string, value: string) => void;
   setMax: (inputIdentifier: string) => void;
   selectedPool: SelectedPoolType | null;
-  handleDepositClick: () => void;
+  // handleDepositClick: () => void;
+  handleClick: (intent: "deposit" | "withdraw") => void;
   loadingState: LoadingState;
   poolDetails: PoolDetails | undefined;
   pairPoolData: PairPoolData | undefined;

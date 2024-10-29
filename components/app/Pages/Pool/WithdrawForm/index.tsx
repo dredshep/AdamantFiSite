@@ -6,9 +6,9 @@ import PoolTokenInput from "@/components/app/Shared/Forms/Input/PoolTokenInput";
 import PoolSelectionModal from "@/components/app/Shared/Forms/Select/PoolSelectionModal";
 import { usePoolStore } from "@/store/forms/poolStore";
 
-const DepositForm: React.FC = () => {
+const WithdrawForm: React.FC = () => {
   // const { selectedPool, apr, estimatedLPTokens, handleDepositClick } =
-  //   usePoolDepositForm();
+  //   usePoolForm();
   const { selectedPool } = usePoolStore();
   const { handleClick } = usePoolForm(selectedPool?.address);
 
@@ -42,7 +42,7 @@ const DepositForm: React.FC = () => {
           </Dialog.Root>
         </div>
         <PoolTokenInput
-          poolInputIdentifier={`pool.deposit.tokenA`}
+          poolInputIdentifier={`pool.withdraw.tokenA`}
           token={{
             symbol: selectedPool.token0!.symbol,
             balance: Number(selectedPool.token0!.balance),
@@ -51,7 +51,7 @@ const DepositForm: React.FC = () => {
           label="Deposit"
         />
         <PoolTokenInput
-          poolInputIdentifier={`pool.deposit.tokenB`}
+          poolInputIdentifier={`pool.withdraw.tokenB`}
           token={{
             symbol: selectedPool.token1!.symbol,
             balance: Number(selectedPool.token1!.balance),
@@ -78,4 +78,4 @@ const DepositForm: React.FC = () => {
   );
 };
 
-export default DepositForm;
+export default WithdrawForm;
