@@ -10,8 +10,9 @@ import {
   calculateMinReceive,
 } from "@/utils/swap";
 // new imports
-import { getTokenDecimals } from "@/utils/apis/tokenInfo";
-import { SecretNetworkClient, TxOptions, TxResultCode } from "secretjs";
+import { SecretNetworkClient, TxOptions, TxResponse } from "secretjs";
+import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
+import { Hop } from "@/types";
 import Decimal from "decimal.js";
 import {
   PathEstimation,
@@ -19,6 +20,8 @@ import {
   findPaths,
   estimateBestPath,
 } from "@/utils/swap/estimate";
+import { getTokenDecimals } from "@/utils/apis/tokenInfo";
+import { useTxStore } from "@/store/txStore";
 // TODO: Find a way to not need to import this.
 import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
 
@@ -49,6 +52,7 @@ export const useSwapForm = () => {
   const [bestPathEstimation, setBestPathEstimation] =
     useState<PathEstimation | null>(null);
   const [estimatedOutput, setEstimatedOutput] = useState<string>("");
+  const { setPending, setResult } = useTxStore.getState();
 
   useEffect(() => {
     void fetchSwappableTokens().then(setSwappableTokens);
@@ -181,6 +185,8 @@ export const useSwapForm = () => {
     }
 
     try {
+      setPending(true);
+
       // Fetch the account information to get the sequence number and account number
       const accountInfo = await secretjs.query.auth.account({
         address: walletAddress!,
@@ -193,94 +199,174 @@ export const useSwapForm = () => {
       };
 
       // Check if sequence number is available
-      const sequence =
-        baseAccount.sequence != null && baseAccount.sequence !== ""
-          ? parseInt(baseAccount.sequence, 10)
-          : null;
-      const accountNumber =
-        baseAccount.account_number != null && baseAccount.account_number !== ""
-          ? parseInt(baseAccount.account_number, 10)
-          : null;
+      const sequence = baseAccount.sequence
+        ? parseInt(baseAccount.sequence, 10)
+        : null;
+      const accountNumber = baseAccount.account_number
+        ? parseInt(baseAccount.account_number, 10)
+        : null;
 
-      for (let i = 0; i < path.pools.length; i++) {
-        const poolAddress = path.pools[i];
-        const inputToken = path.tokens[i];
-        const outputToken = path.tokens[i + 1];
+      let txOptions: TxOptions = {
+        gasLimit: 500_000,
+        gasPriceInFeeDenom: 0.25,
+        feeDenom: "uscrt",
+        // Only include explicitSignerData if both sequence and accountNumber are available
+        // TODO: explicitSignerData is probably not needed. I think secretjs handles this.
+        ...(sequence !== null && accountNumber !== null
+          ? {
+            explicitSignerData: {
+              accountNumber: accountNumber,
+              sequence: sequence,
+              chainId: "secret-4",
+            },
+          }
+          : {}),
+      };
 
-        console.log(`Executing swap ${i + 1} on pool ${poolAddress}`);
-        console.log(`Swapping ${inputToken} for ${outputToken}`);
-        if (typeof inputToken !== "string") {
-          throw new Error(`Input token is not a string (undefined)`);
-        }
-        const decimals = getTokenDecimals(inputToken);
-        if (decimals === undefined) {
-          throw new Error(
-            `Decimals for token ${inputToken} could not be determined`,
+      const decimalsIn = getTokenDecimals(payToken!.address);
+      if (decimalsIn === undefined) {
+        throw new Error(
+          `Decimals for token ${payToken!.address} could not be determined`,
+        );
+      }
+      const decimalsOut = getTokenDecimals(receiveToken!.address);
+      if (decimalsOut === undefined) {
+        throw new Error(
+          `Decimals for token ${receiveToken!.address} could not be determined`,
+        );
+      }
+
+      const send_amount = new Decimal(payDetails.amount)
+        .times(Decimal.pow(10, decimalsIn))
+        .toFixed(0);
+
+      const expected_return = bestPathEstimation.finalOutput
+        .times(Decimal.pow(10, decimalsOut))
+        .toFixed(0);
+
+      console.log("Expected Return:", expected_return);
+
+      let sendMsg: Snip20SendOptions;
+      let result: TxResponse;
+      const hops: Hop[] = [];
+
+      if (path.pools.length >= 2) {
+        console.log("Multiple hops. Using Router contract.");
+
+        for (let i = 0; i < path.pools.length; i++) {
+          const poolAddress = path.pools[i];
+          const inputTokenAddress = path.tokens[i];
+          const outputTokenAddress = path.tokens[i + 1];
+
+          // FIXME: How to get code_hash here?? Hardcode known pair details for now.
+          const poolCodeHash = "";
+          const inputTokenCodeHash = "";
+
+          const hop: Hop = {
+            from_token: {
+              snip20: {
+                address: inputTokenAddress!,
+                code_hash: inputTokenCodeHash,
+              },
+            },
+            pair_address: poolAddress!,
+            pair_code_hash: poolCodeHash,
+          };
+
+          console.debug(`Hop ${i + 1}`, hop);
+
+          hops.push(hop);
+
+          console.log(`Hop ${i + 1} on pool ${poolAddress}`);
+          console.log(
+            `Swapping ${inputTokenAddress} for ${outputTokenAddress}`,
           );
         }
 
-        const swapMsg = {
-          swap: {
-            offer_asset: {
-              info: {
-                token: {
-                  contract_addr: inputToken,
-                  token_code_hash:
-                    "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
-                  viewing_key: inputViewingKey,
-                },
-              },
-              amount: bestPathEstimation.finalOutput
-                .mul(Decimal.pow(10, decimals))
-                .toFixed(0),
-            },
-            belief_price: "0",
-            max_spread: "0.5",
-            to: walletAddress,
+        sendMsg = {
+          send: {
+            // NOTE: Router Contract
+            recipient: "secret1xy5r5j4zp0v5fzza5r9yhmv7nux06rfp2yfuuv",
+            amount: send_amount,
+            msg: btoa(
+              JSON.stringify({
+                to: walletAddress,
+                hops,
+                expected_return,
+              }),
+            ),
           },
         };
 
-        console.log("Swapping with message:", JSON.stringify(swapMsg, null, 2));
+        console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
 
-        const txOptions: TxOptions = {
-          gasLimit: 200_000,
-          gasPriceInFeeDenom: 0.25,
-          feeDenom: "uscrt",
-          // Only include explicitSignerData if both sequence and accountNumber are available
-          ...(sequence !== null && accountNumber !== null
-            ? {
-              explicitSignerData: {
-                accountNumber: accountNumber,
-                sequence: sequence + i,
-                chainId: "secret-4",
-              },
-            }
-            : {}),
-        };
-
-        if (typeof poolAddress !== "string") {
-          throw new Error("Pool address is undefined");
-        }
-        const result = await secretjs.tx.compute.executeContract(
+        // FIXME: hardcoded contract_address and code_hash to sSCRT
+        result = await secretjs.tx.snip20.send(
           {
             sender: walletAddress!,
-            contract_address: poolAddress,
+            contract_address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
             code_hash:
-              "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
-            msg: swapMsg,
+              "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
+            msg: sendMsg,
             sent_funds: [],
           },
           txOptions,
         );
+      } else {
+        console.log("Single hop. Using Pair contract directly.");
 
-        console.log("Transaction Result:", result);
+        const poolAddress = path.pools[0];
+        const inputToken = path.tokens[0];
+        const outputToken = path.tokens[1];
 
-        if (result.code !== TxResultCode.Success) {
-          throw new Error(`Swap failed at step ${i + 1}: ${result.rawLog}`);
-        }
+        console.log(`Executing swap on pool ${poolAddress}`);
+        console.log(`Swapping ${inputToken} for ${outputToken}`);
 
-        console.log(`Swap ${i + 1} executed successfully!`);
+        const swapMsg = {
+          swap: {
+            belief_price: expected_return,
+            max_spread: bestPathEstimation.totalPriceImpact,
+            to: walletAddress,
+          },
+        };
+
+        sendMsg = {
+          send: {
+            recipient: poolAddress!,
+            amount: send_amount,
+            msg: btoa(JSON.stringify(swapMsg)),
+          },
+        };
+
+        console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
+        console.log("Callback message:", JSON.stringify(swapMsg, null, 2));
+
+        // gasLimit could be changed depending on single swap or multi hop
+        txOptions.gasLimit = 500_000;
+
+        // FIXME: hardcoded contract_address and code_hash to sSCRT
+        result = await secretjs.tx.snip20.send(
+          {
+            sender: walletAddress!,
+            contract_address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+            code_hash:
+              "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
+            msg: sendMsg,
+            sent_funds: [],
+          },
+          txOptions,
+        );
       }
+
+      setResult(result);
+
+      console.log("Transaction Result:", result);
+
+      if (result.code !== 0) {
+        throw new Error(`Swap failed: ${result.rawLog}`);
+      }
+
+      console.log(`Swap executed successfully!`);
 
       alert("Swap completed successfully!");
       setEstimatedOutput("Swap completed successfully!");
