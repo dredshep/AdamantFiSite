@@ -253,6 +253,7 @@ export const useSwapForm = () => {
       if (path.pools.length >= 2) {
         console.log("Multiple hops. Using Router contract.");
 
+        // Loop to construct the Hop array.
         for (let i = 0; i < path.pools.length; i++) {
           const poolAddress = path.pools[i];
           const inputTokenAddress = path.tokens[i];
@@ -316,11 +317,11 @@ export const useSwapForm = () => {
         console.log("Single hop. Using Pair contract directly.");
 
         const poolAddress = path.pools[0];
-        const inputToken = path.tokens[0];
-        const outputToken = path.tokens[1];
+        const inputTokenAddress = path.tokens[0];
+        const outputTokenAddress = path.tokens[1];
 
         console.log(`Executing swap on pool ${poolAddress}`);
-        console.log(`Swapping ${inputToken} for ${outputToken}`);
+        console.log(`Swapping ${inputTokenAddress} for ${outputTokenAddress}`);
 
         const swapMsg = {
           swap: {
@@ -348,7 +349,7 @@ export const useSwapForm = () => {
         result = await secretjs.tx.snip20.send(
           {
             sender: walletAddress!,
-            contract_address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+            contract_address: inputTokenAddress!,
             code_hash:
               "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
             msg: sendMsg,
@@ -367,8 +368,10 @@ export const useSwapForm = () => {
       }
 
       console.log(`Swap executed successfully!`);
-
+      // TODO: probably want to take out these alerts
       alert("Swap completed successfully!");
+      // why is this updating the estimated output? probably a relic of the test page.
+      // What (if anything) should be updated with this message instead?
       setEstimatedOutput("Swap completed successfully!");
     } catch (error) {
       console.error("Error during swap execution:", error);
