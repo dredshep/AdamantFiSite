@@ -15,7 +15,7 @@ export const useSwapForm = () => {
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>(
     []
   );
-  const { swapTokenInputs: tokenInputs } = useSwapStore.getState();
+  const { swapTokenInputs: tokenInputs } = useSwapStore();
   const payDetails = tokenInputs["swap.pay"];
   const payToken = useTokenStore(
     (state) => state.tokens?.[payDetails.tokenAddress]

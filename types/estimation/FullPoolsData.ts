@@ -9,7 +9,7 @@ export type FullPoolsData = {
             native_token: {
               denom: string;
             };
-            token?: undefined;
+            token?: never;
           };
           amount: string;
         }
@@ -20,7 +20,7 @@ export type FullPoolsData = {
               token_code_hash: string;
               viewing_key: string;
             };
-            native_token?: undefined;
+            native_token?: never;
           };
           amount: string;
         }

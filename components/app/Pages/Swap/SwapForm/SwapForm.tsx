@@ -2,6 +2,8 @@ import React from "react";
 import TokenInput from "@/components/app/Shared/Forms/Input/TokenInput";
 import FormButton from "@/components/app/Shared/Forms/FormButton";
 import { useSwapForm } from "@/hooks/useSwapForm";
+import BestRouteEstimator from "../../BestRouteEstimator";
+import { secretClient } from "@/utils/secretClient";
 
 const SwapForm: React.FC = () => {
   const {
@@ -99,6 +101,12 @@ const SwapForm: React.FC = () => {
           </span>
         </div>
       </div>
+      <BestRouteEstimator
+        // amountIn={payDetails.amount}
+        // inputToken={payToken?.address ?? ""}
+        // outputToken={receiveToken?.address ?? ""}
+        secretjs={secretClient ?? null}
+      />
       <FormButton onClick={handleSwapClick} text="Swap" />
     </div>
   );

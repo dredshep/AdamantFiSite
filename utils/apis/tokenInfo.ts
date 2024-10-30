@@ -44,7 +44,7 @@ export const getTokenName = (address: string): string | undefined => {
   }
   const internalName = internalMapping[address];
 
-  if (internalName) {
+  if (internalName !== undefined) {
     return `${internalName}`;
   }
   return undefined;
