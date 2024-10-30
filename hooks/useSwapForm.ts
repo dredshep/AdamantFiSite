@@ -28,16 +28,16 @@ import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
 export const useSwapForm = () => {
   const [swappableTokens, setSwappableTokens] = useState<SwappableToken[]>([]);
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>(
-    [],
+    []
   );
   const { swapTokenInputs: tokenInputs } = useSwapStore();
   const payDetails = tokenInputs["swap.pay"];
   const payToken = useTokenStore(
-    (state) => state.tokens?.[payDetails.tokenAddress],
+    (state) => state.tokens?.[payDetails.tokenAddress]
   );
   const receiveDetails = tokenInputs["swap.receive"];
   const receiveToken = useTokenStore(
-    (state) => state.tokens?.[receiveDetails.tokenAddress],
+    (state) => state.tokens?.[receiveDetails.tokenAddress]
   );
   const slippage = useSwapStore((state) => state.sharedSettings.slippage);
   const gas = useSwapStore((state) => state.sharedSettings.gas);
@@ -84,11 +84,15 @@ export const useSwapForm = () => {
       const enigmaUtils = window.keplr.getEnigmaUtils("secret-4");
       const accounts = await offlineSigner?.getAccounts();
 
-      if (!accounts || accounts.length === 0 || accounts[0] === undefined) {
+      if (
+        accounts !== undefined &&
+        accounts.length === 0 &&
+        accounts[0] === undefined
+      ) {
         alert("No accounts found");
         return;
       }
-      if (!offlineSigner) {
+      if (offlineSigner === undefined) {
         alert("No offline signer found");
         return;
       }
@@ -97,11 +101,11 @@ export const useSwapForm = () => {
         chainId: "secret-4",
         url: "https://rpc.ankr.com/http/scrt_cosmos",
         wallet: offlineSigner,
-        walletAddress: accounts[0].address,
+        walletAddress: accounts[0]!.address,
         encryptionUtils: enigmaUtils,
       });
 
-      setWalletAddress(accounts[0].address);
+      setWalletAddress(accounts[0]!.address);
 
       setSecretjs(client);
     };
@@ -114,16 +118,16 @@ export const useSwapForm = () => {
   const handleEstimate = async () => {
     if (
       secretjs &&
-      payDetails.amount &&
-      payToken?.address &&
-      receiveToken?.address
+      payDetails.amount !== undefined &&
+      payToken?.address !== undefined &&
+      receiveToken?.address !== undefined
     ) {
       const amountInDecimal = new Decimal(payDetails.amount);
       const tokenPoolMap = buildTokenPoolMap(fullPoolsData);
       const paths = findPaths(
         tokenPoolMap,
         payToken.address,
-        receiveToken.address,
+        receiveToken.address
       );
 
       if (paths.length === 0) {
@@ -134,7 +138,7 @@ export const useSwapForm = () => {
       const bestPathEstimation = await estimateBestPath(
         secretjs,
         paths,
-        amountInDecimal,
+        amountInDecimal
       );
 
       if (bestPathEstimation) {
@@ -170,13 +174,18 @@ export const useSwapForm = () => {
       return;
     }
 
-    const inputViewingKey = await window.keplr?.getSecret20ViewingKey(
+    if (window.keplr === undefined) {
+      alert("Keplr is not installed");
+      return;
+    }
+
+    const inputViewingKey = await window.keplr.getSecret20ViewingKey(
       "secret-4",
-      payToken!.address,
+      payToken!.address
     );
-    const outputViewingKey = await window.keplr?.getSecret20ViewingKey(
+    const outputViewingKey = await window.keplr.getSecret20ViewingKey(
       "secret-4",
-      receiveToken!.address,
+      receiveToken!.address
     );
 
     if (inputViewingKey === undefined || outputViewingKey === undefined) {
@@ -206,7 +215,7 @@ export const useSwapForm = () => {
         ? parseInt(baseAccount.account_number, 10)
         : null;
 
-      let txOptions: TxOptions = {
+      const txOptions: TxOptions = {
         gasLimit: 500_000,
         gasPriceInFeeDenom: 0.25,
         feeDenom: "uscrt",
@@ -214,25 +223,25 @@ export const useSwapForm = () => {
         // TODO: explicitSignerData is probably not needed. I think secretjs handles this.
         ...(sequence !== null && accountNumber !== null
           ? {
-            explicitSignerData: {
-              accountNumber: accountNumber,
-              sequence: sequence,
-              chainId: "secret-4",
-            },
-          }
+              explicitSignerData: {
+                accountNumber: accountNumber,
+                sequence: sequence,
+                chainId: "secret-4",
+              },
+            }
           : {}),
       };
 
       const decimalsIn = getTokenDecimals(payToken!.address);
       if (decimalsIn === undefined) {
         throw new Error(
-          `Decimals for token ${payToken!.address} could not be determined`,
+          `Decimals for token ${payToken!.address} could not be determined`
         );
       }
       const decimalsOut = getTokenDecimals(receiveToken!.address);
       if (decimalsOut === undefined) {
         throw new Error(
-          `Decimals for token ${receiveToken!.address} could not be determined`,
+          `Decimals for token ${receiveToken!.address} could not be determined`
         );
       }
 
@@ -280,7 +289,7 @@ export const useSwapForm = () => {
 
           console.log(`Hop ${i + 1} on pool ${poolAddress}`);
           console.log(
-            `Swapping ${inputTokenAddress} for ${outputTokenAddress}`,
+            `Swapping ${inputTokenAddress} for ${outputTokenAddress}`
           );
         }
 
@@ -294,7 +303,7 @@ export const useSwapForm = () => {
                 to: walletAddress,
                 hops,
                 expected_return,
-              }),
+              })
             ),
           },
         };
@@ -311,7 +320,7 @@ export const useSwapForm = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions,
+          txOptions
         );
       } else {
         console.log("Single hop. Using Pair contract directly.");
@@ -355,7 +364,7 @@ export const useSwapForm = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions,
+          txOptions
         );
       }
 
@@ -393,30 +402,30 @@ Slippage: ${slippage}
 Gas: ${gas}
 
 Price Impact: ${priceImpact}% = ${(
-        (parseFloat(priceImpact) / 100) *
-        parseFloat(payDetails.amount)
-      ).toFixed(4)} ${payToken?.symbol}
+      (parseFloat(priceImpact) / 100) *
+      parseFloat(payDetails.amount)
+    ).toFixed(4)} ${payToken?.symbol}
 TX Fee: ${txFee} ${payToken?.symbol} = ${(
-        (parseFloat(txFee) / parseFloat(payDetails.amount)) *
-        100
-      ).toFixed(2)}%
+      (parseFloat(txFee) / parseFloat(payDetails.amount)) *
+      100
+    ).toFixed(2)}%
 Min Receive: ${minReceive} ${receiveToken?.symbol}
 
 RawData: ${JSON.stringify(
-        {
-          payToken,
-          payDetails,
-          receiveToken,
-          receiveDetails,
-          slippage,
-          gas,
-          priceImpact,
-          txFee,
-          minReceive,
-        },
-        null,
-        2,
-      )}`;
+      {
+        payToken,
+        payDetails,
+        receiveToken,
+        receiveDetails,
+        slippage,
+        gas,
+        priceImpact,
+        txFee,
+        minReceive,
+      },
+      null,
+      2
+    )}`;
 
     alert(alertMessage);
   };
