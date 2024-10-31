@@ -10,7 +10,12 @@ import {
   calculateMinReceive,
 } from "@/utils/swap";
 // new imports
-import { SecretNetworkClient, TxOptions, TxResponse } from "secretjs";
+import {
+  SecretNetworkClient,
+  TxOptions,
+  TxResponse,
+  TxResultCode,
+} from "secretjs";
 import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
 import { Hop } from "@/types";
 import Decimal from "decimal.js";
@@ -380,7 +385,7 @@ export const useSwapForm = () => {
 
       console.log("Transaction Result:", result);
 
-      if (result.code !== 0) {
+      if (result.code !== TxResultCode.Success) {
         throw new Error(`Swap failed: ${result.rawLog}`);
       }
 

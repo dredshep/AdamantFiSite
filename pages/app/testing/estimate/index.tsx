@@ -469,7 +469,7 @@ const SwapPage = () => {
       );
       const accounts = await offlineSigner?.getAccounts();
 
-      if (!accounts || accounts.length === 0) {
+      if (!accounts || accounts.length === 0 || accounts[0] === undefined) {
         alert("No accounts found");
         return;
       }

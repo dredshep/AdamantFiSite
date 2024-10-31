@@ -5,6 +5,10 @@ import { PoolTokenInputs, SwapTokenInputs } from "@/types";
 import { useTokenStore } from "@/store/tokenStore";
 import { usePoolForm } from "@/hooks/usePoolForm";
 import { usePoolStore } from "@/store/forms/poolStore";
+import {
+  getApiTokenSymbol,
+  getApiTokenAddress,
+} from "@/utils/apis/getSwappableTokens";
 
 type FormType = "swap" | "pool";
 interface TokenInputProps {
@@ -94,7 +98,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
   }
 
   const estimatedPrice = `$${(
-    parseFloat(tokenData.amount || "0") * parseFloat(token.usdPrice ?? "0")
+    parseFloat(tokenData.amount || "0") * parseFloat(token.price ?? "0")
   ).toFixed(2)}`;
 
   return (
@@ -102,8 +106,8 @@ const TokenInput: React.FC<TokenInputProps> = ({
       swapInputIdentifier={inputIdentifier}
       inputValue={tokenData.amount}
       onInputChange={handleInputChange}
-      tokenSymbol={token.symbol}
-      tokenAddress={token.address}
+      tokenSymbol={getApiTokenSymbol(token)}
+      tokenAddress={getApiTokenAddress(token)}
       balance={tokenData.balance}
       onMaxClick={handleMaxClick}
       showEstimatedPrice={true}

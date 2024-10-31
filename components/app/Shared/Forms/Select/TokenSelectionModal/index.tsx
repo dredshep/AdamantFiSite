@@ -4,6 +4,10 @@ import { Token, SwapTokenInputs } from "@/types";
 import TokenSelectionSearchBar from "./TokenSelectionSearchBar";
 import { useSwapStore } from "@/store/swapStore";
 import TokenSelectionItem from "../TokenSelectionItem";
+import {
+  getApiTokenAddress,
+  getApiTokenSymbol,
+} from "@/utils/apis/getSwappableTokens";
 
 interface TokenSelectionModalProps {
   inputIdentifier: keyof SwapTokenInputs;
@@ -20,7 +24,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     setTokenInputProperty(
       inputIdentifier,
       "tokenAddress",
-      selectedToken.address
+      getApiTokenAddress(selectedToken)
     );
   };
   return (
@@ -52,7 +56,9 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
         >
           {tokens
             ?.filter((token) =>
-              token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+              getApiTokenSymbol(token)
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase())
             )
             .map((token, index) => (
               <TokenSelectionItem

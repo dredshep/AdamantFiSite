@@ -5,6 +5,10 @@ import TokenSelectionItem from "@/components/app/Shared/Forms/Select/TokenSelect
 import TokenSelectionSearchBar from "@/components/app/Shared/Forms/Select/TokenSelectionModal/TokenSelectionSearchBar";
 import { useSwapStore } from "@/store/swapStore";
 import { Token, SwapTokenInputs } from "@/types";
+import {
+  getApiTokenAddress,
+  getApiTokenSymbol,
+} from "@/utils/apis/getSwappableTokens";
 
 interface TokenSelectionModalProps {
   isOpen: boolean;
@@ -24,7 +28,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     setTokenInputProperty(
       inputIdentifier,
       "tokenAddress",
-      selectedToken.address
+      getApiTokenAddress(selectedToken)
     );
     onClose();
   };
@@ -60,7 +64,9 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
         >
           {tokens
             ?.filter((token) =>
-              token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+              getApiTokenSymbol(token)
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase())
             )
             .map((token, index) => (
               // <Dialog.Close asChild key={index}>
