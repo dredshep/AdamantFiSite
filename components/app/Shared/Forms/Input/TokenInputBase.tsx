@@ -1,7 +1,7 @@
-import React from "react";
 import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
 import { PoolTokenInputs, SecretString, SwapTokenInputs } from "@/types";
 import * as Dialog from "@radix-ui/react-dialog";
+import React from "react";
 import TokenSelectionModal from "../Select/TokenSelectionModal";
 import InputLabel from "./InputLabel";
 
@@ -10,8 +10,8 @@ interface TokenInputBaseProps {
   onInputChange: (value: string) => void;
   tokenSymbol: string;
   tokenAddress: SecretString;
-  balance: string;
-  onMaxClick: () => void;
+  // balance: string;
+  // onMaxClick: () => void;
   showEstimatedPrice?: boolean;
   estimatedPrice?: string;
   swapInputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
@@ -19,60 +19,60 @@ interface TokenInputBaseProps {
   hasMax: boolean;
 }
 
-function TopRightBalance({
-  balance,
-  tokenSymbol,
-  onMaxClick,
-  hasMax,
-}: {
-  balance: number;
-  tokenSymbol: string;
-  onMaxClick: () => void;
-  hasMax: boolean;
-}) {
-  return (
-    <div className="flex gap-2.5 normal-case text-gray-400 items-center">
-      <div className="flex gap-2 tracking-wide text-sm font-light">
-        <div>Available: </div>
-        <div>
-          {balance.toFixed(2)} {tokenSymbol}
-        </div>
-      </div>
-      {hasMax && (
-        <button
-          className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md px-2"
-          onClick={onMaxClick}
-        >
-          max
-        </button>
-      )}
-    </div>
-  );
-}
+// function TopRightBalance({
+//   // balance,
+//   // tokenSymbol,
+//   onMaxClick,
+//   hasMax,
+// }: {
+//   balance: number;
+//   tokenSymbol: string;
+//   // onMaxClick: () => void;
+//   hasMax: boolean;
+// }) {
+//   return (
+//     <div className="flex gap-2.5 normal-case text-gray-400 items-center">
+//       <div className="flex gap-2 tracking-wide text-sm font-light">
+//         {/* <div>Available: </div>
+//         <div>
+//           {balance.toFixed(2)} {tokenSymbol}
+//         </div> */}
+//       </div>
+//       {hasMax && (
+//         <button
+//           className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md px-2"
+//           onClick={onMaxClick}
+//         >
+//           max
+//         </button>
+//       )}
+//     </div>
+//   );
+// }
 
 const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   inputValue,
   onInputChange,
   tokenSymbol,
   tokenAddress,
-  balance,
-  onMaxClick,
+  // balance,
+  // onMaxClick,
   showEstimatedPrice = false,
   estimatedPrice = "",
   swapInputIdentifier: inputIdentifier,
   label,
-  hasMax,
+  // hasMax,
 }) => {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex justify-between">
         <InputLabel label={label} caseType="normal-case" />
-        <TopRightBalance
+        {/* <TopRightBalance
           balance={Number(balance ?? 0)}
           tokenSymbol={tokenSymbol}
           hasMax={hasMax}
           onMaxClick={onMaxClick}
-        />
+        /> */}
       </div>
       <div className="flex items-center bg-adamant-app-input bg-opacity-50 rounded-lg p-4">
         <input

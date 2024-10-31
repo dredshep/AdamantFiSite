@@ -1,14 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
 import { usePoolStore } from "@/store/forms/poolStore";
+import { PoolTokenInputs } from "@/types";
+import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
 import { calculatePriceImpact, calculateTxFee } from "@/utils/swap";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { fetchPoolData, validatePoolAddress } from "./queryFunctions";
 import type {
-  UsePoolDepositFormResult,
   LoadingState,
   SelectedPoolType,
+  UsePoolDepositFormResult,
 } from "./types";
-import { PoolTokenInputs } from "@/types";
 
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
@@ -95,9 +96,9 @@ export function usePoolForm(
 
     console.log("Deposit clicked", {
       pool: selectedPool.address,
-      token0: selectedPool.token0.symbol,
+      token0: getApiTokenSymbol(selectedPool.token0),
       amount1,
-      token1: selectedPool.token1.symbol,
+      token1: getApiTokenSymbol(selectedPool.token1),
       amount2,
       priceImpact,
       txFee,
@@ -123,9 +124,9 @@ export function usePoolForm(
 
     console.log("Withdraw clicked", {
       pool: selectedPool.address,
-      token0: selectedPool.token0.symbol,
+      token0: getApiTokenSymbol(selectedPool.token0),
       amount1,
-      token1: selectedPool.token1.symbol,
+      token1: getApiTokenSymbol(selectedPool.token1),
       amount2,
       priceImpact,
       txFee,

@@ -1,4 +1,4 @@
-import { SwappableToken } from "@/types";
+import { ApiToken } from "@/utils/apis/getSwappableTokens";
 
 export interface PairPoolData {
   assets: PoolAsset[];
@@ -46,8 +46,8 @@ export interface PairInfo {
 
 export interface SelectedPoolType {
   address: string;
-  token0: SwappableToken;
-  token1: SwappableToken;
+  token0: ApiToken;
+  token1: ApiToken;
   pairInfo: PairInfo;
 }
 

@@ -1,9 +1,9 @@
-import { SwappableToken } from "@/types";
+import { ApiToken, getApiTokenAddress } from "@/utils/apis/getSwappableTokens";
 import { PairInfo, SelectedPoolType } from "./types";
 
 export function setupPoolTokens(
   pair: PairInfo,
-  tokens: SwappableToken[],
+  tokens: ApiToken[],
   poolAddress: string,
   setSelectedPool: (pool: SelectedPoolType) => void
 ): void {
@@ -16,8 +16,8 @@ export function setupPoolTokens(
     token0Address.length > 0 &&
     token1Address.length > 0
   ) {
-    const token0 = tokens.find((t) => t.address === token0Address);
-    const token1 = tokens.find((t) => t.address === token1Address);
+    const token0 = tokens.find((t) => getApiTokenAddress(t) === token0Address);
+    const token1 = tokens.find((t) => getApiTokenAddress(t) === token1Address);
 
     if (token0 && token1) {
       setSelectedPool({

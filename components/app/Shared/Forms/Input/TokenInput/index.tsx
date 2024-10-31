@@ -1,14 +1,14 @@
-import React from "react";
-import { useSwapStore } from "@/store/swapStore";
 import TokenInputBase from "@/components/app/Shared/Forms/Input/TokenInputBase";
-import { PoolTokenInputs, SwapTokenInputs } from "@/types";
-import { useTokenStore } from "@/store/tokenStore";
 import { usePoolForm } from "@/hooks/usePoolForm";
 import { usePoolStore } from "@/store/forms/poolStore";
+import { useSwapStore } from "@/store/swapStore";
+import { useTokenStore } from "@/store/tokenStore";
+import { PoolTokenInputs, SwapTokenInputs } from "@/types";
 import {
-  getApiTokenSymbol,
   getApiTokenAddress,
+  getApiTokenSymbol,
 } from "@/utils/apis/getSwappableTokens";
+import React from "react";
 
 type FormType = "swap" | "pool";
 interface TokenInputProps {
@@ -84,14 +84,14 @@ const TokenInput: React.FC<TokenInputProps> = ({
     }
   };
 
-  const handleMaxClick = () => {
-    const balanceStr = String(tokenData.balance);
-    if (formType === "swap" && isSwapInput(inputIdentifier)) {
-      setTokenInputProperty(inputIdentifier, "amount", balanceStr);
-    } else {
-      setTokenInputAmount(inputIdentifier as keyof PoolTokenInputs, balanceStr);
-    }
-  };
+  // const handleMaxClick = () => {
+  //   const balanceStr = String(tokenData.balance);
+  //   if (formType === "swap" && isSwapInput(inputIdentifier)) {
+  //     setTokenInputProperty(inputIdentifier, "amount", balanceStr);
+  //   } else {
+  //     setTokenInputAmount(inputIdentifier as keyof PoolTokenInputs, balanceStr);
+  //   }
+  // };
 
   if (!token) {
     return null;
@@ -108,8 +108,8 @@ const TokenInput: React.FC<TokenInputProps> = ({
       onInputChange={handleInputChange}
       tokenSymbol={getApiTokenSymbol(token)}
       tokenAddress={getApiTokenAddress(token)}
-      balance={tokenData.balance}
-      onMaxClick={handleMaxClick}
+      // balance={tokenData.balance}
+      // onMaxClick={handleMaxClick}
       showEstimatedPrice={true}
       estimatedPrice={estimatedPrice}
       label={formType === "swap" ? "Swap" : "Pool"}

@@ -1,14 +1,14 @@
-import React from "react";
-import { usePoolStore } from "@/store/forms/poolStore";
 import TokenInputBase from "@/components/app/Shared/Forms/Input/TokenInputBase";
+import { usePoolStore } from "@/store/forms/poolStore";
 import { PoolTokenInputs, SecretString } from "@/types";
+import React from "react";
 // import InputLabel from "@/components/app/Shared/Forms/Input/InputLabel";
 
 interface PoolTokenInputProps {
   poolInputIdentifier: keyof PoolTokenInputs;
   token: {
     symbol: string;
-    balance: number;
+    // balance: number;
     address: SecretString;
   };
   label: string;
@@ -25,9 +25,9 @@ const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
     setTokenInputAmount(inputIdentifier, value);
   };
 
-  const handleMaxClick = () => {
-    setTokenInputAmount(inputIdentifier, token.balance.toString());
-  };
+  // const handleMaxClick = () => {
+  //   setTokenInputAmount(inputIdentifier, token.balance.toString());
+  // };
 
   return (
     <div>
@@ -37,8 +37,8 @@ const PoolTokenInput: React.FC<PoolTokenInputProps> = ({
         onInputChange={handleInputChange}
         tokenSymbol={token.symbol}
         tokenAddress={token.address}
-        balance={token.balance.toString()}
-        onMaxClick={handleMaxClick}
+        // balance={token.balance.toString()}
+        // onMaxClick={handleMaxClick}
         swapInputIdentifier={inputIdentifier}
         hasMax={true}
         label={label}

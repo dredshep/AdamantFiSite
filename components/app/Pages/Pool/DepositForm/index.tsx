@@ -1,10 +1,14 @@
-import React from "react";
-import * as Dialog from "@radix-ui/react-dialog";
 import FormButton from "@/components/app/Shared/Forms/FormButton";
-import { usePoolForm } from "@/hooks/usePoolForm";
 import PoolTokenInput from "@/components/app/Shared/Forms/Input/PoolTokenInput";
 import PoolSelectionModal from "@/components/app/Shared/Forms/Select/PoolSelectionModal";
+import { usePoolForm } from "@/hooks/usePoolForm";
 import { usePoolStore } from "@/store/forms/poolStore";
+import {
+  getApiTokenAddress,
+  getApiTokenSymbol,
+} from "@/utils/apis/getSwappableTokens";
+import * as Dialog from "@radix-ui/react-dialog";
+import React from "react";
 
 const DepositForm: React.FC = () => {
   // const { selectedPool, apr, estimatedLPTokens, handleDepositClick } =
@@ -44,18 +48,18 @@ const DepositForm: React.FC = () => {
         <PoolTokenInput
           poolInputIdentifier={`pool.deposit.tokenA`}
           token={{
-            symbol: selectedPool.token0!.symbol,
-            balance: Number(selectedPool.token0!.balance),
-            address: selectedPool.token0!.address,
+            symbol: getApiTokenSymbol(selectedPool.token0!),
+            // balance: Number(selectedPool.token0!.balance),
+            address: getApiTokenAddress(selectedPool.token0!),
           }}
           label="Deposit"
         />
         <PoolTokenInput
           poolInputIdentifier={`pool.deposit.tokenB`}
           token={{
-            symbol: selectedPool.token1!.symbol,
-            balance: Number(selectedPool.token1!.balance),
-            address: selectedPool.token1!.address,
+            symbol: getApiTokenSymbol(selectedPool.token1!),
+            // balance: Number(selectedPool.token1!.balance),
+            address: getApiTokenAddress(selectedPool.token1!),
           }}
           label="And"
         />

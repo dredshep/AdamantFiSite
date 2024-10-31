@@ -11,7 +11,10 @@
     "push": "git push origin main && git push personal main",
     "prebuild": "yarn type-check",
     "type-check": "tsc --noEmit",
-    "lint-full": "yarn lint && yarn type-check"
+    "lint-full": "yarn lint && yarn type-check",
+    "lint-and-open": "yarn type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
+    "lint-and-open:cursor": "yarn type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
+    "lint-and-open:code": "yarn type-check > type-errors.txt 2>&1 && node scripts/openErrors.js code"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.3",
