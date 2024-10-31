@@ -1,9 +1,10 @@
-import { Token } from "@/types/Token";
+// import { Token } from "@/types/Token";
 // import { WalletState } from "@/types/store/WalletState";
 import { SharedSettings } from "@/types/store/SharedSettings";
 import { SwapTokenInputs } from "@/types/store/TokenInputs";
 import { TokenInputState } from "@/types/store/TokenInputState";
 import { SecretString } from "../SecretString";
+import { ApiToken } from "@/utils/apis/getSwappableTokens";
 
 export interface SwapStoreState {
   [key: string]: unknown;
@@ -17,7 +18,7 @@ export interface SwapStoreState {
     // other properties
   };
   chainId: string;
-  swappableTokens: Token[] | null;
+  swappableTokens: ApiToken[] | null;
   connectionRefused: boolean;
   setTokenInputProperty: <T extends keyof TokenInputState>(
     inputIdentifier: keyof SwapTokenInputs,
@@ -32,6 +33,6 @@ export interface SwapStoreState {
   disconnectWallet: () => void;
   updateBalance: (tokenSymbol: "SCRT" | "ADMT", balance: string) => void;
   setChainId: (chainId: string) => void;
-  setSwappableTokens: (tokens: Token[]) => void;
+  setSwappableTokens: (tokens: ApiToken[]) => void;
   setConnectionRefused: (refused: boolean) => void;
 }

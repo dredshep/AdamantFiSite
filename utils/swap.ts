@@ -1,10 +1,10 @@
-import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { getApiToken } from "@/utils/apis/getSwappableTokens";
 import { getTinyChartData } from "@/utils/apis/getTinyChartData";
 import { SwappableToken } from "@/types/Token";
 import { TokenInputState } from "@/types";
 
 export const fetchSwappableTokens = async (): Promise<SwappableToken[]> => {
-  return await getSwappableTokens();
+  return await getApiToken();
 };
 
 export const fetchChartData = async (tokenAddress: string) => {

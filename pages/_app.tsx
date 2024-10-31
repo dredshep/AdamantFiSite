@@ -3,10 +3,14 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 // import { Theme } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
-import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import {
+  ApiToken,
+  getApiToken,
+  getApiTokenAddress,
+} from "@/utils/apis/getSwappableTokens";
 import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
-import { SwappableToken } from "@/types";
+// import { SwappableToken } from "@/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -28,11 +32,11 @@ export default function App({ Component, pageProps }: AppProps) {
 
   useEffect(() => {
     const fetchTokens = async () => {
-      const tokens = await getSwappableTokens();
+      const tokens = await getApiToken();
       setSwappableTokens(tokens);
       const indexedTokens = tokens.reduce(
-        (acc: Record<string, SwappableToken>, token) => {
-          acc[token.address] = token;
+        (acc: Record<string, ApiToken>, token) => {
+          acc[getApiTokenAddress(token)] = token;
           return acc;
         },
         {}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
-import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { getApiToken } from "@/utils/apis/getSwappableTokens";
 import { Pair } from "@/types/api/Factory";
 import { SwappableToken } from "@/types/Token";
 import { usePoolStore } from "@/store/forms/poolStore";
@@ -23,7 +23,7 @@ const PoolSelectionModal: React.FC = () => {
       try {
         const [pairs, tokens] = await Promise.all([
           queryFactoryPairs(),
-          getSwappableTokens(),
+          getApiToken(),
         ]);
 
         const poolsWithTokenInfo = pairs

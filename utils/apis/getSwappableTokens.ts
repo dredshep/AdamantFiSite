@@ -1,25 +1,61 @@
-import { SwappableToken } from "@/types/Token";
-import { transformToSwappableToken } from "./transformToSwappableToken";
-import getUrl from "./getUrl";
-import { AzureTokensToken } from "@/types/api/azure/tokens";
-import { SecretToken } from "@/types/api/azure/secret_tokens";
-import axios from "axios";
+// import { SwappableToken } from "@/types/Token";
+// import { transformToSwappableToken } from "./transformToSwappableToken";
+// import getUrl from "./getUrl";
+// import { AzureTokensToken } from "@/types/api/azure/tokens";
+// import { SecretToken } from "@/types/api/azure/secret_tokens";
+// import axios from "axios";
+import fullApiTokenOutput from "@/outputs/fullApiTokenOutput.json";
+import { SecretString } from "@/types";
+export interface ApiToken {
+  src_network?: SrcNetwork;
+  src_coin?: string;
+  src_address?: string;
+  dst_network?: DstNetwork;
+  dst_address?: string;
+  dst_coin?: string;
+  decimals: number;
+  name: string;
+  display_props: DisplayProps;
+  totalLocked?: string;
+  totalLockedNormal?: string;
+  totalLockedUSD?: string;
+  price: string;
+  _id: string;
+  address?: string;
+  hidden?: boolean;
+  usage?: Usage[];
+  id?: string;
+}
 
-export const getSwappableTokens = async (): Promise<SwappableToken[]> => {
-  // alert(getUrl("/api/tokens"));
-  let tokens = [] as (AzureTokensToken | SecretToken)[];
-  try {
-    const response = await axios.get(getUrl("/api/tokens"));
-    // tokens = (await response.json()) as (AzureTokensToken | SecretToken)[];
-    if (typeof response.data === "string") {
-      tokens = JSON.parse(response.data) as (AzureTokensToken | SecretToken)[];
-    } else if (typeof response.data === "object") {
-      tokens = response.data as (AzureTokensToken | SecretToken)[];
-    }
-  } catch (error) {
-    console.error(error);
-  }
+export interface DisplayProps {
+  symbol: string;
+  image: string;
+  min_to_scrt?: string;
+  min_from_scrt?: string;
+  label: string;
+  hidden?: boolean;
+  proxy?: boolean;
+  usage?: string[];
+}
 
-  // Since the API response might include both types of tokens, we should handle them uniformly
-  return transformToSwappableToken(tokens);
-};
+export enum DstNetwork {
+  Secret = "Secret",
+}
+
+export enum SrcNetwork {
+  BinanceSmartChain = "BinanceSmartChain",
+  Ethereum = "Ethereum",
+}
+
+export enum Usage {
+  Lpstaking = "LPSTAKING",
+  Swap = "SWAP",
+}
+export const getApiToken = async () =>
+  Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
+
+export const getApiTokenAddress = (token: ApiToken) =>
+  (token.dst_address ?? token.address!) as SecretString;
+
+export const getApiTokenSymbol = (token: ApiToken): string =>
+  token.display_props.symbol;

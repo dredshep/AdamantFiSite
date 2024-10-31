@@ -8,8 +8,10 @@ export const findPaths = (
   maxHops: number = 3
 ): Path[] => {
   const paths: Path[] = [];
+  // Set to keep track of visited tokens to avoid infinite loops
   const visited: Set<string> = new Set();
 
+  // Depth-first search to find all paths
   const dfs = async (currentToken: string, path: Path, hops: number) => {
     if (hops > maxHops || visited.has(currentToken)) return;
     if (currentToken === endToken) {

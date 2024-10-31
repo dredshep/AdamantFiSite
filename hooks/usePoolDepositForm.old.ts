@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getTablePools } from "@/utils/apis/getTablePools";
 import { queryPool } from "@/utils/apis/getPairPool";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
-import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { getApiToken } from "@/utils/apis/getSwappableTokens";
 
 interface PairPoolData {
   assets: {
@@ -56,7 +56,7 @@ export const usePoolDepositForm = (
         getTablePools(),
         queryPool(poolAddress),
         queryFactoryPairs(),
-        getSwappableTokens(),
+        getApiToken(),
       ]);
 
       // Find and set the corresponding pair

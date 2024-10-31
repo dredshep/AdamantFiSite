@@ -61,7 +61,7 @@ export const processPoolsData = async (
       return [];
     }
     return pool.query_result.assets.map((asset, index) =>
-      fetchTokenDetails(asset, pairNames[index]!)
+      fetchTokenDetails(asset, pairNames[index])
     );
   });
 

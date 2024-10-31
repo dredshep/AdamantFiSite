@@ -24,6 +24,11 @@ import { getTokenDecimals } from "@/utils/apis/tokenInfo";
 import { useTxStore } from "@/store/txStore";
 // TODO: Find a way to not need to import this.
 import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
+import {
+  getApiTokenAddress,
+  getApiTokenSymbol,
+} from "@/utils/apis/getSwappableTokens";
+import { toast } from "react-toastify";
 
 export const useSwapForm = () => {
   const [swappableTokens, setSwappableTokens] = useState<SwappableToken[]>([]);
@@ -162,7 +167,10 @@ export const useSwapForm = () => {
 
   const handleSwapClick = async () => {
     showDebugAlert();
-
+    if (payToken === undefined || receiveToken === undefined) {
+      toast.error("Pay or receive token is undefined");
+      return;
+    }
     if (!secretjs) {
       console.error("SecretNetworkClient is not initialized");
       return;
@@ -181,11 +189,11 @@ export const useSwapForm = () => {
 
     const inputViewingKey = await window.keplr.getSecret20ViewingKey(
       "secret-4",
-      payToken!.address
+      getApiTokenAddress(payToken)
     );
     const outputViewingKey = await window.keplr.getSecret20ViewingKey(
       "secret-4",
-      receiveToken!.address
+      getApiTokenAddress(receiveToken)
     );
 
     if (inputViewingKey === undefined || outputViewingKey === undefined) {
@@ -232,16 +240,16 @@ export const useSwapForm = () => {
           : {}),
       };
 
-      const decimalsIn = getTokenDecimals(payToken!.address);
+      const decimalsIn = getTokenDecimals(getApiTokenAddress(payToken));
       if (decimalsIn === undefined) {
         throw new Error(
-          `Decimals for token ${payToken!.address} could not be determined`
+          `Decimals for token ${payToken.address} could not be determined`
         );
       }
-      const decimalsOut = getTokenDecimals(receiveToken!.address);
+      const decimalsOut = getTokenDecimals(getApiTokenAddress(receiveToken));
       if (decimalsOut === undefined) {
         throw new Error(
-          `Decimals for token ${receiveToken!.address} could not be determined`
+          `Decimals for token ${receiveToken.address} could not be determined`
         );
       }
 
@@ -390,12 +398,16 @@ export const useSwapForm = () => {
   };
 
   const showDebugAlert = () => {
+    if (payToken === undefined || receiveToken === undefined) {
+      toast.error("Pay or receive token is undefined");
+      return;
+    }
     const alertMessage = `Swapping Details:
     
-Pay Token: ${payToken?.symbol ?? "payToken-undefined"}
+Pay Token: ${getApiTokenSymbol(payToken)}
 Pay Amount: ${payDetails.amount}
 
-Receive Token: ${receiveToken?.symbol ?? "receiveToken-undefined"}
+Receive Token: ${getApiTokenSymbol(receiveToken)}
 Receive Amount: ${receiveDetails.amount}
 
 Slippage: ${slippage}
@@ -404,12 +416,12 @@ Gas: ${gas}
 Price Impact: ${priceImpact}% = ${(
       (parseFloat(priceImpact) / 100) *
       parseFloat(payDetails.amount)
-    ).toFixed(4)} ${payToken?.symbol}
-TX Fee: ${txFee} ${payToken?.symbol} = ${(
+    ).toFixed(4)} ${getApiTokenSymbol(payToken)}
+TX Fee: ${txFee} ${getApiTokenSymbol(payToken)} = ${(
       (parseFloat(txFee) / parseFloat(payDetails.amount)) *
       100
     ).toFixed(2)}%
-Min Receive: ${minReceive} ${receiveToken?.symbol}
+Min Receive: ${minReceive} ${getApiTokenSymbol(receiveToken)}
 
 RawData: ${JSON.stringify(
       {

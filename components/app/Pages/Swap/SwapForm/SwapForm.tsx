@@ -4,6 +4,7 @@ import FormButton from "@/components/app/Shared/Forms/FormButton";
 import { useSwapForm } from "@/hooks/useSwapForm";
 import BestRouteEstimator from "../../BestRouteEstimator";
 import { secretClient } from "@/utils/secretClient";
+import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
 
 const SwapForm: React.FC = () => {
   const {
@@ -50,10 +51,12 @@ const SwapForm: React.FC = () => {
             formType="swap"
             // balance={Number(payToken?.balance ?? 0)}
           />
-          <BottomRightPrice
-            amount={parseFloat(payDetails.amount)}
-            tokenSymbol={payToken?.symbol ?? ""}
-          />
+          {payToken !== undefined && (
+            <BottomRightPrice
+              amount={parseFloat(payDetails.amount)}
+              tokenSymbol={getApiTokenSymbol(payToken)}
+            />
+          )}
         </div>
         <div className="flex flex-col gap-2.5 bg-adamant-app-input bg-opacity-50 rounded-lg p-4">
           <TokenInput
@@ -61,46 +64,50 @@ const SwapForm: React.FC = () => {
             formType="swap"
             // balance={Number(receiveToken?.balance ?? 0)}
           />
-          <BottomRightPrice
-            amount={
-              receiveDetails.amount.length
-                ? parseFloat(receiveDetails.amount)
-                : 0
-            }
-            tokenSymbol={receiveToken?.symbol ?? ""}
-          />
+          {receiveToken !== undefined && (
+            <BottomRightPrice
+              amount={
+                receiveDetails.amount.length
+                  ? parseFloat(receiveDetails.amount)
+                  : 0
+              }
+              tokenSymbol={getApiTokenSymbol(receiveToken)}
+            />
+          )}
         </div>
       </div>
-      <div className="flex flex-col gap-2 px-2.5 text-gray-400 text-sm">
-        <div className="flex justify-between">
-          <span>Price impact:</span>
-          <span>
-            {priceImpact}% ≈{" "}
-            {(
-              (parseFloat(priceImpact) / 100) *
-              parseFloat(payDetails.amount)
-            ).toFixed(4)}{" "}
-            {payToken?.symbol}
-          </span>
+      {payToken !== undefined && receiveToken !== undefined && (
+        <div className="flex flex-col gap-2 px-2.5 text-gray-400 text-sm">
+          <div className="flex justify-between">
+            <span>Price impact:</span>
+            <span>
+              {priceImpact}% ≈{" "}
+              {(
+                (parseFloat(priceImpact) / 100) *
+                parseFloat(payDetails.amount)
+              ).toFixed(4)}{" "}
+              {getApiTokenSymbol(payToken)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>TX fee:</span>
+            <span>
+              {txFee} {getApiTokenSymbol(payToken)} ≈{" "}
+              {(
+                (parseFloat(txFee) / parseFloat(payDetails.amount)) *
+                100
+              ).toFixed(2)}
+              %
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Min receive</span>
+            <span>
+              {minReceive} {getApiTokenSymbol(receiveToken)}
+            </span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span>TX fee:</span>
-          <span>
-            {txFee} {payToken?.symbol} ≈{" "}
-            {(
-              (parseFloat(txFee) / parseFloat(payDetails.amount)) *
-              100
-            ).toFixed(2)}
-            %
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>Min receive</span>
-          <span>
-            {minReceive} {receiveToken?.symbol}
-          </span>
-        </div>
-      </div>
+      )}
       <BestRouteEstimator
         // amountIn={payDetails.amount}
         // inputToken={payToken?.address ?? ""}

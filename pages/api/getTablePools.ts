@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { TablePool } from "@/types";
 // import { PriceData } from "./getPrices";
-import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { getApiToken } from "@/utils/apis/getSwappableTokens";
 import { SwappableToken } from "@/types/Token";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
 // import { Pair } from "@/types/api/Factory";
@@ -17,7 +17,7 @@ const getTablePools = async (
     //   getSwappableTokens(),
     // ]);
     const pairs = await queryFactoryPairs();
-    const swappableTokens = await getSwappableTokens();
+    const swappableTokens = await getApiToken();
 
     const tablePools: TablePool[] = pairs.map((pair) => {
       const tokenSymbols = pair.asset_infos.map((asset) =>

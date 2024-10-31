@@ -68,7 +68,9 @@ const TokenInput: React.FC<TokenInputProps> = ({
   };
 
   const tokenData = getTokenData();
-  const token = useTokenStore().tokens?.[tokenData.tokenAddress];
+  // const token = useTokenStore().tokens?.[tokenData.tokenAddress];
+  const { tokens } = useTokenStore();
+  const token = tokens?.[tokenData.tokenAddress];
 
   const handleInputChange = (value: string) => {
     if (formType === "swap" && isSwapInput(inputIdentifier)) {

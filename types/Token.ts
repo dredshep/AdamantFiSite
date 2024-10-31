@@ -1,3 +1,4 @@
+import { ApiToken } from "@/utils/apis/getSwappableTokens";
 import { SecretString } from "./SecretString";
 
 export interface NativeToken {
@@ -30,4 +31,5 @@ export interface SwappableToken {
   priceVsNativeToken: string;
 }
 
-export type Token = NativeToken | SwappableToken;
+// export type Token = NativeToken | SwappableToken;
+export type Token = ApiToken;

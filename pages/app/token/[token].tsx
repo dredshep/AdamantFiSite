@@ -6,7 +6,7 @@ import values from "@/utils/dummyData/lineChartValues.json";
 import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
 import { VisualizationSpec } from "react-vega";
 import { Token } from "@/types";
-import { getSwappableTokens } from "@/utils/apis/getSwappableTokens";
+import { getApiToken } from "@/utils/apis/getSwappableTokens";
 
 // Mock token details data
 // const tokenDetails = {
@@ -36,7 +36,7 @@ const TokenPage = () => {
   const { token } = router.query;
   const [tokenDetails, setTokenDetails] = React.useState<Token[]>([]);
   useEffect(() => {
-    void getSwappableTokens().then((data) => {
+    void getApiToken().then((data) => {
       setTokenDetails(data);
     });
   }, []);

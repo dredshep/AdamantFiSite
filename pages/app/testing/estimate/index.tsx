@@ -12,6 +12,8 @@ import { useTxStore } from "@/store/txStore";
 import { SecretString, Hop } from "@/types";
 import AllowanceBox from "@/components/app/Testing/AllowanceBox";
 import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
+import { PoolResponse } from "@/types/api/Pair";
+import { QueryMsg } from "@/types/secretswap/factory";
 
 interface PoolQueryResponse {
   assets: {
@@ -58,20 +60,20 @@ const buildTokenPoolMap = (pools: typeof fullPoolsData): TokenPoolMap => {
 const getPossibleOutputsForToken = (
   startToken: string,
   pools: typeof fullPoolsData,
-  maxHops: number = 5,
+  maxHops: number = 5
 ): string[] => {
   const tokenPoolMap = buildTokenPoolMap(pools);
   const reachableTokens = findAllReachableTokens(
     tokenPoolMap,
     startToken,
-    maxHops,
+    maxHops
   );
   return Array.from(reachableTokens);
 };
 const findAllReachableTokens = (
   tokenPoolMap: TokenPoolMap,
   startToken: string,
-  maxHops: number = 5, // Allows flexibility in the depth of search
+  maxHops: number = 5 // Allows flexibility in the depth of search
 ): Set<string> => {
   const reachableTokens: Set<string> = new Set();
   const visited: Set<string> = new Set();
@@ -112,7 +114,7 @@ const findPaths = (
   tokenPoolMap: TokenPoolMap,
   startToken: string,
   endToken: string,
-  maxHops: number = 3,
+  maxHops: number = 3
 ): Path[] => {
   const paths: Path[] = [];
   const visited: Set<string> = new Set();
@@ -163,7 +165,7 @@ export interface PathEstimation {
 const estimateBestPath = async (
   secretjs: SecretNetworkClient,
   paths: Path[],
-  initialAmountIn: Decimal,
+  initialAmountIn: Decimal
 ): Promise<PathEstimation | null> => {
   let bestEstimation: PathEstimation | null = null;
 
@@ -191,12 +193,12 @@ const estimateBestPath = async (
             poolAddress,
             amountIn,
             inputToken,
-            outputToken,
+            outputToken
           );
 
         console.log(`Output from hop ${i + 1}: ${output.toString()}`);
         console.log(
-          `Ideal Output from hop ${i + 1}: ${idealOutput.toString()}`,
+          `Ideal Output from hop ${i + 1}: ${idealOutput.toString()}`
         );
 
         if (output.isNegative()) {
@@ -217,7 +219,7 @@ const estimateBestPath = async (
       const adjustedFinalOutput = amountIn;
 
       console.log(
-        `Final Output after all hops: ${adjustedFinalOutput.toString()}`,
+        `Final Output after all hops: ${adjustedFinalOutput.toString()}`
       );
 
       if (
@@ -245,7 +247,7 @@ const calculateSingleHopOutput = (
   amountIn: Decimal,
   poolData: PoolData,
   inputToken: string,
-  outputToken: string,
+  outputToken: string
 ): {
   output: Decimal;
   idealOutput: Decimal;
@@ -263,12 +265,14 @@ const calculateSingleHopOutput = (
   console.log(`Input Token: ${inputToken}`);
   console.log(`Output Token: ${outputToken}`);
   console.log(
-    `Raw Input Reserve: ${rawInputReserve.amount.toString()} (Decimals: ${rawInputReserve.decimals
-    })`,
+    `Raw Input Reserve: ${rawInputReserve.amount.toString()} (Decimals: ${
+      rawInputReserve.decimals
+    })`
   );
   console.log(
-    `Raw Output Reserve: ${rawOutputReserve.amount.toString()} (Decimals: ${rawOutputReserve.decimals
-    })`,
+    `Raw Output Reserve: ${rawOutputReserve.amount.toString()} (Decimals: ${
+      rawOutputReserve.decimals
+    })`
   );
   console.log(`Amount In: ${amountIn.toString()}`);
 
@@ -277,7 +281,7 @@ const calculateSingleHopOutput = (
 
   // Adjust input amount by input token decimals
   const amountInAdjusted = amountIn.mul(
-    Decimal.pow(10, rawInputReserve.decimals),
+    Decimal.pow(10, rawInputReserve.decimals)
   );
   console.log(`Amount In Adjusted: ${amountInAdjusted.toString()}`);
 
@@ -302,21 +306,21 @@ const calculateSingleHopOutput = (
   // Calculate ideal output assuming infinite liquidity (no price impact)
   const idealOutput = amountInAdjusted.mul(outputReserve).div(inputReserve);
   console.log(
-    `Ideal Output Before Decimal Adjustment: ${idealOutput.toString()}`,
+    `Ideal Output Before Decimal Adjustment: ${idealOutput.toString()}`
   );
 
   // Adjust ideal output by output token decimals
   let idealOutputAdjusted = idealOutput.div(
-    Decimal.pow(10, rawOutputReserve.decimals),
+    Decimal.pow(10, rawOutputReserve.decimals)
   );
   console.log(
-    `Ideal Output After Decimal Adjustment: ${idealOutputAdjusted.toString()}`,
+    `Ideal Output After Decimal Adjustment: ${idealOutputAdjusted.toString()}`
   );
 
   // Ensure ideal output isn't negative
   if (idealOutputAdjusted.isNegative()) {
     console.warn(
-      "Calculated ideal output is negative after decimal adjustment.",
+      "Calculated ideal output is negative after decimal adjustment."
     );
     idealOutputAdjusted = new Decimal(0);
   }
@@ -331,7 +335,7 @@ const calculateSingleHopOutput = (
 
   // Correct calculation of Liquidity Provider Fee
   const lpFee = amountIn.sub(
-    amountInWithFee.div(Decimal.pow(10, rawInputReserve.decimals)),
+    amountInWithFee.div(Decimal.pow(10, rawInputReserve.decimals))
   );
   console.log(`Liquidity Provider Fee: ${lpFee.toString()}`);
   console.log(`--- Calculation End ---\n`);
@@ -350,7 +354,7 @@ const estimateSingleHopOutput = async (
   poolAddress: string,
   amountIn: Decimal,
   inputToken: string,
-  outputToken: string,
+  outputToken: string
 ): Promise<{
   output: Decimal;
   idealOutput: Decimal;
@@ -363,7 +367,7 @@ const estimateSingleHopOutput = async (
     amountIn,
     poolData,
     inputToken,
-    outputToken,
+    outputToken
   );
 
   // Gas cost for a single hop
@@ -380,14 +384,19 @@ const estimateSingleHopOutput = async (
 
 const getPoolData = async (
   secretjs: SecretNetworkClient,
-  poolAddress: string,
+  poolAddress: string
 ): Promise<PoolData> => {
-  const response = (await secretjs.query.compute.queryContract({
+  const response = await secretjs.query.compute.queryContract<
+    {
+      pool: {};
+    },
+    PoolResponse
+  >({
     contract_address: poolAddress,
     code_hash:
       "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
     query: { pool: {} },
-  })) as PoolQueryResponse;
+  });
 
   if (typeof response !== "object" || response === null) {
     throw new Error("Invalid response from pool contract");
@@ -397,7 +406,7 @@ const getPoolData = async (
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
       const decimals =
         asset.info.token?.contract_addr ===
-          "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
+        "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
           ? 6
           : getTokenDecimals(asset.info.token.contract_addr) || 0;
       console.log({ decimals });
@@ -407,7 +416,7 @@ const getPoolData = async (
       };
       return acc;
     },
-    {},
+    {}
   );
 
   return {
@@ -428,10 +437,10 @@ const SwapPage = () => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const inputViewingKey = useViewingKeyStore((state) =>
-    state.getViewingKey(inputToken),
+    state.getViewingKey(inputToken)
   );
   const outputViewingKey = useViewingKeyStore((state) =>
-    state.getViewingKey(outputToken),
+    state.getViewingKey(outputToken)
   );
 
   useEffect(() => {
@@ -440,7 +449,7 @@ const SwapPage = () => {
     if (inputToken) {
       const possibleOutputs = getPossibleOutputsForToken(
         inputToken,
-        fullPoolsData,
+        fullPoolsData
       ) as SecretString[];
       setOutputOptions(possibleOutputs);
     }
@@ -456,7 +465,7 @@ const SwapPage = () => {
       await window.keplr.enable("secret-4");
 
       const offlineSigner = (window as KeplrWindow).getOfflineSigner?.(
-        "secret-4",
+        "secret-4"
       );
       const accounts = await offlineSigner?.getAccounts();
 
@@ -499,7 +508,7 @@ const SwapPage = () => {
       const bestPathEstimation = await estimateBestPath(
         secretjs,
         paths,
-        amountInDecimal,
+        amountInDecimal
       );
 
       if (bestPathEstimation) {
@@ -574,23 +583,23 @@ const SwapPage = () => {
         explicitSignerData:
           sequence !== null && accountNumber !== null
             ? {
-              accountNumber: accountNumber,
-              sequence: sequence,
-              chainId: "secret-4",
-            }
+                accountNumber: accountNumber,
+                sequence: sequence,
+                chainId: "secret-4",
+              }
             : undefined,
       };
 
       const decimalsIn = getTokenDecimals(inputToken);
       if (decimalsIn === undefined) {
         throw new Error(
-          `Decimals for token ${inputToken} could not be determined`,
+          `Decimals for token ${inputToken} could not be determined`
         );
       }
       const decimalsOut = getTokenDecimals(outputToken);
       if (decimalsOut === undefined) {
         throw new Error(
-          `Decimals for token ${outputToken} could not be determined`,
+          `Decimals for token ${outputToken} could not be determined`
         );
       }
 
@@ -649,7 +658,7 @@ const SwapPage = () => {
                 to: walletAddress,
                 hops,
                 expected_return,
-              }),
+              })
             ),
           },
         };
@@ -666,7 +675,7 @@ const SwapPage = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions,
+          txOptions
         );
       } else {
         console.log("Single hop. Using Pair contract directly.");
@@ -710,7 +719,7 @@ const SwapPage = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions,
+          txOptions
         );
       }
 
@@ -753,14 +762,14 @@ const SwapPage = () => {
               // Find the pool that contains the inputToken
               const pool = fullPoolsData.find((pool) =>
                 pool.query_result.assets.some(
-                  (asset) => asset.info.token?.contract_addr === inputToken,
-                ),
+                  (asset) => asset.info.token?.contract_addr === inputToken
+                )
               );
 
               // If pool is found, extract the spenderAddress and tokenCodeHash
               if (pool) {
                 const tokenAsset = pool.query_result.assets.find(
-                  (asset) => asset.info.token?.contract_addr === inputToken,
+                  (asset) => asset.info.token?.contract_addr === inputToken
                 );
 
                 const tokenCodeHash =
@@ -805,14 +814,14 @@ const SwapPage = () => {
                     .map((address) => getTokenName(address))
                     .join(" -> ")}
                   idealOutput={`${bestPathEstimation.idealOutput.toFixed(
-                    8,
+                    8
                   )} ${getTokenName(outputToken)}`}
                   actualOutput={`${bestPathEstimation.finalOutput.toFixed(
-                    8,
+                    8
                   )} ${getTokenName(outputToken)}`}
                   priceImpact={bestPathEstimation.totalPriceImpact + "%"}
                   lpFee={`${bestPathEstimation.totalLpFee.toFixed(
-                    6,
+                    6
                   )} ${getTokenName(inputToken)}`}
                   gasCost={bestPathEstimation.totalGasCost}
                   difference={`${bestPathEstimation.idealOutput
@@ -854,8 +863,8 @@ const SwapPage = () => {
           tokenIn={inputToken}
           tokenOut={outputToken}
           onClose={() => setIsModalOpen(false)}
-        // secretjs={secretjs!}
-        // walletAddress={walletAddress!}
+          // secretjs={secretjs!}
+          // walletAddress={walletAddress!}
         />
       )}
     </div>

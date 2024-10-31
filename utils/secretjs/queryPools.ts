@@ -25,7 +25,7 @@ export const queryPools = async (
       contract_address: contractAddress,
       query: queryMsg,
       code_hash,
-    })) as { assets: ContractPool[] }; // Update the expected result type accordingly
+    })); // Update the expected result type accordingly
 
     console.log(
       "Query result:",

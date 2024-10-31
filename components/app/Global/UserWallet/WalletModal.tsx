@@ -9,15 +9,19 @@ import {
 import { toast } from "react-toastify"; // Assuming you're using react-toastify for notifications
 import { useTokenStore } from "@/store/tokenStore";
 import { useModalStore } from "@/store/modalStore";
+import {
+  getApiTokenAddress,
+  getApiTokenSymbol,
+} from "@/utils/apis/getSwappableTokens";
 
 const WalletModal: React.FC = () => {
   const { closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
-  const { listAllTokens, getTokenByAddress } = useTokenStore();
+  const { listAllTokens } = useTokenStore();
   const tokens = listAllTokens();
-  const balance =
-    getTokenByAddress("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek")
-      ?.balance ?? "N/A";
+  // const balance =
+  //   getTokenByAddress("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek")
+  //     ?.balance ?? "N/A";
   const copyAddressToClipboard = () => {
     if (address === null) return;
     void navigator.clipboard.writeText(address).then(() => {
@@ -60,10 +64,10 @@ const WalletModal: React.FC = () => {
           onClick={closeWalletModal}
         />
       </div>
-      <div className="my-8 px-6">
+      {/* <div className="my-8 px-6">
         <div className="text-lg font-semibold text-gray-500">Your balance</div>
         <div className="text-4xl font-bold top-1">${balance}</div>
-      </div>
+      </div> */}
       <div className="px-6">
         <button className="w-full py-3 rounded-xl bg-adamant-accentBg text-black font-bold my-4 uppercase">
           Get Tokens
@@ -78,14 +82,17 @@ const WalletModal: React.FC = () => {
             key={index}
             className="flex justify-between items-center cursor-pointer hover:bg-adamant-app-boxHighlight py-2 rounded-xl mx-2 px-6"
           >
-            <PlaceholderImageFromSeed seed={token.address} size={40} />
+            <PlaceholderImageFromSeed
+              seed={getApiTokenAddress(token)}
+              size={40}
+            />
             <div className="flex-grow ml-3 flex flex-col">
-              <span className="font-bold">{token.symbol}</span>
-              <span className="text-gray-500 text-xs font-medium">
+              <span className="font-bold">{getApiTokenSymbol(token)}</span>
+              {/* <span className="text-gray-500 text-xs font-medium">
                 {token.network}
-              </span>
+              </span> */}
             </div>
-            <span className="font-bold">{token.balance}</span>
+            {/* <span className="font-bold">{token.balance}</span> */}
           </div>
         )) || (
           <div>
