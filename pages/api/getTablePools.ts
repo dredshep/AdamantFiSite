@@ -1,9 +1,11 @@
+import { SecretString, TablePool } from "@/types";
 import { NextApiRequest, NextApiResponse } from "next";
-import { TablePool } from "@/types";
 // import { PriceData } from "./getPrices";
-import { getApiToken } from "@/utils/apis/getSwappableTokens";
-import { SwappableToken } from "@/types/Token";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
+import {
+  getApiTokenSymbol,
+  getTokenFromAddress,
+} from "@/utils/apis/getSwappableTokens";
 // import { Pair } from "@/types/api/Factory";
 
 const getTablePools = async (
@@ -17,11 +19,12 @@ const getTablePools = async (
     //   getSwappableTokens(),
     // ]);
     const pairs = await queryFactoryPairs();
-    const swappableTokens = await getApiToken();
 
     const tablePools: TablePool[] = pairs.map((pair) => {
-      const tokenSymbols = pair.asset_infos.map((asset) =>
-        getTokenSymbol(asset.token.contract_addr, swappableTokens)
+      const tokenSymbols = pair.asset_infos.map((token) =>
+        getApiTokenSymbol(
+          getTokenFromAddress(token.token.contract_addr as SecretString)!
+        )
       );
       const poolName = tokenSymbols.join("-");
       // const tvl = calculateTVL(pair, pricesData);
@@ -46,13 +49,13 @@ const getTablePools = async (
   }
 };
 
-const getTokenSymbol = (
-  contractAddr: string,
-  swappableTokens: SwappableToken[]
-): string => {
-  const token = swappableTokens.find((t) => t.address === contractAddr);
-  return token ? token.symbol : contractAddr.slice(-5);
-};
+// const getTokenSymbol = (
+//   contractAddr: string,
+//   swappableTokens: ApiToken[]
+// ): string => {
+//   const token = swappableTokens.find((t) => t.address === contractAddr);
+//   return token ? token.symbol : contractAddr.slice(-5);
+// };
 
 // const calculateTVL = (pair: Pair, pricesData: PriceData): number => {
 //   // This is a placeholder. You'll need to implement the actual TVL calculation

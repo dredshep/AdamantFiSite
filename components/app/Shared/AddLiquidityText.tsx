@@ -1,5 +1,6 @@
 import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
+import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
 
 const AddLiquidityPrompt = () => {
   const { swapTokenInputs: tokenInputs } = useSwapStore();
@@ -11,7 +12,8 @@ const AddLiquidityPrompt = () => {
 
   return payToken && receiveToken ? (
     <div>
-      + Add liquidity for {payToken.symbol} and {receiveToken.symbol}
+      + Add liquidity for {getApiTokenSymbol(payToken)} and{" "}
+      {getApiTokenSymbol(receiveToken)}
     </div>
   ) : (
     <div>Loading tokens...</div>

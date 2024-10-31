@@ -1,8 +1,7 @@
 import { TablePool } from "@/types";
-import { getApiToken } from "./getSwappableTokens";
-import { queryFactoryPairs } from "./getFactoryPairs";
-import { SwappableToken } from "@/types/Token";
 import { Pair } from "@/types/api/Factory";
+import { queryFactoryPairs } from "./getFactoryPairs";
+import { ApiToken, getApiToken } from "./getSwappableTokens";
 
 interface PoolValidationResult {
   isValid: boolean;
@@ -11,7 +10,7 @@ interface PoolValidationResult {
 
 interface ValidationContext {
   pairs: Pair[];
-  tokens: SwappableToken[];
+  tokens: ApiToken[];
 }
 
 // Separate function to validate a single pool with existing data

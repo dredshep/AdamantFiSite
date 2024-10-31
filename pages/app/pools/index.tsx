@@ -1,15 +1,15 @@
-import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
 import AppLayout from "@/components/app/Global/AppLayout";
-import { SecretString, TablePool } from "@/types";
-import Link from "next/link";
 import {
-  TableHeaders,
   FinancialDataRow,
   FinancialTableSearchBar,
+  TableHeaders,
 } from "@/components/app/Shared/Tables/FinancialTable";
-import { useEffect, useState } from "react";
+import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
+import { SecretString, TablePool } from "@/types";
 import { getTablePools } from "@/utils/apis/getTablePools";
 import { validatePools } from "@/utils/apis/isPoolConfigured";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface ValidatedPool extends TablePool {
   isValid: boolean;
@@ -116,7 +116,7 @@ export default function PoolsPage() {
                       <TokenDisplay
                         seed={pool.contract_address as SecretString}
                         name={pool.name}
-                        network={pool.network}
+                        // network={pool.network}
                       />
                     ),
                     minWidth: "240px",

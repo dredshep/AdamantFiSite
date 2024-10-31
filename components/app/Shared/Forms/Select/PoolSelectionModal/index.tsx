@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
-import { getApiToken } from "@/utils/apis/getSwappableTokens";
+import {
+  ApiToken,
+  getApiToken,
+  getApiTokenSymbol,
+} from "@/utils/apis/getSwappableTokens";
 import { Pair } from "@/types/api/Factory";
-import { SwappableToken } from "@/types/Token";
 import { usePoolStore } from "@/store/forms/poolStore";
 import TokenSelectionSearchBar from "../TokenSelectionModal/TokenSelectionSearchBar";
 
 interface PoolInfo {
   pair: Pair;
-  token0?: SwappableToken;
-  token1?: SwappableToken;
+  token0?: ApiToken;
+  token1?: ApiToken;
 }
 
 const PoolSelectionModal: React.FC = () => {
@@ -59,8 +62,8 @@ const PoolSelectionModal: React.FC = () => {
     void fetchPoolsAndTokens();
   }, []);
 
-  const getDisplaySymbol = (token?: SwappableToken, address?: string) => {
-    if (token) return token.symbol;
+  const getDisplaySymbol = (token?: ApiToken, address?: string) => {
+    if (token) return getApiTokenSymbol(token);
     if (address !== undefined) return `${address.slice(-6)}`;
     return "Unknown";
   };

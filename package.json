@@ -9,8 +9,9 @@
     "lint": "next lint",
     "remote:add": "git remote add origin https://github.com/AdamantFi/AdamantFiSite.git && git remote add personal https://github.com/dredshep/AdamantFiSite.git",
     "push": "git push origin main && git push personal main",
+    "prebuild": "yarn type-check",
     "type-check": "tsc --noEmit",
-    "lint-and-type-check": "yarn lint && yarn type-check"
+    "lint-full": "yarn lint && yarn type-check"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.3",

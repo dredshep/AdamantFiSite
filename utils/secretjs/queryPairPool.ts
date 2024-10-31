@@ -1,5 +1,6 @@
 import { SecretNetworkClient } from "secretjs";
 import { PoolResponse, QueryMsg } from "@/types/secretswap/pair";
+import isNotNullish from "../isNotNullish";
 
 export async function queryPool(
   secretjs: SecretNetworkClient,
@@ -8,11 +9,20 @@ export async function queryPool(
 ): Promise<PoolResponse> {
   const query: QueryMsg = { pool: {} };
 
-  const data: PoolResponse = await secretjs.query.compute.queryContract({
-    contract_address,
-    code_hash,
-    query,
-  });
+  const data: PoolResponse = await secretjs.query.compute.queryContract<
+    {
+      pool: object;
+    },
+    PoolResponse
+  >(
+    isNotNullish(code_hash)
+      ? {
+          contract_address,
+          code_hash,
+          query,
+        }
+      : { contract_address, query }
+  );
 
   return data;
 }

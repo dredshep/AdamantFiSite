@@ -1,12 +1,12 @@
 import { create } from "zustand";
-import { SwappableToken } from "@/types/Token";
+import { ApiToken } from "@/utils/apis/getSwappableTokens";
 import { Pair } from "@/types/api/Factory";
 import { PoolTokenInputs, TokenInputState } from "@/types";
 
 interface SelectedPool {
   address: string;
-  token0?: SwappableToken;
-  token1?: SwappableToken;
+  token0?: ApiToken;
+  token1?: ApiToken;
   pairInfo: Pair;
 }
 

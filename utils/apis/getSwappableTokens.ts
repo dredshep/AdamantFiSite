@@ -59,3 +59,10 @@ export const getApiTokenAddress = (token: ApiToken) =>
 
 export const getApiTokenSymbol = (token: ApiToken): string =>
   token.display_props.symbol;
+
+export const getTokenFromAddress = (
+  address: SecretString
+): ApiToken | undefined =>
+  (fullApiTokenOutput as ApiToken[]).find(
+    (token) => getApiTokenAddress(token) === address
+  );

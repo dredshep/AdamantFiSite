@@ -1,15 +1,15 @@
 // pages/tokens.tsx
-import { GetStaticProps } from "next";
-import { Token, TokensResponse } from "@/types/api/TokensResponse";
-import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
 import AppLayout from "@/components/app/Global/AppLayout";
-import Link from "next/link";
 import {
   FinancialDataRow,
   FinancialTableSearchBar,
   TableHeaders,
 } from "@/components/app/Shared/Tables/FinancialTable";
+import TokenDisplay from "@/components/app/Shared/Tables/TokenDisplay";
 import { SecretString } from "@/types";
+import { Token, TokensResponse } from "@/types/api/TokensResponse";
+import { GetStaticProps } from "next";
+import Link from "next/link";
 
 interface TokensPageProps {
   tokens: Token[];
@@ -60,7 +60,7 @@ const TokensPage: React.FC<TokensPageProps> = ({ tokens }) => {
                       <TokenDisplay
                         seed={token.src_address as SecretString}
                         name={token.name}
-                        network={token.src_network}
+                        // network={token.src_network}
                       />
                     ),
                     minWidth: "240px",

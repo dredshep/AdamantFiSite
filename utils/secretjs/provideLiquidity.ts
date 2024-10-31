@@ -1,6 +1,7 @@
-import { SecretNetworkClient } from "secretjs";
-import { Asset, ContractInfo } from "@/types/secretswap/shared";
 import { ExecuteMsg } from "@/types/secretswap/pair";
+import { Asset, ContractInfo } from "@/types/secretswap/shared";
+import { SecretNetworkClient } from "secretjs";
+import isNotNullish from "../isNotNullish";
 
 // NOTE: Sample inputs
 
@@ -32,12 +33,18 @@ export async function provideLiquidity(
   asset1: Asset,
   slippage_tolerance?: string
 ) {
-  const provide_liquidity: ExecuteMsg = {
-    provide_liquidity: {
-      assets: [asset0, asset1],
-      slippage_tolerance,
-    },
-  };
+  const provide_liquidity: ExecuteMsg = isNotNullish(slippage_tolerance)
+    ? {
+        provide_liquidity: {
+          assets: [asset0, asset1],
+          slippage_tolerance,
+        },
+      }
+    : {
+        provide_liquidity: {
+          assets: [asset0, asset1],
+        },
+      };
 
   const tx = await secretjs.tx.compute.executeContract({
     sender: secretjs.address,

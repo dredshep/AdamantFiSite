@@ -3,6 +3,7 @@ module.exports = {
   parserOptions: {
     project: "./tsconfig.json",
     tsconfigRootDir: __dirname,
+    sourceType: "module",
   },
   plugins: ["@typescript-eslint", "@next/next"],
   extends: [
@@ -22,5 +23,8 @@ module.exports = {
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/await-thenable": "error",
     "@typescript-eslint/no-misused-promises": "error",
+    "@typescript-eslint/no-unsafe-call": "error",
+    // "@typescript-eslint/explicit-module-boundary-types": "error",
   },
+  ignorePatterns: ["!**/*"],
 };
