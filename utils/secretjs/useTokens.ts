@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getTableTokens } from "@/utils/apis/getTableTokens";
 import { TableToken } from "@/types";
+import isNotNullish from "../isNotNullish";
+import { Window } from "@keplr-wallet/types";
 
 export function useTokens(chainId: string) {
   const [tokens, setTokens] = useState<TableToken[]>([]);
@@ -20,11 +22,12 @@ export function useTokens(chainId: string) {
 
   useEffect(() => {
     async function enableKeplr() {
-      if (!window.keplr) {
+      const keplr = (window as unknown as Window).keplr;
+      if (!isNotNullish(keplr)) {
         alert("Keplr extension not installed");
         return;
       }
-      await window.keplr.enable(chainId);
+      await keplr.enable(chainId);
     }
 
     void enableKeplr();

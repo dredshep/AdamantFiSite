@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useViewingKeyStore } from "@/store/viewingKeyStore";
 import { SecretString } from "@/types";
-import { Keplr, Window as KeplrWindow } from "@keplr-wallet/types";
+import { Keplr, Window as KeplrWindow, Window } from "@keplr-wallet/types";
 import { FiCheckCircle, FiX, FiArrowLeft } from "react-icons/fi";
 import { Tooltip } from "react-tooltip";
 import "react-tooltip/dist/react-tooltip.css";
+import isNotNullish from "@/utils/isNotNullish";
 
 // Reusable component for Registration and Syncing Buttons
 const TokenActionButton: React.FC<{
@@ -52,11 +53,14 @@ const checkSyncStatus = async (
   getViewingKey: (address: string) => string | undefined
 ) => {
   try {
+    const keplr = (window as unknown as Window).keplr;
+    if (!isNotNullish(keplr)) return;
+
     const chainId = process.env["NEXT_PUBLIC_CHAIN_ID"]!;
-    if (!window.keplr) return;
-    const viewingKey = await (
-      window.keplr as unknown as Keplr
-    ).getSecret20ViewingKey(chainId, tokenAddress);
+    const viewingKey = await (keplr as unknown as Keplr).getSecret20ViewingKey(
+      chainId,
+      tokenAddress
+    );
 
     if (viewingKey) {
       setRegistered(true);
@@ -137,7 +141,8 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
     setSynced: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
     try {
-      if (!window.keplr) {
+      const keplr = (window as unknown as Window).keplr;
+      if (!isNotNullish(keplr)) {
         alert("Keplr extension not detected.");
         return;
       }
@@ -148,9 +153,10 @@ const ViewingKeyModal: React.FC<ViewingKeyModalProps> = ({
       }
 
       const chainId = process.env["NEXT_PUBLIC_CHAIN_ID"]!;
-      const viewingKey = await (
-        window.keplr as unknown as Keplr
-      ).getSecret20ViewingKey(chainId, tokenAddress);
+      const viewingKey = await keplr.getSecret20ViewingKey(
+        chainId,
+        tokenAddress
+      );
 
       setViewingKey(tokenAddress, viewingKey);
       setSynced(true);

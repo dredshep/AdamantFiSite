@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { SecretNetworkClient } from "secretjs";
-import { Window as KeplrWindow } from "@keplr-wallet/types";
+import { Window as KeplrWindow, Window } from "@keplr-wallet/types";
 import { queryPoolDetails as addresses } from "../../../components/app/Testing/queryPoolDetails";
+import isNotNullish from "@/utils/isNotNullish";
 
 // const addresses = [
 //   {
@@ -89,12 +90,12 @@ const QueryPools = () => {
 
   useEffect(() => {
     const connectKeplr = async () => {
-      if (!window.keplr) {
+      if (!isNotNullish((window as unknown as Window).keplr)) {
         alert("Please install Keplr extension");
         return;
       }
 
-      await window.keplr.enable("secret-4");
+      await (window as unknown as Window).keplr?.enable("secret-4");
 
       const offlineSigner = (
         window as unknown as KeplrWindow

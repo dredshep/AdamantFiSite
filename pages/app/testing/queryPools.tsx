@@ -3,6 +3,8 @@ import { SecretNetworkClient } from "secretjs";
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 import { queryPools } from "@/utils/secretjs/queryPools";
 import { ContractPool } from "@/types/ContractPool";
+import isNotNullish from "@/utils/isNotNullish";
+import { Window } from "@keplr-wallet/types";
 
 const QueryPools = () => {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
@@ -12,12 +14,12 @@ const QueryPools = () => {
 
   useEffect(() => {
     const connectKeplr = async () => {
-      if (!window.keplr) {
+      if (!isNotNullish((window as unknown as Window).keplr)) {
         alert("Please install Keplr extension");
         return;
       }
 
-      await window.keplr.enable("secret-4");
+      await (window as unknown as Window).keplr?.enable("secret-4");
 
       const offlineSigner = (
         window as unknown as KeplrWindow

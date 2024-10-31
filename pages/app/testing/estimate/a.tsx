@@ -10,6 +10,8 @@ import ViewingKeyModal from "@/components/app/Testing/ViewingKeyModal";
 import { useViewingKeyStore } from "@/store/viewingKeyStore";
 import { SecretString } from "@/types";
 import AllowanceBox from "@/components/app/Testing/AllowanceBox";
+import isNotNullish from "@/utils/isNotNullish";
+import { Window } from "@keplr-wallet/types";
 
 interface PoolQueryResponse {
   assets: {
@@ -470,12 +472,12 @@ const SwapPage = () => {
 
   useEffect(() => {
     const connectKeplr = async () => {
-      if (!window.keplr) {
+      if (!isNotNullish((window as unknown as Window).keplr)) {
         alert("Please install Keplr extension");
         return;
       }
 
-      await window.keplr.enable("secret-4");
+      await (window as unknown as Window).keplr?.enable("secret-4");
 
       const offlineSigner = (
         window as unknown as KeplrWindow

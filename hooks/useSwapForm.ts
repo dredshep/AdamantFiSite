@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
-import { SwappableToken } from "@/types/Token";
 import {
   fetchSwappableTokens,
-  fetchChartData,
   calculatePriceImpact,
   calculateTxFee,
   calculateMinReceive,
@@ -30,16 +28,16 @@ import { useTxStore } from "@/store/txStore";
 // TODO: Find a way to not need to import this.
 import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
 import {
+  ApiToken,
   getApiTokenAddress,
   getApiTokenSymbol,
 } from "@/utils/apis/getSwappableTokens";
 import { toast } from "react-toastify";
+import isNotNullish from "@/utils/isNotNullish";
+import { Window } from "@keplr-wallet/types";
 
 export const useSwapForm = () => {
-  const [swappableTokens, setSwappableTokens] = useState<SwappableToken[]>([]);
-  const [chartData, setChartData] = useState<{ time: number; value: number }[]>(
-    []
-  );
+  const [swappableTokens, setSwappableTokens] = useState<ApiToken[]>([]);
   const { swapTokenInputs: tokenInputs } = useSwapStore();
   const payDetails = tokenInputs["swap.pay"];
   const payToken = useTokenStore(
@@ -69,12 +67,6 @@ export const useSwapForm = () => {
   }, []);
 
   useEffect(() => {
-    if (payToken?.address !== undefined) {
-      void fetchChartData(payToken.address).then(setChartData);
-    }
-  }, [payToken?.address]);
-
-  useEffect(() => {
     setPriceImpact(calculatePriceImpact(payDetails.amount));
     setTxFee(calculateTxFee(payDetails.amount));
     setMinReceive(calculateMinReceive(receiveDetails.amount));
@@ -82,16 +74,17 @@ export const useSwapForm = () => {
 
   // new effects
   useEffect(() => {
+    const keplr = (window as unknown as Window).keplr;
     const connectKeplr = async () => {
-      if (!window.keplr) {
+      if (!isNotNullish(keplr)) {
         alert("Please install Keplr extension");
         return;
       }
 
-      await window.keplr.enable("secret-4");
+      await keplr.enable("secret-4");
 
-      const offlineSigner = window.keplr.getOfflineSignerOnlyAmino("secret-4");
-      const enigmaUtils = window.keplr.getEnigmaUtils("secret-4");
+      const offlineSigner = keplr.getOfflineSignerOnlyAmino("secret-4");
+      const enigmaUtils = keplr.getEnigmaUtils("secret-4");
       const accounts = await offlineSigner?.getAccounts();
 
       if (
@@ -171,6 +164,11 @@ export const useSwapForm = () => {
   // then, we allow the user to execute the swap
 
   const handleSwapClick = async () => {
+    const keplr = (window as unknown as Window).keplr;
+    if (!isNotNullish(keplr)) {
+      alert("Keplr extension not detected.");
+      return;
+    }
     showDebugAlert();
     if (payToken === undefined || receiveToken === undefined) {
       toast.error("Pay or receive token is undefined");
@@ -187,16 +185,16 @@ export const useSwapForm = () => {
       return;
     }
 
-    if (window.keplr === undefined) {
+    if (!isNotNullish(keplr)) {
       alert("Keplr is not installed");
       return;
     }
 
-    const inputViewingKey = await window.keplr.getSecret20ViewingKey(
+    const inputViewingKey = await keplr.getSecret20ViewingKey(
       "secret-4",
       getApiTokenAddress(payToken)
     );
-    const outputViewingKey = await window.keplr.getSecret20ViewingKey(
+    const outputViewingKey = await keplr.getSecret20ViewingKey(
       "secret-4",
       getApiTokenAddress(receiveToken)
     );
@@ -221,10 +219,10 @@ export const useSwapForm = () => {
       };
 
       // Check if sequence number is available
-      const sequence = baseAccount.sequence
+      const sequence = isNotNullish(baseAccount.sequence)
         ? parseInt(baseAccount.sequence, 10)
         : null;
-      const accountNumber = baseAccount.account_number
+      const accountNumber = isNotNullish(baseAccount.account_number)
         ? parseInt(baseAccount.account_number, 10)
         : null;
 
@@ -449,7 +447,7 @@ RawData: ${JSON.stringify(
 
   return {
     swappableTokens,
-    chartData,
+    // chartData,
     payDetails,
     payToken,
     receiveDetails,

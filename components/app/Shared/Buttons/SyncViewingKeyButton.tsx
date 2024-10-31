@@ -1,6 +1,8 @@
 import React from "react";
 import { useViewingKeyStore } from "@/store/viewingKeyStore2";
 import { SecretString } from "@/types";
+import { Window } from "@keplr-wallet/types";
+import isNotNullish from "@/utils/isNotNullish";
 
 const SyncViewingKeyButton = ({
   tokenAddress,
@@ -11,7 +13,7 @@ const SyncViewingKeyButton = ({
 
   const handleSyncViewingKey = async () => {
     try {
-      if (!window.keplr) {
+      if (!(window as unknown as Window).keplr) {
         alert("Keplr extension not detected.");
         return;
       }
@@ -26,17 +28,18 @@ const SyncViewingKeyButton = ({
       // Request the user's permission to fetch the viewing key
       const chainId = process.env["NEXT_PUBLIC_CHAIN_ID"];
       const viewingKey = await (
-        window.keplr as unknown as {
-          getSecret20ViewingKey: (
-            chainId: string,
-            contractAddress: string
-          ) => Promise<string>;
-        }
-      ).getSecret20ViewingKey(chainId, tokenAddress);
+        window as unknown as Window
+      ).keplr?.getSecret20ViewingKey(chainId, tokenAddress);
 
       // Store the viewing key in the Zustand store
-      setViewingKey(tokenAddress, viewingKey);
-      alert("Viewing key synchronized successfully.");
+      if (isNotNullish(viewingKey)) {
+        setViewingKey(tokenAddress, viewingKey);
+        alert("Viewing key synchronized successfully.");
+      } else {
+        alert(
+          "Failed to sync the viewing key. Make sure the token is registered in Keplr."
+        );
+      }
     } catch (error) {
       console.error("Error fetching viewing key:", error);
       alert(
