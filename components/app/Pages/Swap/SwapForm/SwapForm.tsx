@@ -107,7 +107,7 @@ const SwapForm: React.FC = () => {
         // outputToken={receiveToken?.address ?? ""}
         secretjs={secretClient ?? null}
       />
-      <FormButton onClick={handleSwapClick} text="Swap" />
+      <FormButton onClick={() => void handleSwapClick()} text="Swap" />
     </div>
   );
 };
