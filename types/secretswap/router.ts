@@ -27,4 +27,4 @@ export type ExecuteMsg =
 
 // Query
 
-export type QueryMsg = { supported_tokens: {} };
+export type QueryMsg = { supported_tokens: object };

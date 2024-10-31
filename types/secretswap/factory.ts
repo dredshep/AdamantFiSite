@@ -42,8 +42,8 @@ export type ExecuteMsg =
 // Query
 
 export type QueryMsg =
-  | { config: {} }
-  | { pair_settings: {} }
+  | { config: object }
+  | { pair_settings: object }
   | { pair: { asset_infos: [AssetInfo, AssetInfo] } }
   | { pairs: { start_after?: [AssetInfo, AssetInfo]; limit?: number } };
 

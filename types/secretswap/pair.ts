@@ -30,17 +30,17 @@ export type Cw20HookMsg =
       };
     }
   | {
-      withdraw_liquidity: {};
+      withdraw_liquidity: object;
     };
 
 // Query
 
 export type QueryMsg =
   | {
-      pair: {};
+      pair: object;
     }
   | {
-      pool: {};
+      pool: object;
     }
   | {
       simulation: {
