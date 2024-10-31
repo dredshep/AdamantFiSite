@@ -67,7 +67,7 @@ export default function TokensPage() {
                             <TokenDisplay
                               seed={token.address}
                               name={token.name}
-                              network={token.network}
+                              // network={token.network}
                             />
                           ),
                           minWidth: "240px",

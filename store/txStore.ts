@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { TxResponse } from "secretjs";
+import { TxResponse, TxResultCode } from "secretjs";
 
 interface TxStoreState {
   pending: boolean;
@@ -23,7 +23,7 @@ export const useTxStore = create<TxStoreState>((set) => ({
   setResult: (result) =>
     set(() => ({
       result,
-      isSuccess: result.code === 0,
+      isSuccess: result.code === TxResultCode.Success,
       pending: false, // Automatically set pending to false when result is set
     })),
 

@@ -1,0 +1,7 @@
+{
+  // Remove these lines
+  // "eslint.experimental.useFlatConfig": true,
+  // "eslint.options": {
+  //   "overrideConfigFile": "eslint.config.js"
+  // }
+}

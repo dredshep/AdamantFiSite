@@ -6,9 +6,9 @@ export async function queryFactoryPair(
   secretjs: SecretNetworkClient,
   factory_contract: ContractInfo,
   asset0: AssetInfo,
-  asset1: AssetInfo,
+  asset1: AssetInfo
 ): Promise<Pair> {
-  let query: QueryMsg = {
+  const query: QueryMsg = {
     pair: { asset_infos: [asset0, asset1] },
   };
 

@@ -1,0 +1,5 @@
+node_modules/**
+.next/**
+out/**
+postcss.config.js
+next.config.js 

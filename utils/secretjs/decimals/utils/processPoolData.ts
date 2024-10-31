@@ -11,7 +11,7 @@ interface TokenData {
 
 export const processPoolsData = async (
   secretjs: SecretNetworkClient,
-  fullPoolsData: FullPoolsData[],
+  fullPoolsData: FullPoolsData,
   onError: (error: string) => void,
   setTokenDetails: Dispatch<SetStateAction<TokenData[]>>
 ): Promise<void> => {
@@ -20,7 +20,7 @@ export const processPoolsData = async (
   const sSCRTAddress = "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek";
 
   const fetchTokenDetails = async (
-    asset: FullPoolsData["query_result"]["assets"][0],
+    asset: FullPoolsData[number]["query_result"]["assets"][0],
     expectedTokenName: string
   ): Promise<TokenData | null> => {
     if ("native_token" in asset.info) {
@@ -61,7 +61,9 @@ export const processPoolsData = async (
       return [];
     }
     return pool.query_result.assets.map((asset, index) =>
-      fetchTokenDetails(asset, pairNames[index])
+      pairNames[index] !== undefined
+        ? fetchTokenDetails(asset, pairNames[index])
+        : null
     );
   });
 

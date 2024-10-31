@@ -34,7 +34,7 @@ export default function TokensPage() {
         <TableHeaders
           headers={[
             { title: "Token", minWidth: "240px" },
-            { title: "Price" },
+            // { title: "Price" },
             { title: "Change" },
             { title: "TVL" },
             { title: "Volume" },
@@ -55,12 +55,12 @@ export default function TokensPage() {
                       <TokenDisplay
                         seed={token.address}
                         name={token.name}
-                        network={token.network}
+                        // network={token.network}
                       />
                     ),
                     minWidth: "240px",
                   },
-                  { content: token.price, bold: true },
+                  // { content: token.price, bold: true },
                   {
                     content: token.change,
                     modifier: token.change.startsWith("-")

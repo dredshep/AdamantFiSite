@@ -1,5 +1,6 @@
 import { SecretNetworkClient } from "secretjs";
 import { ContractPool } from "@/types/ContractPool";
+import isNotNullish from "../isNotNullish";
 
 export const queryPools = async (
   secretjs: SecretNetworkClient,
@@ -12,7 +13,7 @@ export const queryPools = async (
 
   try {
     let code_hash: string | undefined;
-    if (contractCodeHash) {
+    if (isNotNullish(contractCodeHash)) {
       code_hash = contractCodeHash;
     } else {
       const { code_hash: hash } =
@@ -21,11 +22,23 @@ export const queryPools = async (
         });
       code_hash = hash;
     }
-    const queryResult = (await secretjs.query.compute.queryContract({
-      contract_address: contractAddress,
-      query: queryMsg,
-      code_hash,
-    })); // Update the expected result type accordingly
+    const queryResult = await secretjs.query.compute.queryContract<
+      typeof queryMsg,
+      {
+        assets: ContractPool[];
+      }
+    >(
+      isNotNullish(code_hash)
+        ? {
+            contract_address: contractAddress,
+            query: queryMsg,
+            code_hash,
+          }
+        : {
+            contract_address: contractAddress,
+            query: queryMsg,
+          }
+    ); // Update the expected result type accordingly
 
     console.log(
       "Query result:",
@@ -33,13 +46,15 @@ export const queryPools = async (
     );
 
     // If the structure is not known, log the entire result for inspection
-    if (!queryResult || typeof queryResult !== "object") {
+    if (!isNotNullish(queryResult) || typeof queryResult !== "object") {
       console.error("Unexpected query result format:", queryResult);
       return [];
     }
 
     // Extract the pools from the query result
-    const pools: ContractPool[] = queryResult.assets || [];
+    const pools: ContractPool[] = isNotNullish(queryResult.assets)
+      ? queryResult.assets
+      : [];
     return pools;
   } catch (error) {
     console.error("Error querying contract:", error);

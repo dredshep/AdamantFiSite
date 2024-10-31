@@ -1,15 +1,15 @@
-import { getApiToken } from "@/utils/apis/getSwappableTokens";
-import { getTinyChartData } from "@/utils/apis/getTinyChartData";
+import { ApiToken, getApiToken } from "@/utils/apis/getSwappableTokens";
+// import { getTinyChartData } from "@/utils/apis/getTinyChartData";
 import { SwappableToken } from "@/types/Token";
 import { TokenInputState } from "@/types";
 
-export const fetchSwappableTokens = async (): Promise<SwappableToken[]> => {
+export const fetchSwappableTokens = async (): Promise<ApiToken[]> => {
   return await getApiToken();
 };
 
-export const fetchChartData = async (tokenAddress: string) => {
-  return await getTinyChartData(tokenAddress);
-};
+// export const fetchChartData = async (tokenAddress: string) => {
+//   return await getTinyChartData(tokenAddress);
+// };
 
 export const calculatePriceImpact = (amount: string): string => {
   return (parseFloat(amount) * 0.007).toFixed(4);

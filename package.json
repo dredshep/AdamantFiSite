@@ -39,7 +39,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "decimal.js": "^10.4.3",
-    "eslint": "^9.13.0",
+    "eslint": "8",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.362.0",
     "marked": "^12.0.2",

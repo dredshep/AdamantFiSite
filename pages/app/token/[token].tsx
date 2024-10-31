@@ -7,6 +7,7 @@ import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaCh
 import { VisualizationSpec } from "react-vega";
 import { Token } from "@/types";
 import { getApiToken } from "@/utils/apis/getSwappableTokens";
+import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 
 // Mock token details data
 // const tokenDetails = {
@@ -46,12 +47,12 @@ const TokenPage = () => {
   const details = rawDetails
     ? {
         name: rawDetails.name,
-        network: rawDetails.network ?? "Unknown",
-        totalVolumeLocked: rawDetails.balance ?? "N/A",
-        marketCap: rawDetails.balance ?? "N/A",
-        fdv: rawDetails.balance ?? "N/A",
-        dailyVolume: rawDetails.balance ?? "N/A",
-        about: rawDetails.description ?? "No description available.",
+        // network: rawDetails.network ?? "Unknown",
+        // totalVolumeLocked: rawDetails.balance ?? "N/A",
+        // marketCap: rawDetails.balance ?? "N/A",
+        // fdv: rawDetails.balance ?? "N/A",
+        // dailyVolume: rawDetails.balance ?? "N/A",
+        // about: rawDetails.description ?? "No description available.",
       }
     : null;
 
@@ -74,7 +75,7 @@ const TokenPage = () => {
           </div>
 
           {/* Statistics Box */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <h2 className="text-xl font-bold mb-4">Statistics</h2>
             <table className="w-full">
               <tbody>
@@ -96,7 +97,7 @@ const TokenPage = () => {
                 </tr>
               </tbody>
             </table>
-          </div>
+          </div> */}
 
           {/* My Transactions Box (Placeholder) */}
           <div className="mb-8">
@@ -107,14 +108,14 @@ const TokenPage = () => {
           {/* Swap Form Placeholder */}
           <div className="mb-8">
             <h2 className="text-xl font-bold mb-4">Swap</h2>
-            {/* Your Swap Form Component */}
+            <SwapForm />
           </div>
 
           {/* About Text */}
-          <div>
+          {/* <div>
             <h2 className="text-xl font-bold mb-4">About {details.name}</h2>
             <div>{details.about}</div>
-          </div>
+          </div> */}
         </div>
       </div>
     </AppLayout>

@@ -1,3 +1,4 @@
+import isNotNullish from "../isNotNullish";
 import { queryFactoryPairs } from "./getFactoryPairs";
 import { queryPool } from "./getPairPool";
 import { PoolResponse } from "@/types/api/Pair";
@@ -8,8 +9,8 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 export async function queryPools() {
   if (
-    cachedPools &&
-    cacheTimestamp &&
+    isNotNullish(cachedPools) &&
+    isNotNullish(cacheTimestamp) &&
     Date.now() - cacheTimestamp < CACHE_DURATION
   ) {
     console.log("Returning cached pools.");

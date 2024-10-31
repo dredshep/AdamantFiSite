@@ -7,7 +7,7 @@ export async function queryFactoryPairs(
   factory_contract: ContractInfo,
   limit: number = 100,
 ): Promise<Pair[]> {
-  let query: QueryMsg = {
+  const query: QueryMsg = {
     pairs: { limit },
   };
 

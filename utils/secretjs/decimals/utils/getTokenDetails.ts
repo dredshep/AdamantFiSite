@@ -1,3 +1,4 @@
+import isNotNullish from "@/utils/isNotNullish";
 import { TokenInfoResponse } from "@shadeprotocol/shadejs";
 import { SecretNetworkClient } from "secretjs";
 
@@ -21,8 +22,7 @@ export const getTokenDetails = async (
     const tokenInfoResponse = response as TokenInfoResponse;
 
     if (
-      tokenInfoResponse &&
-      tokenInfoResponse.token_info &&
+      isNotNullish(tokenInfoResponse?.token_info) &&
       typeof tokenInfoResponse.token_info.decimals === "number"
     ) {
       return {

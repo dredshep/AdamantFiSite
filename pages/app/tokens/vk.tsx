@@ -11,6 +11,8 @@ import {
 } from "@/components/app/Shared/Tables/FinancialTable";
 import { useEffect, useState } from "react";
 import { getTableTokens } from "@/utils/apis/getTableTokens";
+import isNotNullish from "@/utils/isNotNullish";
+import { Window } from "@keplr-wallet/types";
 
 export default function TokensPage() {
   const [tokens, setTokens] = useState<TableToken[]>([]);
@@ -22,11 +24,11 @@ export default function TokensPage() {
       console.log({ tableTokens });
       setTokens(tableTokens);
 
-      if (!window.keplr) {
+      if (!isNotNullish((window as unknown as Window).keplr)) {
         alert("Keplr extension not installed");
         return;
       }
-      await window.keplr.enable(chainId);
+      await (window as unknown as Window).keplr?.enable(chainId);
     }
     void main();
   }, []);
@@ -67,7 +69,7 @@ export default function TokensPage() {
                         <TokenDisplay
                           seed={token.address}
                           name={token.name}
-                          network={token.network}
+                          // network={token.network}
                         />
                       ),
                       minWidth: "240px",

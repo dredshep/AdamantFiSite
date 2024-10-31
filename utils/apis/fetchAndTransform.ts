@@ -4,6 +4,6 @@ export async function fetchAndTransform<T>(
   transformer: (data: any) => T = (data) => data as T
 ): Promise<T> {
   const response = await fetch(url);
-  const data = await response.json();
+  const data = (await response.json()) as T;
   return transformer(data);
 }
