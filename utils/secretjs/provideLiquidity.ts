@@ -31,27 +31,30 @@ export async function provideLiquidity(
   pair_contract: ContractInfo,
   asset0: Asset,
   asset1: Asset,
-  slippage_tolerance?: string
+  slippage_tolerance?: string,
 ) {
   const provide_liquidity: ExecuteMsg = isNotNullish(slippage_tolerance)
     ? {
-        provide_liquidity: {
-          assets: [asset0, asset1],
-          slippage_tolerance,
-        },
-      }
+      provide_liquidity: {
+        assets: [asset0, asset1],
+        slippage_tolerance,
+      },
+    }
     : {
-        provide_liquidity: {
-          assets: [asset0, asset1],
-        },
-      };
+      provide_liquidity: {
+        assets: [asset0, asset1],
+      },
+    };
 
-  const tx = await secretjs.tx.compute.executeContract({
-    sender: secretjs.address,
-    contract_address: pair_contract.address,
-    code_hash: pair_contract.code_hash,
-    msg: provide_liquidity,
-  });
+  const tx = await secretjs.tx.compute.executeContract(
+    {
+      sender: secretjs.address,
+      contract_address: pair_contract.address,
+      code_hash: pair_contract.code_hash,
+      msg: provide_liquidity,
+    },
+    { gasLimit: 500_000 },
+  );
 
   console.debug(JSON.stringify(tx, null, 4));
 
