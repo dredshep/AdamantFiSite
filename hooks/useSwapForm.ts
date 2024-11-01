@@ -35,17 +35,18 @@ import {
 import { toast } from "react-toastify";
 import isNotNullish from "@/utils/isNotNullish";
 import { Window } from "@keplr-wallet/types";
+import { getCodeHashByAddress } from "@/utils/secretjs/getCodeHashByAddress";
 
 export const useSwapForm = () => {
   const [swappableTokens, setSwappableTokens] = useState<ApiToken[]>([]);
   const { swapTokenInputs: tokenInputs } = useSwapStore();
   const payDetails = tokenInputs["swap.pay"];
   const payToken = useTokenStore(
-    (state) => state.tokens?.[payDetails.tokenAddress]
+    (state) => state.tokens?.[payDetails.tokenAddress],
   );
   const receiveDetails = tokenInputs["swap.receive"];
   const receiveToken = useTokenStore(
-    (state) => state.tokens?.[receiveDetails.tokenAddress]
+    (state) => state.tokens?.[receiveDetails.tokenAddress],
   );
   const slippage = useSwapStore((state) => state.sharedSettings.slippage);
   const gas = useSwapStore((state) => state.sharedSettings.gas);
@@ -130,7 +131,7 @@ export const useSwapForm = () => {
       const paths = findPaths(
         tokenPoolMap,
         payToken.address,
-        receiveToken.address
+        receiveToken.address,
       );
 
       if (paths.length === 0) {
@@ -141,7 +142,7 @@ export const useSwapForm = () => {
       const bestPathEstimation = await estimateBestPath(
         secretjs,
         paths,
-        amountInDecimal
+        amountInDecimal,
       );
 
       if (bestPathEstimation) {
@@ -192,11 +193,11 @@ export const useSwapForm = () => {
 
     const inputViewingKey = await keplr.getSecret20ViewingKey(
       "secret-4",
-      getApiTokenAddress(payToken)
+      getApiTokenAddress(payToken),
     );
     const outputViewingKey = await keplr.getSecret20ViewingKey(
       "secret-4",
-      getApiTokenAddress(receiveToken)
+      getApiTokenAddress(receiveToken),
     );
 
     if (inputViewingKey === undefined || outputViewingKey === undefined) {
@@ -234,25 +235,25 @@ export const useSwapForm = () => {
         // TODO: explicitSignerData is probably not needed. I think secretjs handles this.
         ...(sequence !== null && accountNumber !== null
           ? {
-              explicitSignerData: {
-                accountNumber: accountNumber,
-                sequence: sequence,
-                chainId: "secret-4",
-              },
-            }
+            explicitSignerData: {
+              accountNumber: accountNumber,
+              sequence: sequence,
+              chainId: "secret-4",
+            },
+          }
           : {}),
       };
 
       const decimalsIn = getTokenDecimals(getApiTokenAddress(payToken));
       if (decimalsIn === undefined) {
         throw new Error(
-          `Decimals for token ${payToken.address} could not be determined`
+          `Decimals for token ${payToken.address} could not be determined`,
         );
       }
       const decimalsOut = getTokenDecimals(getApiTokenAddress(receiveToken));
       if (decimalsOut === undefined) {
         throw new Error(
-          `Decimals for token ${receiveToken.address} could not be determined`
+          `Decimals for token ${receiveToken.address} could not be determined`,
         );
       }
 
@@ -300,7 +301,7 @@ export const useSwapForm = () => {
 
           console.log(`Hop ${i + 1} on pool ${poolAddress}`);
           console.log(
-            `Swapping ${inputTokenAddress} for ${outputTokenAddress}`
+            `Swapping ${inputTokenAddress} for ${outputTokenAddress}`,
           );
         }
 
@@ -314,7 +315,7 @@ export const useSwapForm = () => {
                 to: walletAddress,
                 hops,
                 expected_return,
-              })
+              }),
             ),
           },
         };
@@ -331,7 +332,7 @@ export const useSwapForm = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions
+          txOptions,
         );
       } else {
         console.log("Single hop. Using Pair contract directly.");
@@ -365,20 +366,19 @@ export const useSwapForm = () => {
         // gasLimit could be changed depending on single swap or multi hop
         txOptions.gasLimit = 500_000;
 
-        // FIXME: hardcoded contract_address and code_hash to sSCRT
         result = await secretjs.tx.snip20.send(
           {
             sender: walletAddress!,
             contract_address: inputTokenAddress!,
-            code_hash:
-              "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
+            code_hash: getCodeHashByAddress(inputTokenAddress!),
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions
+          txOptions,
         );
       }
 
+      setPending(false);
       setResult(result);
 
       console.log("Transaction Result:", result);
@@ -417,30 +417,30 @@ Slippage: ${slippage}
 Gas: ${gas}
 
 Price Impact: ${priceImpact}% = ${(
-      (parseFloat(priceImpact) / 100) *
-      parseFloat(payDetails.amount)
-    ).toFixed(4)} ${getApiTokenSymbol(payToken)}
+        (parseFloat(priceImpact) / 100) *
+        parseFloat(payDetails.amount)
+      ).toFixed(4)} ${getApiTokenSymbol(payToken)}
 TX Fee: ${txFee} ${getApiTokenSymbol(payToken)} = ${(
-      (parseFloat(txFee) / parseFloat(payDetails.amount)) *
-      100
-    ).toFixed(2)}%
+        (parseFloat(txFee) / parseFloat(payDetails.amount)) *
+        100
+      ).toFixed(2)}%
 Min Receive: ${minReceive} ${getApiTokenSymbol(receiveToken)}
 
 RawData: ${JSON.stringify(
-      {
-        payToken,
-        payDetails,
-        receiveToken,
-        receiveDetails,
-        slippage,
-        gas,
-        priceImpact,
-        txFee,
-        minReceive,
-      },
-      null,
-      2
-    )}`;
+        {
+          payToken,
+          payDetails,
+          receiveToken,
+          receiveDetails,
+          slippage,
+          gas,
+          priceImpact,
+          txFee,
+          minReceive,
+        },
+        null,
+        2,
+      )}`;
 
     alert(alertMessage);
   };
