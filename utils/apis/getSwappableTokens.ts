@@ -1,11 +1,5 @@
-// import { SwappableToken } from "@/types/Token";
-// import { transformToSwappableToken } from "./transformToSwappableToken";
-// import getUrl from "./getUrl";
-// import { AzureTokensToken } from "@/types/api/azure/tokens";
-// import { SecretToken } from "@/types/api/azure/secret_tokens";
-// import axios from "axios";
-import fullApiTokenOutput from "@/outputs/fullApiTokenOutput.json";
-import { SecretString } from "@/types";
+import fullApiTokenOutput from '@/outputs/fullApiTokenOutput.json';
+import { SecretString } from '@/types';
 export interface ApiToken {
   src_network?: SrcNetwork;
   src_coin?: string;
@@ -39,30 +33,24 @@ export interface DisplayProps {
 }
 
 export enum DstNetwork {
-  Secret = "Secret",
+  Secret = 'Secret',
 }
 
 export enum SrcNetwork {
-  BinanceSmartChain = "BinanceSmartChain",
-  Ethereum = "Ethereum",
+  BinanceSmartChain = 'BinanceSmartChain',
+  Ethereum = 'Ethereum',
 }
 
 export enum Usage {
-  Lpstaking = "LPSTAKING",
-  Swap = "SWAP",
+  Lpstaking = 'LPSTAKING',
+  Swap = 'SWAP',
 }
-export const getApiToken = async () =>
-  Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
+export const getApiToken = async () => Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
 
 export const getApiTokenAddress = (token: ApiToken) =>
   (token.dst_address ?? token.address!) as SecretString;
 
-export const getApiTokenSymbol = (token: ApiToken): string =>
-  token.display_props.symbol;
+export const getApiTokenSymbol = (token: ApiToken): string => token.display_props.symbol;
 
-export const getTokenFromAddress = (
-  address: SecretString
-): ApiToken | undefined =>
-  (fullApiTokenOutput as ApiToken[]).find(
-    (token) => getApiTokenAddress(token) === address
-  );
+export const getTokenFromAddress = (address: SecretString): ApiToken | undefined =>
+  (fullApiTokenOutput as ApiToken[]).find((token) => getApiTokenAddress(token) === address);
