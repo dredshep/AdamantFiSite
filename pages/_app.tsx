@@ -1,15 +1,15 @@
-import "@radix-ui/themes/styles.css";
 import "@/styles/globals.css";
+import "@radix-ui/themes/styles.css";
 import type { AppProps } from "next/app";
 // import { Theme } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
-import {
-  ApiToken,
-  getApiToken,
-  getApiTokenAddress,
-} from "@/utils/apis/getSwappableTokens";
 import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
+import {
+  ApiToken,
+  getApiTokenAddress,
+  getApiTokens,
+} from "@/utils/apis/getSwappableTokens";
+import { useEffect, useState } from "react";
 // import { SwappableToken } from "@/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -32,7 +32,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   useEffect(() => {
     const fetchTokens = async () => {
-      const tokens = await getApiToken();
+      const tokens = await getApiTokens();
       setSwappableTokens(tokens);
       const indexedTokens = tokens.reduce(
         (acc: Record<string, ApiToken>, token) => {

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import { usePoolStore } from "@/store/forms/poolStore";
+import { Pair } from "@/types/api/Factory";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
 import {
   ApiToken,
-  getApiToken,
+  getApiTokens,
   getApiTokenSymbol,
 } from "@/utils/apis/getSwappableTokens";
-import { Pair } from "@/types/api/Factory";
-import { usePoolStore } from "@/store/forms/poolStore";
+import * as Dialog from "@radix-ui/react-dialog";
+import React, { useEffect, useState } from "react";
 import TokenSelectionSearchBar from "../TokenSelectionModal/TokenSelectionSearchBar";
 
 interface PoolInfo {
@@ -26,7 +26,7 @@ const PoolSelectionModal: React.FC = () => {
       try {
         const [pairs, tokens] = await Promise.all([
           queryFactoryPairs(),
-          getApiToken(),
+          getApiTokens(),
         ]);
 
         const poolsWithTokenInfo = pairs

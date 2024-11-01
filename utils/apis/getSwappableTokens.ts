@@ -51,7 +51,12 @@ export enum Usage {
   Lpstaking = "LPSTAKING",
   Swap = "SWAP",
 }
-export const getApiToken = async () =>
+
+// export const getChainPools = async () => {
+//   const tokens = await getApiTokens();
+// }
+
+export const getApiTokens = async () =>
   Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
 
 export const getApiTokenAddress = (token: ApiToken) =>

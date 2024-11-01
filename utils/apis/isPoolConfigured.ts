@@ -1,7 +1,7 @@
 import { TablePool } from "@/types";
 import { Pair } from "@/types/api/Factory";
 import { queryFactoryPairs } from "./getFactoryPairs";
-import { ApiToken, getApiToken } from "./getSwappableTokens";
+import { ApiToken, getApiTokens } from "./getSwappableTokens";
 
 interface PoolValidationResult {
   isValid: boolean;
@@ -60,7 +60,7 @@ export async function validatePools(
     // Fetch data once
     const [pairs, tokens] = await Promise.all([
       queryFactoryPairs(),
-      getApiToken(),
+      getApiTokens(),
     ]);
 
     const context: ValidationContext = { pairs, tokens };

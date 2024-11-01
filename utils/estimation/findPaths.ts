@@ -1,49 +1,61 @@
 import { Path, TokenPoolMap } from "@/types/estimation";
-import { fetchPoolData } from ".";
+import { SecretNetworkClient } from "secretjs";
+import { prepareGraph } from "./prepareGraph";
+import { PriorityQueue } from "./PriorityQueue";
 
-export const findPaths = (
+export const findOptimalPath = async (
   tokenPoolMap: TokenPoolMap,
   startToken: string,
   endToken: string,
-  maxHops: number = 3
-): Path[] => {
-  const paths: Path[] = [];
-  // Set to keep track of visited tokens to avoid infinite loops
-  const visited: Set<string> = new Set();
+  secretjs: SecretNetworkClient
+): Promise<Path> => {
+  const { edges, tokens } = await prepareGraph(tokenPoolMap, secretjs);
 
-  // Depth-first search to find all paths
-  const dfs = async (currentToken: string, path: Path, hops: number) => {
-    if (hops > maxHops || visited.has(currentToken)) return;
+  const distances: { [token: string]: number } = {};
+  const previous: { [token: string]: { token: string; pool: string } | null } =
+    {};
+  const queue = new PriorityQueue<{ token: string; cost: number }>(
+    (a, b) => a.cost - b.cost
+  );
+
+  // Initialize distances and previous nodes
+  tokens.forEach((token) => {
+    distances[token] = Infinity;
+    previous[token] = null;
+  });
+  distances[startToken] = 0;
+  queue.enqueue({ token: startToken, cost: 0 });
+
+  while (!queue.isEmpty()) {
+    const { token: currentToken } = queue.dequeue()!;
     if (currentToken === endToken) {
-      paths.push({ pools: [...path.pools], tokens: [...path.tokens] });
-      return;
+      break; // Found the shortest path to the end token
     }
 
-    const fullPoolsData = await fetchPoolData();
-    visited.add(currentToken);
+    const adjacentEdges = edges.filter((edge) => edge.from === currentToken);
+    for (const edge of adjacentEdges) {
+      const alt = distances[currentToken]! + edge.weight;
+      if (alt < distances[edge.to]!) {
+        distances[edge.to] = alt;
+        previous[edge.to] = { token: currentToken, pool: edge.poolAddress };
+        queue.enqueue({ token: edge.to, cost: alt });
+      }
+    }
+  }
 
-    const pools = tokenPoolMap[currentToken] ?? [];
-    pools.forEach((poolAddress) => {
-      const poolTokens = fullPoolsData
-        .find((pool) => pool.contract_address === poolAddress)
-        ?.query_result.assets.filter((asset) => asset.info.token !== undefined)
-        .map((asset) => asset.info.token!.contract_addr);
+  // Reconstruct the optimal path
+  const pathTokens: string[] = [];
+  const pathPools: string[] = [];
+  let currentToken = endToken;
+  while (previous[currentToken]) {
+    pathTokens.unshift(currentToken);
+    pathPools.unshift(previous[currentToken]!.pool);
+    currentToken = previous[currentToken]!.token;
+  }
+  if (currentToken !== startToken) {
+    throw new Error("No path found between the specified tokens.");
+  }
+  pathTokens.unshift(startToken);
 
-      poolTokens?.forEach((nextToken) => {
-        if (nextToken !== currentToken) {
-          path.pools.push(poolAddress);
-          path.tokens.push(nextToken);
-          void dfs(nextToken, path, hops + 1);
-          path.pools.pop();
-          path.tokens.pop();
-        }
-      });
-    });
-
-    visited.delete(currentToken);
-  };
-
-  void dfs(startToken, { pools: [], tokens: [startToken] }, 0);
-
-  return paths;
+  return { tokens: pathTokens, pools: pathPools };
 };

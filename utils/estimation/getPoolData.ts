@@ -2,6 +2,7 @@ import { PoolData, PoolQueryResponse } from "@/types/estimation";
 import Decimal from "decimal.js";
 import { SecretNetworkClient } from "secretjs";
 import { getTokenDecimals } from "../apis/tokenInfo";
+import isNotNullish from "../isNotNullish";
 
 export const getPoolData = async (
   secretjs: SecretNetworkClient,
@@ -21,12 +22,15 @@ export const getPoolData = async (
 
   const reserves = response.assets.reduce(
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
+      if (!isNotNullish(asset.info.token)) {
+        return acc;
+      }
       const decimals =
         asset.info.token?.contract_addr ===
         "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
           ? 6
           : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
-      console.log({ decimals });
+      // console.log({ decimals });
       acc[asset.info.token.contract_addr] = {
         amount: new Decimal(asset.amount),
         decimals,

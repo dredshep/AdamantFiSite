@@ -1,33 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
-import Decimal from "decimal.js";
-// import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
+import { useSwapForm } from "@/hooks/useSwapForm";
+import { PathEstimation } from "@/types/estimation";
 import {
   buildTokenPoolMap,
-  findPaths,
   estimateBestPath,
-} from "@/utils/estimation"; // Assuming these functions are extracted to a utility file
+  findOptimalPath,
+} from "@/utils/estimation";
 import { fetchPoolData } from "@/utils/estimation/fetchPoolData";
-import { PathEstimation } from "@/pages/app/testing/estimate/a";
+import Decimal from "decimal.js";
 import Image from "next/image";
-import { useSwapForm } from "@/hooks/useSwapForm";
+import { useEffect, useState } from "react";
+import { SecretNetworkClient } from "secretjs";
 
 interface BestRouteEstimatorProps {
   secretjs: SecretNetworkClient | null;
-  // inputToken: string;
-  // outputToken: string;
-  // amountIn: string;
 }
 
-function BestRouteEstimator({
-  secretjs,
-}: // inputToken,
-// outputToken,
-// amountIn,
-BestRouteEstimatorProps) {
+function BestRouteEstimator({ secretjs }: BestRouteEstimatorProps) {
   const { payDetails, receiveDetails } = useSwapForm();
   const [bestPathEstimation, setBestPathEstimation] =
     useState<PathEstimation | null>(null);
+
   useEffect(() => {
     const handleEstimate = async () => {
       console.log(`\n--- Estimating best path ---`);
@@ -35,69 +27,47 @@ BestRouteEstimatorProps) {
       console.log(`Output Token: ${receiveDetails.tokenAddress}`);
       console.log(`Amount In: ${payDetails.amount}`);
       console.log(`--- Step 1: Fetching pool data ---`);
-      const fullPoolsData = await fetchPoolData();
-
-      // Validate payDetails before proceeding
-      const amountIn = payDetails.amount?.trim(); // Trim whitespace
       if (
-        secretjs !== null &&
-        amountIn !== null &&
-        payDetails.tokenAddress !== null &&
-        receiveDetails.tokenAddress !== null &&
-        !isNaN(Number(amountIn)) && // Check if amount is a valid number
-        amountIn !== "" && // Ensure it's not an empty string
-        Number(amountIn) > 0 // Ensure it's a positive number
+        secretjs &&
+        payDetails.amount &&
+        payDetails.tokenAddress &&
+        receiveDetails.tokenAddress &&
+        !isNaN(Number(payDetails.amount)) &&
+        Number(payDetails.amount) > 0
       ) {
         console.log(`--- Step 2: Building token pool map ---`);
-        const amountInDecimal = new Decimal(amountIn);
-        const tokenPoolMap = buildTokenPoolMap(fullPoolsData);
-        console.log(`--- Step 3: Finding paths ---`);
-        const paths = findPaths(
-          tokenPoolMap,
-          payDetails.tokenAddress,
-          receiveDetails.tokenAddress
-        );
+        const amountInDecimal = new Decimal(payDetails.amount.trim());
+        console.log(`--- Step 3: Finding optimal path ---`);
+        const tokenPoolMap = buildTokenPoolMap(await fetchPoolData());
 
-        if (paths.length === 0) {
-          console.log("No available paths found for the selected tokens.");
-          return;
+        try {
+          const optimalPath = await findOptimalPath(
+            tokenPoolMap,
+            payDetails.tokenAddress,
+            receiveDetails.tokenAddress,
+            secretjs
+          );
+
+          const estimation = await estimateBestPath(
+            secretjs,
+            [optimalPath],
+            amountInDecimal
+          );
+          setBestPathEstimation(estimation);
+        } catch (error) {
+          console.error("Error finding optimal path:", error);
         }
-
-        const estimation = await estimateBestPath(
-          secretjs,
-          paths,
-          amountInDecimal
-        );
-        setBestPathEstimation(estimation);
       } else {
         console.error("Invalid input for estimation:", payDetails);
-        if (amountIn === null || amountIn === "") {
-          console.error("Amount is null or empty.");
-        } else if (isNaN(Number(amountIn))) {
-          console.error("Amount is not a valid number:", amountIn);
-        } else if (Number(amountIn) <= 0) {
-          console.error("Amount must be a positive number:", amountIn);
-        }
       }
     };
 
-    if (
-      secretjs !== null &&
-      payDetails.tokenAddress !== null &&
-      receiveDetails.tokenAddress !== null &&
-      payDetails.amount !== null &&
-      payDetails.amount.trim() !== ""
-    ) {
-      void handleEstimate();
-    } else {
-      // console.error("Invalid input for estimation:", payDetails);
-    }
+    void handleEstimate();
   }, [
     secretjs,
     payDetails.tokenAddress,
     receiveDetails.tokenAddress,
     payDetails.amount,
-    payDetails,
   ]);
 
   return (

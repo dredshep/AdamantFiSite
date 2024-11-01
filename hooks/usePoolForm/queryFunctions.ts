@@ -1,9 +1,9 @@
-import { getTablePools } from "@/utils/apis/getTablePools";
-import { queryPool } from "@/utils/apis/getPairPool";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
-import { getApiToken } from "@/utils/apis/getSwappableTokens";
-import { PoolQueryResult, PairPoolData, SelectedPoolType } from "./types";
+import { queryPool } from "@/utils/apis/getPairPool";
+import { getApiTokens } from "@/utils/apis/getSwappableTokens";
+import { getTablePools } from "@/utils/apis/getTablePools";
 import { setupPoolTokens } from "./poolTokens";
+import { PairPoolData, PoolQueryResult, SelectedPoolType } from "./types";
 
 export async function fetchPoolData(
   poolAddress: string,
@@ -13,7 +13,7 @@ export async function fetchPoolData(
     getTablePools(),
     queryPool(poolAddress),
     queryFactoryPairs(),
-    getApiToken(),
+    getApiTokens(),
   ]);
 
   if (pairData === undefined || typeof pairData !== "object") {

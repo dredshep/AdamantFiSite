@@ -1,13 +1,13 @@
-import { useRouter } from "next/router";
 import AppLayout from "@/components/app/Global/AppLayout";
-import React, { useEffect } from "react";
+import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
+import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
+import { Token } from "@/types";
+import { getApiTokens } from "@/utils/apis/getSwappableTokens";
 import chartSpec from "@/utils/dummyData/lineChart.json";
 import values from "@/utils/dummyData/lineChartValues.json";
-import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
+import { useRouter } from "next/router";
+import React, { useEffect } from "react";
 import { VisualizationSpec } from "react-vega";
-import { Token } from "@/types";
-import { getApiToken } from "@/utils/apis/getSwappableTokens";
-import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
 
 // Mock token details data
 // const tokenDetails = {
@@ -37,7 +37,7 @@ const TokenPage = () => {
   const { token } = router.query;
   const [tokenDetails, setTokenDetails] = React.useState<Token[]>([]);
   useEffect(() => {
-    void getApiToken().then((data) => {
+    void getApiTokens().then((data) => {
       setTokenDetails(data);
     });
   }, []);
