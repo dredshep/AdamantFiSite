@@ -1,7 +1,6 @@
 import fullApiTokenOutput from '@/outputs/fullApiTokenOutput.json';
 import { SecretString } from '@/types';
-import { TokenInfo } from '@/types/api/Factory';
-import { FactoryTokens } from '@/utils/secretjs/getCodeHashByAddress';
+import { SimpleToken, simpleTokens } from './hardcoded/simpleTokens';
 
 export interface ApiToken {
   src_network?: SrcNetwork;
@@ -59,12 +58,25 @@ export const getApiTokenSymbol = (token: ApiToken): string => {
   return token.display_props.symbol;
 };
 
-export const getTokenFromAddress = (address: SecretString): ApiToken | undefined =>
-  (fullApiTokenOutput as ApiToken[]).find((token) => getApiTokenAddress(token) === address);
+export function tokenAddressToApiToken(address: SecretString): ApiToken | undefined {
+  return (fullApiTokenOutput as ApiToken[]).find((token) => getApiTokenAddress(token) === address);
+}
 
-export const transformFactoryTokenToApiToken = (factoryToken: TokenInfo): ApiToken => {
-  const knownToken = FactoryTokens.find(
-    (token) => token.contract_addr === factoryToken.contract_addr
+export function tokenAddressToSimpleToken(address: SecretString): SimpleToken | undefined {
+  return simpleTokens.find((token) => token.contract_addr === address);
+}
+
+export const getTokenFromAddress = (address: SecretString): ApiToken | undefined => {
+  const simpleToken = tokenAddressToSimpleToken(address);
+  if (simpleToken) {
+    return transformSimpleTokenToApiToken(simpleToken);
+  }
+  return tokenAddressToApiToken(address);
+};
+
+export const transformSimpleTokenToApiToken = (simpleToken: SimpleToken): ApiToken => {
+  const knownToken = simpleTokens.find(
+    (token) => token.contract_addr === simpleToken.contract_addr
   );
 
   return {
@@ -77,8 +89,8 @@ export const transformFactoryTokenToApiToken = (factoryToken: TokenInfo): ApiTok
       label: knownToken?.token_name ?? '',
     },
     price: '0',
-    _id: factoryToken.contract_addr,
-    address: factoryToken.contract_addr,
+    _id: simpleToken.contract_addr,
+    address: simpleToken.contract_addr,
     usage: [Usage.Swap],
   };
 };
