@@ -28,6 +28,6 @@ export async function queryFactoryPairs() {
   cachedPairs = pairs;
   cacheTimestamp = Date.now();
 
-  console.log('RETURNING PAIRS', pairs);
+  // console.log('RETURNING PAIRS', pairs);
   return pairs;
 }

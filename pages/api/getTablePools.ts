@@ -18,10 +18,13 @@ const getTablePools = async (
     const pairs = await queryFactoryPairs();
 
     const tablePools: TablePool[] = pairs.map((pair) => {
-      console.log('GETTING SYMBOLS', { pair });
-      const tokenSymbols = pair.asset_infos?.map((token) =>
-        getApiTokenSymbol(getTokenFromAddress(token.token.contract_addr as SecretString)!)
-      );
+      // console.log('GETTING SYMBOLS', { pair: JSON.stringify(pair, null, 2) });
+      const tokenSymbols = pair.asset_infos?.map((token) => {
+        const address = token.token.contract_addr as SecretString;
+        const apiToken = getTokenFromAddress(address);
+        const symbol = apiToken ? getApiTokenSymbol(apiToken) : address.slice(-5);
+        return symbol;
+      });
       const poolName = tokenSymbols.join('-');
       // const tvl = calculateTVL(pair, pricesData);
       // const price = calculatePoolPrice(pair, pricesData);
