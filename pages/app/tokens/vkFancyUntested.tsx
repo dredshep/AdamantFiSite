@@ -12,6 +12,8 @@
 // } from "@/components/app/Shared/Tables/FinancialTable";
 // import { useTokens } from "@/utils/secretjs/useTokensFancyUntested"; // Importing the custom hook
 
+import Link from "next/link";
+
 // export default function TokensPage() {
 //   const { tokens, isLoading, error } = useTokens("secret-4");
 //   const [searchTerm, setSearchTerm] = useState("");
@@ -90,3 +92,12 @@
 //     </AppLayout>
 //   );
 // }
+function RedirectorToHome() {
+  return <Link className="text-adamant-blue" href="/app">
+    Home
+  </Link>;
+}
+
+export default function UnimplementedRedirectorToHome() {
+  return <RedirectorToHome />;
+}
