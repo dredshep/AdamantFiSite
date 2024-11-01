@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { usePoolStore } from "@/store/forms/poolStore";
 import { PoolTokenInputs } from "@/types";
 import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
 import { calculatePriceImpact, calculateTxFee } from "@/utils/swap";
+import { getCodeHashByAddress } from "@/utils/secretjs/getCodeHashByAddress";
+import { provideLiquidity } from "@/utils/secretjs/provideLiquidity";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { fetchPoolData, validatePoolAddress } from "./queryFunctions";
@@ -10,6 +13,10 @@ import type {
   SelectedPoolType,
   UsePoolDepositFormResult,
 } from "./types";
+import { SecretNetworkClient } from "secretjs";
+import { Window } from "@keplr-wallet/types";
+import isNotNullish from "@/utils/isNotNullish";
+import { Asset, ContractInfo } from "@/types/secretswap/shared";
 
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
@@ -17,10 +24,57 @@ interface TokenInputs extends PoolTokenInputs {
 }
 
 export function usePoolForm(
-  poolAddress: string | string[] | undefined
+  poolAddress: string | string[] | undefined,
 ): UsePoolDepositFormResult {
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } =
     usePoolStore();
+
+  const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
+  // const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  // TODO: reduce this code duplication
+  useEffect(() => {
+    const keplr = (window as unknown as Window).keplr;
+    const connectKeplr = async () => {
+      if (!isNotNullish(keplr)) {
+        alert("Please install Keplr extension");
+        return;
+      }
+
+      await keplr.enable("secret-4");
+
+      const offlineSigner = keplr.getOfflineSignerOnlyAmino("secret-4");
+      const enigmaUtils = keplr.getEnigmaUtils("secret-4");
+      const accounts = await offlineSigner?.getAccounts();
+
+      if (
+        accounts !== undefined &&
+        accounts.length === 0 &&
+        accounts[0] === undefined
+      ) {
+        alert("No accounts found");
+        return;
+      }
+      if (offlineSigner === undefined) {
+        alert("No offline signer found");
+        return;
+      }
+
+      const client = new SecretNetworkClient({
+        chainId: "secret-4",
+        url: "https://rpc.ankr.com/http/scrt_cosmos",
+        wallet: offlineSigner,
+        walletAddress: accounts[0]!.address,
+        encryptionUtils: enigmaUtils,
+      });
+
+      // setWalletAddress(accounts[0]!.address);
+
+      setSecretjs(client);
+    };
+
+    void connectKeplr();
+  }, []);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["pool-data", poolAddress],
@@ -53,14 +107,14 @@ export function usePoolForm(
       isLoading === true
         ? "loading"
         : error instanceof Error
-        ? "error"
-        : "success",
+          ? "error"
+          : "success",
     message:
       isLoading === true
         ? "Loading pool data..."
         : error instanceof Error
-        ? error.message
-        : undefined,
+          ? error.message
+          : undefined,
   };
 
   const safeTokenInputs = tokenInputs as unknown as TokenInputs;
@@ -71,40 +125,83 @@ export function usePoolForm(
       if (balance !== undefined && balance !== "" && balance !== null) {
         setTokenInputAmount(
           inputIdentifier as keyof typeof tokenInputs,
-          balance
+          balance,
         );
       }
     }
   };
 
-  const handleDepositClick = (): void => {
+  const handleDepositClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
+    if (!secretjs) return;
 
     const inputIdentifier1 = `pool.deposit.tokenA`;
     const inputIdentifier2 = `pool.deposit.tokenB`;
 
-    const amount1 = safeTokenInputs[inputIdentifier1]?.amount ?? "0";
-    const amount2 = safeTokenInputs[inputIdentifier2]?.amount ?? "0";
+    const amount0 = safeTokenInputs[inputIdentifier1]?.amount ?? "0";
+    const amount1 = safeTokenInputs[inputIdentifier2]?.amount ?? "0";
 
-    if (amount1 === "0" || amount2 === "0") {
+    if (amount0 === "0" || amount1 === "0") {
       toast.error("Please enter an amount for both tokens");
+      return;
+    }
+
+    const address0 = selectedPool.token0.address;
+    const address1 = selectedPool.token1.address;
+
+    if (address0 === undefined || address1 === undefined) {
+      toast.error("Undefined token address");
       return;
     }
 
     const priceImpact = calculatePriceImpact(amount1);
     const txFee = calculateTxFee(amount1);
 
+    // TODO: Map pair address to code_hash. They will all be the same for now.
+    const pairContract: ContractInfo = {
+      address: selectedPool.address,
+      code_hash:
+        "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+    };
+
+    const asset0: Asset = {
+      info: {
+        token: {
+          contract_addr: address0,
+          token_code_hash: getCodeHashByAddress(address0),
+          viewing_key: "SecretSwap",
+        },
+      },
+      amount: amount0,
+    };
+
+    const asset1: Asset = {
+      info: {
+        token: {
+          contract_addr: address1,
+          token_code_hash: getCodeHashByAddress(address1),
+          viewing_key: "SecretSwap",
+        },
+      },
+      amount: amount1,
+    };
+
     console.log("Deposit clicked", {
       pool: selectedPool.address,
       token0: getApiTokenSymbol(selectedPool.token0),
-      amount1,
+      amount0,
       token1: getApiTokenSymbol(selectedPool.token1),
-      amount2,
+      amount1,
       priceImpact,
       txFee,
     });
+
+    const tx = await provideLiquidity(secretjs, pairContract, asset0, asset1);
+
+    // TODO: what to do with the tx response?
   };
 
+  // TODO: make this async
   const handleWithdrawClick = (): void => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
 
@@ -143,14 +240,14 @@ export function usePoolForm(
 
   const typedSelectedPool = selectedPool
     ? {
-        address: selectedPool.address,
-        token0: selectedPool.token0!,
-        token1: selectedPool.token1!,
-        pairInfo: {
-          contract_addr: selectedPool.pairInfo.contract_addr,
-          asset_infos: selectedPool.pairInfo.asset_infos,
-        },
-      }
+      address: selectedPool.address,
+      token0: selectedPool.token0!,
+      token1: selectedPool.token1!,
+      pairInfo: {
+        contract_addr: selectedPool.pairInfo.contract_addr,
+        asset_infos: selectedPool.pairInfo.asset_infos,
+      },
+    }
     : null;
 
   return {
