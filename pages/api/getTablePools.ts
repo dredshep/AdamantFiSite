@@ -1,11 +1,8 @@
-import { SecretString, TablePool } from "@/types";
-import { NextApiRequest, NextApiResponse } from "next";
+import { SecretString, TablePool } from '@/types';
+import { NextApiRequest, NextApiResponse } from 'next';
 // import { PriceData } from "./getPrices";
-import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
-import {
-  getApiTokenSymbol,
-  getTokenFromAddress,
-} from "@/utils/apis/getSwappableTokens";
+import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
+import { getApiTokenSymbol, getTokenFromAddress } from '@/utils/apis/getSwappableTokens';
 // import { Pair } from "@/types/api/Factory";
 
 const getTablePools = async (
@@ -21,12 +18,11 @@ const getTablePools = async (
     const pairs = await queryFactoryPairs();
 
     const tablePools: TablePool[] = pairs.map((pair) => {
-      const tokenSymbols = pair.asset_infos.map((token) =>
-        getApiTokenSymbol(
-          getTokenFromAddress(token.token.contract_addr as SecretString)!
-        )
+      console.log('GETTING SYMBOLS', { pair });
+      const tokenSymbols = pair.asset_infos?.map((token) =>
+        getApiTokenSymbol(getTokenFromAddress(token.token.contract_addr as SecretString)!)
       );
-      const poolName = tokenSymbols.join("-");
+      const poolName = tokenSymbols.join('-');
       // const tvl = calculateTVL(pair, pricesData);
       // const price = calculatePoolPrice(pair, pricesData);
       // const change = calculatePoolChange(pair, pricesData);
@@ -34,7 +30,7 @@ const getTablePools = async (
       return {
         contract_address: pair.contract_addr,
         name: poolName,
-        network: "Secret Network",
+        network: 'Secret Network',
         // price: price.toFixed(2),
         // change: change.toFixed(2) + "%",
         // total_value_locked: tvl.toFixed(2),
@@ -44,8 +40,8 @@ const getTablePools = async (
 
     res.status(200).json(tablePools);
   } catch (error) {
-    console.error("Error fetching pool data:", error);
-    res.status(500).json({ error: "Failed to fetch pool data" });
+    console.error('Error fetching pool data:', error);
+    res.status(500).json({ error: 'Failed to fetch pool data' });
   }
 };
 

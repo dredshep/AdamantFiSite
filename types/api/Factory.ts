@@ -1,4 +1,4 @@
-interface TokenInfo {
+export interface TokenInfo {
   contract_addr: string;
   token_code_hash: string;
   viewing_key: string;

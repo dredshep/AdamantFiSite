@@ -1,5 +1,8 @@
 import fullApiTokenOutput from '@/outputs/fullApiTokenOutput.json';
 import { SecretString } from '@/types';
+import { TokenInfo } from '@/types/api/Factory';
+import { FactoryTokens } from '@/utils/secretjs/getCodeHashByAddress';
+
 export interface ApiToken {
   src_network?: SrcNetwork;
   src_coin?: string;
@@ -45,12 +48,37 @@ export enum Usage {
   Lpstaking = 'LPSTAKING',
   Swap = 'SWAP',
 }
+
 export const getApiToken = async () => Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
 
 export const getApiTokenAddress = (token: ApiToken) =>
   (token.dst_address ?? token.address!) as SecretString;
 
-export const getApiTokenSymbol = (token: ApiToken): string => token.display_props.symbol;
+export const getApiTokenSymbol = (token: ApiToken): string => {
+  console.log('GETTING SYMBOL', { token });
+  return token.display_props.symbol;
+};
 
 export const getTokenFromAddress = (address: SecretString): ApiToken | undefined =>
   (fullApiTokenOutput as ApiToken[]).find((token) => getApiTokenAddress(token) === address);
+
+export const transformFactoryTokenToApiToken = (factoryToken: TokenInfo): ApiToken => {
+  const knownToken = FactoryTokens.find(
+    (token) => token.contract_addr === factoryToken.contract_addr
+  );
+
+  return {
+    dst_network: DstNetwork.Secret,
+    decimals: knownToken?.decimals ?? 6,
+    name: knownToken?.token_name ?? '',
+    display_props: {
+      symbol: knownToken?.token_name ?? '',
+      image: '',
+      label: knownToken?.token_name ?? '',
+    },
+    price: '0',
+    _id: factoryToken.contract_addr,
+    address: factoryToken.contract_addr,
+    usage: [Usage.Swap],
+  };
+};
