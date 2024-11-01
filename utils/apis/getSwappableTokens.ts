@@ -54,7 +54,6 @@ export const getApiTokenAddress = (token: ApiToken) =>
   (token.dst_address ?? token.address!) as SecretString;
 
 export const getApiTokenSymbol = (token: ApiToken): string => {
-  console.log('GETTING SYMBOL', { token });
   return token.display_props.symbol;
 };
 
