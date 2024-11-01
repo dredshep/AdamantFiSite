@@ -22,7 +22,7 @@ export async function queryFactoryPairs() {
   }
 
   const { pairs }: PairsResponse = await secretjs.query.compute.queryContract({
-    contract_address: "secret1fjqlk09wp7yflxx7y433mkeskqdtw3yqerkcgp",
+    contract_address: "secret1y2apaye99rfruz29jx4cmnpcmf87xr9uz5vrmd",
     code_hash:
       "16ea6dca596d2e5e6eef41df6dc26a1368adaa238aa93f07959841e7968c51bd",
     query: { pairs: { limit: 100 } },
