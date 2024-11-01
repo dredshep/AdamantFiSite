@@ -9,6 +9,8 @@ export function getCodeHashByAddress(contractAddress: string) {
   }
 }
 
+// NOTE: These are the only possible tokens to swap at the moment.
+
 const tokens = [
   {
     contract_addr: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
