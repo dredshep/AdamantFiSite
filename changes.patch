@@ -1,0 +1,725 @@
+From aa4e56e6829bea885059a7594435cd2eb72f2f30 Mon Sep 17 00:00:00 2001
+From: dredshep <dredshep@gmail.com>
+Date: Fri, 1 Nov 2024 15:17:14 +0100
+Subject: [PATCH] broken
+
+---
+ components/app/Pages/BestRouteEstimator.tsx   | 100 ++++++------------
+ .../Forms/Select/PoolSelectionModal/index.tsx |  12 +--
+ hooks/usePoolForm/queryFunctions.ts           |  10 +-
+ pages/_app.tsx                                |  12 +--
+ pages/api/getTableTokens.ts                   |   8 +-
+ pages/app/token/[token].tsx                   |  14 +--
+ utils/apis/getSwappableTokens.ts              |   7 +-
+ utils/apis/isPoolConfigured.ts                |   4 +-
+ utils/estimation/PriorityQueue.ts             |  18 ++++
+ utils/estimation/calculateEdgeWeight.ts       |  43 ++++++++
+ utils/estimation/fetchPoolData.ts             |   2 +-
+ utils/estimation/findPaths.ts                 |  92 +++++++++-------
+ utils/estimation/getPoolData.ts               |   6 +-
+ utils/estimation/index.ts                     |   7 +-
+ utils/estimation/prepareGraph.ts              |  85 +++++++++++++++
+ utils/secretClient.ts                         |   2 +-
+ utils/swap.ts                                 |   6 +-
+ 17 files changed, 282 insertions(+), 146 deletions(-)
+ create mode 100644 utils/estimation/PriorityQueue.ts
+ create mode 100644 utils/estimation/calculateEdgeWeight.ts
+ create mode 100644 utils/estimation/prepareGraph.ts
+
+diff --git a/components/app/Pages/BestRouteEstimator.tsx b/components/app/Pages/BestRouteEstimator.tsx
+index 5e04a45..88febf9 100644
+--- a/components/app/Pages/BestRouteEstimator.tsx
++++ b/components/app/Pages/BestRouteEstimator.tsx
+@@ -1,33 +1,25 @@
+-import React, { useState, useEffect } from "react";
+-import { SecretNetworkClient } from "secretjs";
+-import Decimal from "decimal.js";
+-// import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
++import { useSwapForm } from "@/hooks/useSwapForm";
++import { PathEstimation } from "@/types/estimation";
+ import {
+   buildTokenPoolMap,
+-  findPaths,
+   estimateBestPath,
+-} from "@/utils/estimation"; // Assuming these functions are extracted to a utility file
++  findOptimalPath,
++} from "@/utils/estimation";
+ import { fetchPoolData } from "@/utils/estimation/fetchPoolData";
+-import { PathEstimation } from "@/pages/app/testing/estimate/a";
++import Decimal from "decimal.js";
+ import Image from "next/image";
+-import { useSwapForm } from "@/hooks/useSwapForm";
++import { useEffect, useState } from "react";
++import { SecretNetworkClient } from "secretjs";
+ 
+ interface BestRouteEstimatorProps {
+   secretjs: SecretNetworkClient | null;
+-  // inputToken: string;
+-  // outputToken: string;
+-  // amountIn: string;
+ }
+ 
+-function BestRouteEstimator({
+-  secretjs,
+-}: // inputToken,
+-// outputToken,
+-// amountIn,
+-BestRouteEstimatorProps) {
++function BestRouteEstimator({ secretjs }: BestRouteEstimatorProps) {
+   const { payDetails, receiveDetails } = useSwapForm();
+   const [bestPathEstimation, setBestPathEstimation] =
+     useState<PathEstimation | null>(null);
++
+   useEffect(() => {
+     const handleEstimate = async () => {
+       console.log(`\n--- Estimating best path ---`);
+@@ -35,69 +27,47 @@ BestRouteEstimatorProps) {
+       console.log(`Output Token: ${receiveDetails.tokenAddress}`);
+       console.log(`Amount In: ${payDetails.amount}`);
+       console.log(`--- Step 1: Fetching pool data ---`);
+-      const fullPoolsData = await fetchPoolData();
+-
+-      // Validate payDetails before proceeding
+-      const amountIn = payDetails.amount?.trim(); // Trim whitespace
+       if (
+-        secretjs !== null &&
+-        amountIn !== null &&
+-        payDetails.tokenAddress !== null &&
+-        receiveDetails.tokenAddress !== null &&
+-        !isNaN(Number(amountIn)) && // Check if amount is a valid number
+-        amountIn !== "" && // Ensure it's not an empty string
+-        Number(amountIn) > 0 // Ensure it's a positive number
++        secretjs &&
++        payDetails.amount &&
++        payDetails.tokenAddress &&
++        receiveDetails.tokenAddress &&
++        !isNaN(Number(payDetails.amount)) &&
++        Number(payDetails.amount) > 0
+       ) {
+         console.log(`--- Step 2: Building token pool map ---`);
+-        const amountInDecimal = new Decimal(amountIn);
+-        const tokenPoolMap = buildTokenPoolMap(fullPoolsData);
+-        console.log(`--- Step 3: Finding paths ---`);
+-        const paths = findPaths(
+-          tokenPoolMap,
+-          payDetails.tokenAddress,
+-          receiveDetails.tokenAddress
+-        );
++        const amountInDecimal = new Decimal(payDetails.amount.trim());
++        console.log(`--- Step 3: Finding optimal path ---`);
++        const tokenPoolMap = buildTokenPoolMap(await fetchPoolData());
+ 
+-        if (paths.length === 0) {
+-          console.log("No available paths found for the selected tokens.");
+-          return;
+-        }
++        try {
++          const optimalPath = await findOptimalPath(
++            tokenPoolMap,
++            payDetails.tokenAddress,
++            receiveDetails.tokenAddress,
++            secretjs
++          );
+ 
+-        const estimation = await estimateBestPath(
+-          secretjs,
+-          paths,
+-          amountInDecimal
+-        );
+-        setBestPathEstimation(estimation);
++          const estimation = await estimateBestPath(
++            secretjs,
++            [optimalPath],
++            amountInDecimal
++          );
++          setBestPathEstimation(estimation);
++        } catch (error) {
++          console.error("Error finding optimal path:", error);
++        }
+       } else {
+         console.error("Invalid input for estimation:", payDetails);
+-        if (amountIn === null || amountIn === "") {
+-          console.error("Amount is null or empty.");
+-        } else if (isNaN(Number(amountIn))) {
+-          console.error("Amount is not a valid number:", amountIn);
+-        } else if (Number(amountIn) <= 0) {
+-          console.error("Amount must be a positive number:", amountIn);
+-        }
+       }
+     };
+ 
+-    if (
+-      secretjs !== null &&
+-      payDetails.tokenAddress !== null &&
+-      receiveDetails.tokenAddress !== null &&
+-      payDetails.amount !== null &&
+-      payDetails.amount.trim() !== ""
+-    ) {
+-      void handleEstimate();
+-    } else {
+-      // console.error("Invalid input for estimation:", payDetails);
+-    }
++    void handleEstimate();
+   }, [
+     secretjs,
+     payDetails.tokenAddress,
+     receiveDetails.tokenAddress,
+     payDetails.amount,
+-    payDetails,
+   ]);
+ 
+   return (
+diff --git a/components/app/Shared/Forms/Select/PoolSelectionModal/index.tsx b/components/app/Shared/Forms/Select/PoolSelectionModal/index.tsx
+index 5b236e7..59d25a0 100644
+--- a/components/app/Shared/Forms/Select/PoolSelectionModal/index.tsx
++++ b/components/app/Shared/Forms/Select/PoolSelectionModal/index.tsx
+@@ -1,13 +1,13 @@
+-import React, { useState, useEffect } from "react";
+-import * as Dialog from "@radix-ui/react-dialog";
++import { usePoolStore } from "@/store/forms/poolStore";
++import { Pair } from "@/types/api/Factory";
+ import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
+ import {
+   ApiToken,
+-  getApiToken,
++  getApiTokens,
+   getApiTokenSymbol,
+ } from "@/utils/apis/getSwappableTokens";
+-import { Pair } from "@/types/api/Factory";
+-import { usePoolStore } from "@/store/forms/poolStore";
++import * as Dialog from "@radix-ui/react-dialog";
++import React, { useEffect, useState } from "react";
+ import TokenSelectionSearchBar from "../TokenSelectionModal/TokenSelectionSearchBar";
+ 
+ interface PoolInfo {
+@@ -26,7 +26,7 @@ const PoolSelectionModal: React.FC = () => {
+       try {
+         const [pairs, tokens] = await Promise.all([
+           queryFactoryPairs(),
+-          getApiToken(),
++          getApiTokens(),
+         ]);
+ 
+         const poolsWithTokenInfo = pairs
+diff --git a/hooks/usePoolForm/queryFunctions.ts b/hooks/usePoolForm/queryFunctions.ts
+index 8306442..02510c2 100644
+--- a/hooks/usePoolForm/queryFunctions.ts
++++ b/hooks/usePoolForm/queryFunctions.ts
+@@ -1,9 +1,9 @@
+-import { getTablePools } from "@/utils/apis/getTablePools";
+-import { queryPool } from "@/utils/apis/getPairPool";
+ import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
+-import { getApiToken } from "@/utils/apis/getSwappableTokens";
+-import { PoolQueryResult, PairPoolData, SelectedPoolType } from "./types";
++import { queryPool } from "@/utils/apis/getPairPool";
++import { getApiTokens } from "@/utils/apis/getSwappableTokens";
++import { getTablePools } from "@/utils/apis/getTablePools";
+ import { setupPoolTokens } from "./poolTokens";
++import { PairPoolData, PoolQueryResult, SelectedPoolType } from "./types";
+ 
+ export async function fetchPoolData(
+   poolAddress: string,
+@@ -13,7 +13,7 @@ export async function fetchPoolData(
+     getTablePools(),
+     queryPool(poolAddress),
+     queryFactoryPairs(),
+-    getApiToken(),
++    getApiTokens(),
+   ]);
+ 
+   if (pairData === undefined || typeof pairData !== "object") {
+diff --git a/pages/_app.tsx b/pages/_app.tsx
+index 45224ab..6b9251b 100644
+--- a/pages/_app.tsx
++++ b/pages/_app.tsx
+@@ -1,15 +1,15 @@
+-import "@radix-ui/themes/styles.css";
+ import "@/styles/globals.css";
++import "@radix-ui/themes/styles.css";
+ import type { AppProps } from "next/app";
+ // import { Theme } from "@radix-ui/themes";
+-import { useEffect, useState } from "react";
++import { useSwapStore } from "@/store/swapStore";
++import { useTokenStore } from "@/store/tokenStore";
+ import {
+   ApiToken,
+-  getApiToken,
+   getApiTokenAddress,
++  getApiTokens,
+ } from "@/utils/apis/getSwappableTokens";
+-import { useSwapStore } from "@/store/swapStore";
+-import { useTokenStore } from "@/store/tokenStore";
++import { useEffect, useState } from "react";
+ // import { SwappableToken } from "@/types";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ 
+@@ -32,7 +32,7 @@ export default function App({ Component, pageProps }: AppProps) {
+ 
+   useEffect(() => {
+     const fetchTokens = async () => {
+-      const tokens = await getApiToken();
++      const tokens = await getApiTokens();
+       setSwappableTokens(tokens);
+       const indexedTokens = tokens.reduce(
+         (acc: Record<string, ApiToken>, token) => {
+diff --git a/pages/api/getTableTokens.ts b/pages/api/getTableTokens.ts
+index 01dcf7e..badea4d 100644
+--- a/pages/api/getTableTokens.ts
++++ b/pages/api/getTableTokens.ts
+@@ -1,12 +1,12 @@
+ // @/api/getTableTokens.ts
+ 
+-import { NextApiRequest, NextApiResponse } from "next";
++import { TableToken, Token } from "@/types";
+ import {
+-  getApiToken,
+   getApiTokenAddress,
++  getApiTokens,
+   getApiTokenSymbol,
+ } from "@/utils/apis/getSwappableTokens";
+-import { TableToken, Token } from "@/types";
++import { NextApiRequest, NextApiResponse } from "next";
+ 
+ // Define your transformation function
+ const transformTokensToTableFormat = (tokens: Token[]): TableToken[] => {
+@@ -24,7 +24,7 @@ const transformTokensToTableFormat = (tokens: Token[]): TableToken[] => {
+ // API Route that uses the transformation
+ const getTableTokens = async (_req: NextApiRequest, res: NextApiResponse) => {
+   try {
+-    const swappableTokens = await getApiToken(); // Fetch the tokens from the other API
++    const swappableTokens = await getApiTokens(); // Fetch the tokens from the other API
+     const tableTokens = transformTokensToTableFormat(swappableTokens); // Transform them to table format
+     res.status(200).json(tableTokens);
+   } catch (error) {
+diff --git a/pages/app/token/[token].tsx b/pages/app/token/[token].tsx
+index 3a0fd62..79b9190 100644
+--- a/pages/app/token/[token].tsx
++++ b/pages/app/token/[token].tsx
+@@ -1,13 +1,13 @@
+-import { useRouter } from "next/router";
+ import AppLayout from "@/components/app/Global/AppLayout";
+-import React, { useEffect } from "react";
++import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
++import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
++import { Token } from "@/types";
++import { getApiTokens } from "@/utils/apis/getSwappableTokens";
+ import chartSpec from "@/utils/dummyData/lineChart.json";
+ import values from "@/utils/dummyData/lineChartValues.json";
+-import ResponsiveVegaChart from "@/components/app/Shared/Charts/ResponsiveVegaChart";
++import { useRouter } from "next/router";
++import React, { useEffect } from "react";
+ import { VisualizationSpec } from "react-vega";
+-import { Token } from "@/types";
+-import { getApiToken } from "@/utils/apis/getSwappableTokens";
+-import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
+ 
+ // Mock token details data
+ // const tokenDetails = {
+@@ -37,7 +37,7 @@ const TokenPage = () => {
+   const { token } = router.query;
+   const [tokenDetails, setTokenDetails] = React.useState<Token[]>([]);
+   useEffect(() => {
+-    void getApiToken().then((data) => {
++    void getApiTokens().then((data) => {
+       setTokenDetails(data);
+     });
+   }, []);
+diff --git a/utils/apis/getSwappableTokens.ts b/utils/apis/getSwappableTokens.ts
+index d55f625..ce46513 100644
+--- a/utils/apis/getSwappableTokens.ts
++++ b/utils/apis/getSwappableTokens.ts
+@@ -51,7 +51,12 @@ export enum Usage {
+   Lpstaking = "LPSTAKING",
+   Swap = "SWAP",
+ }
+-export const getApiToken = async () =>
++
++// export const getChainPools = async () => {
++//   const tokens = await getApiTokens();
++// }
++
++export const getApiTokens = async () =>
+   Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
+ 
+ export const getApiTokenAddress = (token: ApiToken) =>
+diff --git a/utils/apis/isPoolConfigured.ts b/utils/apis/isPoolConfigured.ts
+index 1fbaae0..de7fb55 100644
+--- a/utils/apis/isPoolConfigured.ts
++++ b/utils/apis/isPoolConfigured.ts
+@@ -1,7 +1,7 @@
+ import { TablePool } from "@/types";
+ import { Pair } from "@/types/api/Factory";
+ import { queryFactoryPairs } from "./getFactoryPairs";
+-import { ApiToken, getApiToken } from "./getSwappableTokens";
++import { ApiToken, getApiTokens } from "./getSwappableTokens";
+ 
+ interface PoolValidationResult {
+   isValid: boolean;
+@@ -60,7 +60,7 @@ export async function validatePools(
+     // Fetch data once
+     const [pairs, tokens] = await Promise.all([
+       queryFactoryPairs(),
+-      getApiToken(),
++      getApiTokens(),
+     ]);
+ 
+     const context: ValidationContext = { pairs, tokens };
+diff --git a/utils/estimation/PriorityQueue.ts b/utils/estimation/PriorityQueue.ts
+new file mode 100644
+index 0000000..5116f3b
+--- /dev/null
++++ b/utils/estimation/PriorityQueue.ts
+@@ -0,0 +1,18 @@
++export class PriorityQueue<T> {
++  private items: { element: T; priority: number }[] = [];
++
++  constructor(private compare: (a: T, b: T) => number) {}
++
++  enqueue(element: T) {
++    this.items.push({ element, priority: this.compare(element, element) });
++    this.items.sort((a, b) => a.priority - b.priority);
++  }
++
++  dequeue(): T | undefined {
++    return this.items.shift()?.element;
++  }
++
++  isEmpty(): boolean {
++    return this.items.length === 0;
++  }
++}
+diff --git a/utils/estimation/calculateEdgeWeight.ts b/utils/estimation/calculateEdgeWeight.ts
+new file mode 100644
+index 0000000..a15918c
+--- /dev/null
++++ b/utils/estimation/calculateEdgeWeight.ts
+@@ -0,0 +1,43 @@
++import Decimal from "decimal.js";
++import { SecretNetworkClient } from "secretjs";
++import { calculateSingleHopOutput, getPoolData } from ".";
++
++// if (
++//   !isNotNullish(process.env["NEXT_PUBLIC_SECRET_NETWORK_URL"]) ||
++//   !isNotNullish(process.env["NEXT_PUBLIC_SECRET_NETWORK_CHAIN_ID"])
++// ) {
++//   throw new Error(
++//     "NEXT_PUBLIC_SECRET_NETWORK_URL and NEXT_PUBLIC_SECRET_NETWORK_CHAIN_ID must be set"
++//   );
++// }
++
++// const secretjs = new SecretNetworkClient({
++//   url: process.env["NEXT_PUBLIC_SECRET_NETWORK_URL"],
++//   chainId: process.env["NEXT_PUBLIC_SECRET_NETWORK_CHAIN_ID"],
++// });
++
++export const calculateEdgeWeight = async (
++  inputToken: string,
++  outputToken: string,
++  poolAddress: string,
++  secretjs: SecretNetworkClient
++): Promise<number> => {
++  const amountIn = new Decimal(1); // Test with a unit amount
++  const poolData = await getPoolData(secretjs, poolAddress);
++
++  const { output } = calculateSingleHopOutput(
++    amountIn,
++    poolData,
++    inputToken,
++    outputToken
++  );
++
++  // Avoid division by zero
++  if (output.isZero()) {
++    return Infinity;
++  }
++
++  // Calculate the negative logarithm of the normalized output as the weight
++  const weight = -Math.log(output.toNumber());
++  return weight;
++};
+diff --git a/utils/estimation/fetchPoolData.ts b/utils/estimation/fetchPoolData.ts
+index 80acbfa..170236e 100644
+--- a/utils/estimation/fetchPoolData.ts
++++ b/utils/estimation/fetchPoolData.ts
+@@ -1,5 +1,5 @@
+ import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
+ export async function fetchPoolData() {
+-  console.log({ fullPoolsData });
++  // console.log({ fullPoolsData });
+   return Promise.resolve(fullPoolsData);
+ }
+diff --git a/utils/estimation/findPaths.ts b/utils/estimation/findPaths.ts
+index 223d719..0aaa2ca 100644
+--- a/utils/estimation/findPaths.ts
++++ b/utils/estimation/findPaths.ts
+@@ -1,49 +1,61 @@
+ import { Path, TokenPoolMap } from "@/types/estimation";
+-import { fetchPoolData } from ".";
++import { SecretNetworkClient } from "secretjs";
++import { prepareGraph } from "./prepareGraph";
++import { PriorityQueue } from "./PriorityQueue";
+ 
+-export const findPaths = (
++export const findOptimalPath = async (
+   tokenPoolMap: TokenPoolMap,
+   startToken: string,
+   endToken: string,
+-  maxHops: number = 3
+-): Path[] => {
+-  const paths: Path[] = [];
+-  // Set to keep track of visited tokens to avoid infinite loops
+-  const visited: Set<string> = new Set();
+-
+-  // Depth-first search to find all paths
+-  const dfs = async (currentToken: string, path: Path, hops: number) => {
+-    if (hops > maxHops || visited.has(currentToken)) return;
++  secretjs: SecretNetworkClient
++): Promise<Path> => {
++  const { edges, tokens } = await prepareGraph(tokenPoolMap, secretjs);
++
++  const distances: { [token: string]: number } = {};
++  const previous: { [token: string]: { token: string; pool: string } | null } =
++    {};
++  const queue = new PriorityQueue<{ token: string; cost: number }>(
++    (a, b) => a.cost - b.cost
++  );
++
++  // Initialize distances and previous nodes
++  tokens.forEach((token) => {
++    distances[token] = Infinity;
++    previous[token] = null;
++  });
++  distances[startToken] = 0;
++  queue.enqueue({ token: startToken, cost: 0 });
++
++  while (!queue.isEmpty()) {
++    const { token: currentToken } = queue.dequeue()!;
+     if (currentToken === endToken) {
+-      paths.push({ pools: [...path.pools], tokens: [...path.tokens] });
+-      return;
++      break; // Found the shortest path to the end token
+     }
+ 
+-    const fullPoolsData = await fetchPoolData();
+-    visited.add(currentToken);
+-
+-    const pools = tokenPoolMap[currentToken] ?? [];
+-    pools.forEach((poolAddress) => {
+-      const poolTokens = fullPoolsData
+-        .find((pool) => pool.contract_address === poolAddress)
+-        ?.query_result.assets.filter((asset) => asset.info.token !== undefined)
+-        .map((asset) => asset.info.token!.contract_addr);
+-
+-      poolTokens?.forEach((nextToken) => {
+-        if (nextToken !== currentToken) {
+-          path.pools.push(poolAddress);
+-          path.tokens.push(nextToken);
+-          void dfs(nextToken, path, hops + 1);
+-          path.pools.pop();
+-          path.tokens.pop();
+-        }
+-      });
+-    });
+-
+-    visited.delete(currentToken);
+-  };
+-
+-  void dfs(startToken, { pools: [], tokens: [startToken] }, 0);
+-
+-  return paths;
++    const adjacentEdges = edges.filter((edge) => edge.from === currentToken);
++    for (const edge of adjacentEdges) {
++      const alt = distances[currentToken]! + edge.weight;
++      if (alt < distances[edge.to]!) {
++        distances[edge.to] = alt;
++        previous[edge.to] = { token: currentToken, pool: edge.poolAddress };
++        queue.enqueue({ token: edge.to, cost: alt });
++      }
++    }
++  }
++
++  // Reconstruct the optimal path
++  const pathTokens: string[] = [];
++  const pathPools: string[] = [];
++  let currentToken = endToken;
++  while (previous[currentToken]) {
++    pathTokens.unshift(currentToken);
++    pathPools.unshift(previous[currentToken]!.pool);
++    currentToken = previous[currentToken]!.token;
++  }
++  if (currentToken !== startToken) {
++    throw new Error("No path found between the specified tokens.");
++  }
++  pathTokens.unshift(startToken);
++
++  return { tokens: pathTokens, pools: pathPools };
+ };
+diff --git a/utils/estimation/getPoolData.ts b/utils/estimation/getPoolData.ts
+index c99ebd1..f246a2a 100644
+--- a/utils/estimation/getPoolData.ts
++++ b/utils/estimation/getPoolData.ts
+@@ -2,6 +2,7 @@ import { PoolData, PoolQueryResponse } from "@/types/estimation";
+ import Decimal from "decimal.js";
+ import { SecretNetworkClient } from "secretjs";
+ import { getTokenDecimals } from "../apis/tokenInfo";
++import isNotNullish from "../isNotNullish";
+ 
+ export const getPoolData = async (
+   secretjs: SecretNetworkClient,
+@@ -21,12 +22,15 @@ export const getPoolData = async (
+ 
+   const reserves = response.assets.reduce(
+     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
++      if (!isNotNullish(asset.info.token)) {
++        return acc;
++      }
+       const decimals =
+         asset.info.token?.contract_addr ===
+         "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
+           ? 6
+           : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
+-      console.log({ decimals });
++      // console.log({ decimals });
+       acc[asset.info.token.contract_addr] = {
+         amount: new Decimal(asset.amount),
+         decimals,
+diff --git a/utils/estimation/index.ts b/utils/estimation/index.ts
+index 4ba8c7f..85d09a9 100644
+--- a/utils/estimation/index.ts
++++ b/utils/estimation/index.ts
+@@ -1,9 +1,8 @@
+ export * from "./bestRouteEstimation";
++export * from "./buildTokenPoolMap";
++export * from "./calculateSingleHopOutput";
++export * from "./estimateSingleHopOutput";
+ export * from "./fetchPoolData";
+ export * from "./findPaths";
+ export * from "./getPoolData";
+-export * from "./calculateSingleHopOutput";
+-export * from "./getPoolData";
+-export * from "./buildTokenPoolMap";
+-export * from "./estimateSingleHopOutput";
+ export * from "./isValidReserve";
+diff --git a/utils/estimation/prepareGraph.ts b/utils/estimation/prepareGraph.ts
+new file mode 100644
+index 0000000..ff9190b
+--- /dev/null
++++ b/utils/estimation/prepareGraph.ts
+@@ -0,0 +1,85 @@
++import { PoolData, TokenPoolMap } from "@/types/estimation";
++import Decimal from "decimal.js";
++import { SecretNetworkClient } from "secretjs";
++import { calculateSingleHopOutput, fetchPoolData, getPoolData } from ".";
++
++interface Edge {
++  from: string;
++  to: string;
++  poolAddress: string;
++  weight: number;
++}
++
++export const prepareGraph = async (
++  tokenPoolMap: TokenPoolMap,
++  secretjs: SecretNetworkClient
++): Promise<{ edges: Edge[]; tokens: Set<string> }> => {
++  const fullPoolsData = await fetchPoolData();
++  const poolDataCache: { [poolAddress: string]: PoolData } = {};
++  const edges: Edge[] = [];
++  const tokens = new Set<string>();
++
++  // Fetch and cache pool data
++  for (const pool of fullPoolsData) {
++    const poolAddress = pool.contract_address;
++    const data = await getPoolData(secretjs, poolAddress);
++    poolDataCache[poolAddress] = data;
++  }
++
++  // Calculate edge weights synchronously
++  for (const token in tokenPoolMap) {
++    const pools = tokenPoolMap[token];
++    tokens.add(token);
++
++    for (const poolAddress of pools as string[]) {
++      const poolData = fullPoolsData.find(
++        (p) => p.contract_address === poolAddress
++      );
++      const poolTokens = poolData?.query_result.assets
++        .filter((asset) => asset.info.token !== undefined)
++        .map((asset) => asset.info.token!.contract_addr);
++
++      for (const nextToken of poolTokens || []) {
++        if (nextToken !== token) {
++          const weight = calculateEdgeWeightSync(
++            token,
++            nextToken,
++            // poolAddress,
++            poolDataCache[poolAddress]!
++          );
++          edges.push({
++            from: token,
++            to: nextToken,
++            poolAddress,
++            weight,
++          });
++        }
++      }
++    }
++  }
++
++  return { edges, tokens };
++};
++
++const calculateEdgeWeightSync = (
++  inputToken: string,
++  outputToken: string,
++  // poolAddress: string,
++  poolData: PoolData
++): number => {
++  const amountIn = new Decimal(1); // Unit amount for estimation
++
++  const { output } = calculateSingleHopOutput(
++    amountIn,
++    poolData,
++    inputToken,
++    outputToken
++  );
++
++  if (output.isZero()) {
++    return Infinity;
++  }
++
++  const weight = -Math.log(output.toNumber());
++  return weight;
++};
+diff --git a/utils/secretClient.ts b/utils/secretClient.ts
+index 6c898f2..4e24fa9 100644
+--- a/utils/secretClient.ts
++++ b/utils/secretClient.ts
+@@ -2,5 +2,5 @@ import { SecretNetworkClient } from "secretjs";
+ 
+ export const secretClient = new SecretNetworkClient({
+   chainId: "secret-4",
+-  url: "https://api.secrettestnet.io",
++  url: "https://rpc.ankr.com/http/scrt_cosmos",
+ });
+diff --git a/utils/swap.ts b/utils/swap.ts
+index fb78370..07f37d2 100644
+--- a/utils/swap.ts
++++ b/utils/swap.ts
+@@ -1,10 +1,10 @@
+-import { ApiToken, getApiToken } from "@/utils/apis/getSwappableTokens";
++import { ApiToken, getApiTokens } from "@/utils/apis/getSwappableTokens";
+ // import { getTinyChartData } from "@/utils/apis/getTinyChartData";
+-import { SwappableToken } from "@/types/Token";
+ import { TokenInputState } from "@/types";
++import { SwappableToken } from "@/types/Token";
+ 
+ export const fetchSwappableTokens = async (): Promise<ApiToken[]> => {
+-  return await getApiToken();
++  return await getApiTokens();
+ };
+ 
+ // export const fetchChartData = async (tokenAddress: string) => {
+-- 
+2.25.1
+
