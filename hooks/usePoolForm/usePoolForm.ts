@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { usePoolStore } from "@/store/forms/poolStore";
+import { useTxStore } from "@/store/txStore";
 import { PoolTokenInputs } from "@/types";
 import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
 import { calculatePriceImpact, calculateTxFee } from "@/utils/swap";
@@ -13,7 +14,7 @@ import type {
   SelectedPoolType,
   UsePoolDepositFormResult,
 } from "./types";
-import { SecretNetworkClient } from "secretjs";
+import { SecretNetworkClient, TxResultCode } from "secretjs";
 import { Window } from "@keplr-wallet/types";
 import isNotNullish from "@/utils/isNotNullish";
 import { Asset, ContractInfo } from "@/types/secretswap/shared";
@@ -31,6 +32,7 @@ export function usePoolForm(
 
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
   // const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const { setPending, setResult } = useTxStore.getState();
 
   // TODO: reduce this code duplication
   useEffect(() => {
@@ -196,9 +198,28 @@ export function usePoolForm(
       txFee,
     });
 
-    const tx = await provideLiquidity(secretjs, pairContract, asset0, asset1);
+    try {
+      setPending(true);
 
-    // TODO: what to do with the tx response?
+      const result = await provideLiquidity(
+        secretjs,
+        pairContract,
+        asset0,
+        asset1,
+      );
+
+      setPending(false);
+      setResult(result);
+
+      console.log("Transaction Result:", result);
+
+      if (result.code !== TxResultCode.Success) {
+        throw new Error(`Swap failed: ${result.rawLog}`);
+      }
+    } catch (error) {
+      console.error("Error during tx execution:", error);
+      alert("Transaction failed. Check the console for more details.");
+    }
   };
 
   // TODO: make this async
