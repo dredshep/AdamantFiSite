@@ -34,7 +34,7 @@ export function usePoolForm(
   // const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const { setPending, setResult } = useTxStore.getState();
 
-  // TODO: reduce this code duplication
+  // TODO: reduce this code duplication. the same effect is defined in the swap form
   useEffect(() => {
     const keplr = (window as unknown as Window).keplr;
     const connectKeplr = async () => {
@@ -253,9 +253,9 @@ export function usePoolForm(
 
   const handleClick = (intent: "deposit" | "withdraw"): void => {
     if (intent === "deposit") {
-      handleDepositClick();
+      void handleDepositClick();
     } else if (intent === "withdraw") {
-      handleWithdrawClick();
+      void handleWithdrawClick();
     }
   };
 
