@@ -1,14 +1,11 @@
-import FormButton from "@/components/app/Shared/Forms/FormButton";
-import PoolTokenInput from "@/components/app/Shared/Forms/Input/PoolTokenInput";
-import PoolSelectionModal from "@/components/app/Shared/Forms/Select/PoolSelectionModal";
-import { usePoolForm } from "@/hooks/usePoolForm";
-import { usePoolStore } from "@/store/forms/poolStore";
-import {
-  getApiTokenAddress,
-  getApiTokenSymbol,
-} from "@/utils/apis/getSwappableTokens";
-import * as Dialog from "@radix-ui/react-dialog";
-import React from "react";
+import FormButton from '@/components/app/Shared/Forms/FormButton';
+import PoolTokenInput from '@/components/app/Shared/Forms/Input/PoolTokenInput';
+import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
+import { usePoolForm } from '@/hooks/usePoolForm';
+import { usePoolStore } from '@/store/forms/poolStore';
+import { getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
+import * as Dialog from '@radix-ui/react-dialog';
+import React from 'react';
 
 const WithdrawForm: React.FC = () => {
   // const { selectedPool, apr, estimatedLPTokens, handleDepositClick } =
@@ -38,9 +35,7 @@ const WithdrawForm: React.FC = () => {
           <span className="text-white font-medium">Selected Pool:</span>
           <Dialog.Root>
             <Dialog.Trigger asChild>
-              <button className="text-adamant-primary hover:text-adamant-primary/90">
-                Change
-              </button>
+              <button className="text-adamant-primary hover:text-adamant-primary/90">Change</button>
             </Dialog.Trigger>
             <PoolSelectionModal />
           </Dialog.Root>
@@ -52,7 +47,7 @@ const WithdrawForm: React.FC = () => {
             // balance: Number(selectedPool.token0!.balance),
             address: getApiTokenAddress(selectedPool.token0!),
           }}
-          label="Deposit"
+          label="Withdraw"
         />
         <PoolTokenInput
           poolInputIdentifier={`pool.withdraw.tokenB`}
@@ -74,10 +69,7 @@ const WithdrawForm: React.FC = () => {
           </div>
         </div> */}
       </div>
-      <FormButton
-        onClick={() => handleClick("deposit")}
-        text="Provide Liquidity"
-      />
+      <FormButton onClick={() => handleClick('withdraw')} text="Withdraw Liquidity" />
     </div>
   );
 };

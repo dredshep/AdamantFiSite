@@ -1,64 +1,15 @@
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { SecretString } from '@/types';
-import { Pair } from '@/types/api/Factory';
-import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
-import {
-  ApiToken,
-  getApiToken,
-  getApiTokenSymbol,
-  getTokenFromAddress,
-} from '@/utils/apis/getSwappableTokens';
+import { ApiToken, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import TokenSelectionSearchBar from '../TokenSelectionModal/TokenSelectionSearchBar';
-
-interface PoolInfo {
-  pair: Pair;
-  token0?: ApiToken;
-  token1?: ApiToken;
-}
 
 const PoolSelectionModal: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [pools, setPools] = useState<PoolInfo[]>([]);
+  const { pools, loading, error } = usePoolsAndTokens();
   const { setSelectedPool } = usePoolStore();
-
-  useEffect(() => {
-    const fetchPoolsAndTokens = async () => {
-      try {
-        const [pairs]: [Pair[], ApiToken[]] = await Promise.all([
-          queryFactoryPairs(),
-          getApiToken(),
-        ]);
-
-        const poolsWithTokenInfo = pairs
-          .map((pair) => {
-            if (pair.asset_infos[0] !== undefined && pair.asset_infos[1] !== undefined) {
-              const token0Address = pair.asset_infos[0].token?.contract_addr;
-              const token1Address = pair.asset_infos[1].token?.contract_addr;
-
-              return {
-                pair,
-                token0: getTokenFromAddress(token0Address as SecretString),
-                token1: getTokenFromAddress(token1Address as SecretString),
-                // token0: tokens.find((t) => t.address === token0Address),
-                // token1: tokens.find((t) => t.address === token1Address),
-              };
-            }
-            return null;
-          })
-          .filter(
-            (pool) => pool !== null && pool.token0 !== undefined && pool.token1 !== undefined
-          ) as PoolInfo[];
-
-        setPools(poolsWithTokenInfo);
-      } catch (error) {
-        console.error('Error fetching pools and tokens:', error);
-      }
-    };
-
-    void fetchPoolsAndTokens();
-  }, []);
 
   const getDisplaySymbol = (token?: ApiToken, address?: string) => {
     if (token) return getApiTokenSymbol(token);
@@ -98,41 +49,54 @@ const PoolSelectionModal: React.FC = () => {
 
         <div className="text-gray-500 font-medium text-sm mt-4 px-6">AVAILABLE POOLS</div>
 
-        <div
-          className="flex flex-col gap-2 overflow-y-auto max-h-96 mt-4 px-6"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {filteredPools.map((pool, index) => (
-            <button
-              key={index}
-              className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors"
-              onClick={() => {
-                setSelectedPool({
-                  address: pool.pair.contract_addr,
-                  token0: pool.token0!,
-                  token1: pool.token1!,
-                  pairInfo: pool.pair,
-                });
-                const close = document.querySelector('[data-radix-collection-item]') as HTMLElement;
-                close?.click();
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">
-                    {getDisplaySymbol(pool.token0, pool.pair.asset_infos[0]!.token?.contract_addr)}{' '}
-                    /{' '}
-                    {getDisplaySymbol(pool.token1, pool.pair.asset_infos[1]!.token?.contract_addr)}
-                  </span>
-                  <span className="text-sm text-gray-400">
-                    {pool.pair.contract_addr.slice(0, 8)}...
-                    {pool.pair.contract_addr.slice(-8)}
-                  </span>
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <LoadingSpinner size={40} />
+          </div>
+        ) : error ? (
+          <div className="text-red-500 text-center p-4">Error loading pools: {error.message}</div>
+        ) : (
+          <div className="flex flex-col gap-2 overflow-y-auto max-h-96 mt-4 px-6">
+            {filteredPools.map((pool, index) => (
+              <button
+                key={index}
+                className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors"
+                onClick={() => {
+                  setSelectedPool({
+                    address: pool.pair.contract_addr,
+                    token0: pool.token0!,
+                    token1: pool.token1!,
+                    pairInfo: pool.pair,
+                  });
+                  const close = document.querySelector(
+                    '[data-radix-collection-item]'
+                  ) as HTMLElement;
+                  close?.click();
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">
+                      {getDisplaySymbol(
+                        pool.token0,
+                        pool.pair.asset_infos[0]!.token?.contract_addr
+                      )}{' '}
+                      /{' '}
+                      {getDisplaySymbol(
+                        pool.token1,
+                        pool.pair.asset_infos[1]!.token?.contract_addr
+                      )}
+                    </span>
+                    <span className="text-sm text-gray-400">
+                      {pool.pair.contract_addr.slice(0, 8)}...
+                      {pool.pair.contract_addr.slice(-8)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </Dialog.Content>
     </Dialog.Portal>
   );
