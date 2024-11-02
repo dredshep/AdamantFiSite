@@ -1,7 +1,13 @@
 import { usePoolStore } from '@/store/forms/poolStore';
+import { SecretString } from '@/types';
 import { Pair } from '@/types/api/Factory';
 import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
-import { ApiToken, getApiToken, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
+import {
+  ApiToken,
+  getApiToken,
+  getApiTokenSymbol,
+  getTokenFromAddress,
+} from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import React, { useEffect, useState } from 'react';
 import TokenSelectionSearchBar from '../TokenSelectionModal/TokenSelectionSearchBar';
@@ -20,7 +26,10 @@ const PoolSelectionModal: React.FC = () => {
   useEffect(() => {
     const fetchPoolsAndTokens = async () => {
       try {
-        const [pairs, tokens] = await Promise.all([queryFactoryPairs(), getApiToken()]);
+        const [pairs]: [Pair[], ApiToken[]] = await Promise.all([
+          queryFactoryPairs(),
+          getApiToken(),
+        ]);
 
         const poolsWithTokenInfo = pairs
           .map((pair) => {
@@ -30,8 +39,10 @@ const PoolSelectionModal: React.FC = () => {
 
               return {
                 pair,
-                token0: tokens.find((t) => t.address === token0Address),
-                token1: tokens.find((t) => t.address === token1Address),
+                token0: getTokenFromAddress(token0Address as SecretString),
+                token1: getTokenFromAddress(token1Address as SecretString),
+                // token0: tokens.find((t) => t.address === token0Address),
+                // token1: tokens.find((t) => t.address === token1Address),
               };
             }
             return null;
