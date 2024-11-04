@@ -17,8 +17,9 @@ export async function queryFactoryPairs() {
     return cachedPairs;
   }
 
+  // FIXME: hardcoded address
   const { pairs }: PairsResponse = await secretjs.query.compute.queryContract({
-    contract_address: 'secret1y2apaye99rfruz29jx4cmnpcmf87xr9uz5vrmd',
+    contract_address: 'secret1tvzu9v3jvh4yvprxntatp9hg06kmdev40g5fna',
     code_hash: '16ea6dca596d2e5e6eef41df6dc26a1368adaa238aa93f07959841e7968c51bd',
     query: { pairs: { limit: 100 } },
   });

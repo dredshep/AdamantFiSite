@@ -1,8 +1,8 @@
 [
   {
     "pair": "sSCRT-sATOM",
-    "contract_address": "secret1e5gcuqcs5mu98ytqfvnuxx06rlzlq72qmu0zvh",
-    "lp_token_contract": "secret1742jufz9tgveknwsy873dd0a94armuan9urcmc",
+    "contract_address": "secret1zcxaj9cxe4dvdy53fhydp2thf9t7rh47k3lsm2",
+    "lp_token_contract": "secret1t7msxegm7sphd2c5ln30ch5nlav7vuvdu5equh",
     "query_result": {
       "assets": [
         {
@@ -32,8 +32,8 @@
   },
   {
     "pair": "sSCRT-SILK",
-    "contract_address": "secret1gfsga5p3d9fxdtkscrvkwg5guz35uvgeza66nh",
-    "lp_token_contract": "secret1xasty5nd7gkx4lece3mjlrn8aywlxwlt4qxta6",
+    "contract_address": "secret1trp78e4zyz6pcstqwdsxap9uk64hxngnu3s0g6",
+    "lp_token_contract": "secret160t5w8qc7ey7yn6ll02tr47d2s3qejrptfez86",
     "query_result": {
       "assets": [
         {
@@ -63,8 +63,8 @@
   },
   {
     "pair": "sSCRT-ETH.axl",
-    "contract_address": "secret1x92a83kzxgnd6r44xhqu0tgw4eq9nu6pnudmdc",
-    "lp_token_contract": "secret1kd236tg9shr5hzfngr9xtqkgxyzxml87t433a9",
+    "contract_address": "secret15c99xxql2fpc0h04xvd0jfqqcqgns252hyt29g",
+    "lp_token_contract": "secret1c4vep36086f77eyldkq3l92q2z2gpecxgp9usl",
     "query_result": {
       "assets": [
         {
@@ -94,8 +94,8 @@
   },
   {
     "pair": "sSCRT-USDC.nbl",
-    "contract_address": "secret1wl8qeru6xek3pf3gs7n06n79eafv7lekw3hh8d",
-    "lp_token_contract": "secret1v99mag4sr8k0ymc6f8tw7hdw757t3z5ewj36vc",
+    "contract_address": "secret1gdxk2ddtyrfzc3r9y8mw6ze4vh547gj8w3yjjy",
+    "lp_token_contract": "secret1qwd00qf679h855ennt3qnjymgz6a5mwuq5cnpa",
     "query_result": {
       "assets": [
         {
@@ -125,8 +125,8 @@
   },
   {
     "pair": "sSCRT-JKL",
-    "contract_address": "secret1v33eu03ghv39ju82crf5fyrcy5lmjq5wz5eyyk",
-    "lp_token_contract": "secret1p68rvjvwnc03r847a8yg9makwwzuuwg6r47273",
+    "contract_address": "secret1ape6aakh2p5602rv2sdv0nanwmcwyctnvmc65r",
+    "lp_token_contract": "secret1slqhx2r65qh6vx9gkw7ks7zk4rccu3qwuv5mzd",
     "query_result": {
       "assets": [
         {
