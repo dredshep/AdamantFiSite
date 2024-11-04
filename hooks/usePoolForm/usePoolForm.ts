@@ -99,8 +99,8 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       isLoading === true
         ? 'Loading pool data...'
         : error instanceof Error
-        ? error.message
-        : undefined,
+          ? error.message
+          : undefined,
   };
 
   const safeTokenInputs = tokenInputs as unknown as TokenInputs;
@@ -113,6 +113,15 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       }
     }
   };
+
+  function convertAmount(amount: string, decimals: number): string {
+    // Parse the amount as a decimal number
+    const decimalAmount = parseFloat(amount);
+    // Multiply by 10^decimals and round to avoid floating-point precision issues
+    const convertedAmount = Math.round(decimalAmount * Math.pow(10, decimals));
+    // Convert the result back to a string
+    return convertedAmount.toString();
+  }
 
   const handleDepositClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
@@ -154,7 +163,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
           viewing_key: 'SecretSwap',
         },
       },
-      amount: amount0,
+      amount: convertAmount(amount0, selectedPool.token0.decimals),
     };
 
     const asset1: Asset = {
@@ -165,7 +174,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
           viewing_key: 'SecretSwap',
         },
       },
-      amount: amount1,
+      amount: convertAmount(amount1, selectedPool.token1.decimals),
     };
 
     console.log('Deposit clicked', {
@@ -186,7 +195,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       setPending(false);
       setResult(result);
 
-      console.log('Transaction Result:', result);
+      console.log('Transaction Result:', JSON.stringify(result, null, 4));
 
       if (result.code !== TxResultCode.Success) {
         throw new Error(`Swap failed: ${result.rawLog}`);
