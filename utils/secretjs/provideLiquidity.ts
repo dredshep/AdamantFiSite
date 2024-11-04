@@ -92,7 +92,13 @@ export async function provideLiquidity(
 
   console.debug(JSON.stringify(messages, null, 4));
 
-  const tx = await secretjs.tx.broadcast(messages, { gasLimit: 1_000_000 });
+  const tx = await secretjs.tx.broadcast(messages, {
+    gasLimit: 1_000_000,
+    gasPriceInFeeDenom: 0.1,
+    feeDenom: 'uscrt',
+    waitForCommit: true,
+    broadcastTimeoutMs: 60_000,
+  });
 
   console.debug(JSON.stringify(tx, null, 4));
 
