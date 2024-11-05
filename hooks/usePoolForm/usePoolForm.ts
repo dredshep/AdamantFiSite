@@ -23,11 +23,12 @@ interface TokenInputs extends PoolTokenInputs {
 export function usePoolForm(poolAddress: string | string[] | undefined): UsePoolDepositFormResult {
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } = usePoolStore();
 
+  // TODO: Find a way to have one secretjs client for the whole app.
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  // const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const { setPending, setResult } = useTxStore.getState();
 
-  // TODO: reduce this code duplication. the same effect is defined in the swap form
+  // TODO: Reduce this code duplication. The same effect is defined in the swap form.
   useEffect(() => {
     const keplr = (window as unknown as Window).keplr;
     const connectKeplr = async () => {
@@ -59,13 +60,83 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
         encryptionUtils: enigmaUtils,
       });
 
-      // setWalletAddress(accounts[0]!.address);
-
+      setWalletAddress(accounts[0]!.address);
       setSecretjs(client);
     };
 
     void connectKeplr();
   }, []);
+
+  async function getTokenBalance(
+    secretjs: SecretNetworkClient,
+    tokenAddress: string,
+    tokenCodeHash: string
+  ) {
+    const keplr = (window as unknown as Window).keplr;
+
+    // TODO: probably don't want to use alerts
+    if (!keplr) {
+      alert('Please install the Keplr extension');
+      return;
+    }
+
+    const viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress);
+
+    const balance = await secretjs.query.snip20.getBalance({
+      contract: {
+        address: tokenAddress,
+        code_hash: tokenCodeHash,
+      },
+      address: secretjs.address,
+      auth: { key: viewingKey },
+    });
+
+    return balance;
+  }
+
+  useEffect(() => {
+    if (!secretjs) return;
+
+    const connectAndFetchBalances = async () => {
+      try {
+        const keplr = (window as unknown as Window).keplr;
+
+        // TODO: probably don't want to use alerts
+        if (!keplr) {
+          alert('Please install the Keplr extension');
+          return;
+        }
+
+        if (walletAddress !== null && walletAddress !== undefined && walletAddress !== '') {
+          console.log('Wallet address changed:', walletAddress);
+
+          const token0Address = selectedPool?.token0?.address;
+          const token1Address = selectedPool?.token1?.address;
+
+          if (token0Address === undefined || token1Address === undefined) {
+            console.error('Token address is undefined');
+            return;
+          }
+
+          const [balance0, balance1] = await Promise.all([
+            getTokenBalance(secretjs, token0Address, getCodeHashByAddress(token0Address)),
+            getTokenBalance(secretjs, token1Address, getCodeHashByAddress(token1Address)),
+          ]);
+
+          console.log('Balance of token0:', balance0);
+          console.log('Balance of token1:', balance1);
+
+          // Handle the balances here as needed, such as updating state
+          // setBalance0(balance0);
+          // setBalance1(balance1);
+        }
+      } catch (error) {
+        console.error('Error connecting or fetching balances:', error);
+      }
+    };
+
+    void connectAndFetchBalances();
+  }, [walletAddress, selectedPool]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['pool-data', poolAddress],
