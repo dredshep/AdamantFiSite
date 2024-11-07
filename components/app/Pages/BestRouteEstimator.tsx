@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
+import { useEffect, useState } from 'react';
+import { SecretNetworkClient } from 'secretjs';
 // import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
-import {
-  buildTokenPoolMap,
-  findPaths,
-  estimateBestPath,
-} from "@/utils/estimation"; // Assuming these functions are extracted to a utility file
-import { fetchPoolData } from "@/utils/estimation/fetchPoolData";
-import { PathEstimation } from "@/pages/app/testing/estimate/a";
-import Image from "next/image";
-import { useSwapForm } from "@/hooks/useSwapForm";
+import { useSwapForm } from '@/hooks/useSwapForm';
+import { PathEstimation } from '@/types/estimation/PathEstimation';
+import { buildTokenPoolMap, estimateBestPath, findPaths } from '@/utils/estimation'; // Assuming these functions are extracted to a utility file
+import { fetchPoolData } from '@/utils/estimation/fetchPoolData';
+import Image from 'next/image';
 
 interface BestRouteEstimatorProps {
   secretjs: SecretNetworkClient | null;
@@ -26,8 +22,7 @@ function BestRouteEstimator({
 // amountIn,
 BestRouteEstimatorProps) {
   const { payDetails, receiveDetails } = useSwapForm();
-  const [bestPathEstimation, setBestPathEstimation] =
-    useState<PathEstimation | null>(null);
+  const [bestPathEstimation, setBestPathEstimation] = useState<PathEstimation | null>(null);
   useEffect(() => {
     const handleEstimate = async () => {
       console.log(`\n--- Estimating best path ---`);
@@ -45,38 +40,30 @@ BestRouteEstimatorProps) {
         payDetails.tokenAddress !== null &&
         receiveDetails.tokenAddress !== null &&
         !isNaN(Number(amountIn)) && // Check if amount is a valid number
-        amountIn !== "" && // Ensure it's not an empty string
+        amountIn !== '' && // Ensure it's not an empty string
         Number(amountIn) > 0 // Ensure it's a positive number
       ) {
         console.log(`--- Step 2: Building token pool map ---`);
         const amountInDecimal = new Decimal(amountIn);
         const tokenPoolMap = buildTokenPoolMap(fullPoolsData);
         console.log(`--- Step 3: Finding paths ---`);
-        const paths = findPaths(
-          tokenPoolMap,
-          payDetails.tokenAddress,
-          receiveDetails.tokenAddress
-        );
+        const paths = findPaths(tokenPoolMap, payDetails.tokenAddress, receiveDetails.tokenAddress);
 
         if (paths.length === 0) {
-          console.log("No available paths found for the selected tokens.");
+          console.log('No available paths found for the selected tokens.');
           return;
         }
 
-        const estimation = await estimateBestPath(
-          secretjs,
-          paths,
-          amountInDecimal
-        );
+        const estimation = await estimateBestPath(secretjs, paths, amountInDecimal);
         setBestPathEstimation(estimation);
       } else {
-        console.error("Invalid input for estimation:", payDetails);
-        if (amountIn === null || amountIn === "") {
-          console.error("Amount is null or empty.");
+        console.error('Invalid input for estimation:', payDetails);
+        if (amountIn === null || amountIn === '') {
+          console.error('Amount is null or empty.');
         } else if (isNaN(Number(amountIn))) {
-          console.error("Amount is not a valid number:", amountIn);
+          console.error('Amount is not a valid number:', amountIn);
         } else if (Number(amountIn) <= 0) {
-          console.error("Amount must be a positive number:", amountIn);
+          console.error('Amount must be a positive number:', amountIn);
         }
       }
     };
@@ -86,7 +73,7 @@ BestRouteEstimatorProps) {
       payDetails.tokenAddress !== null &&
       receiveDetails.tokenAddress !== null &&
       payDetails.amount !== null &&
-      payDetails.amount.trim() !== ""
+      payDetails.amount.trim() !== ''
     ) {
       void handleEstimate();
     } else {
@@ -106,22 +93,20 @@ BestRouteEstimatorProps) {
       {bestPathEstimation ? (
         <div className="text-white">
           <p>
-            Best Route:{" "}
-            {bestPathEstimation.path.tokens.map(
-              (token: string, index: number) => (
-                <span key={token}>
-                  {index > 0 && " -> "}
-                  {/* Replace with your logo component */}
-                  <Image
-                    src={`path/to/logo/${token}.png`}
-                    alt={token}
-                    className="inline w-6 h-6"
-                    width={24}
-                    height={24}
-                  />
-                </span>
-              )
-            )}
+            Best Route:{' '}
+            {bestPathEstimation.path.tokens.map((token: string, index: number) => (
+              <span key={token}>
+                {index > 0 && ' -> '}
+                {/* Replace with your logo component */}
+                <Image
+                  src={`path/to/logo/${token}.png`}
+                  alt={token}
+                  className="inline w-6 h-6"
+                  width={24}
+                  height={24}
+                />
+              </span>
+            ))}
           </p>
           <p>Final Output: {bestPathEstimation.finalOutput.toString()}</p>
           <p>Ideal Output: {bestPathEstimation.idealOutput.toString()}</p>

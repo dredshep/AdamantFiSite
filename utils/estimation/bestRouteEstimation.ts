@@ -1,8 +1,8 @@
-import { PathEstimation } from "@/pages/app/testing/estimate/a";
-import { Path } from "@/types/estimation/Path";
-import Decimal from "decimal.js";
-import { SecretNetworkClient } from "secretjs";
-import { estimateSingleHopOutput } from ".";
+import { Path } from '@/types/estimation/Path';
+import { PathEstimation } from '@/types/estimation/PathEstimation';
+import Decimal from 'decimal.js';
+import { SecretNetworkClient } from 'secretjs';
+import { estimateSingleHopOutput } from '.';
 
 export const estimateBestPath = async (
   secretjs: SecretNetworkClient,
@@ -17,8 +17,7 @@ export const estimateBestPath = async (
     let totalLpFee = new Decimal(0);
     let totalPriceImpact = new Decimal(0);
     let cumulativeIdealOutput = new Decimal(0); // Track cumulative ideal output
-    const hopGasCost =
-      path.pools.length > 1 ? new Decimal(0.2) : new Decimal(0.12); // 0.12 for single-hop, 0.20 for multi-hop
+    const hopGasCost = path.pools.length > 1 ? new Decimal(0.2) : new Decimal(0.12); // 0.12 for single-hop, 0.20 for multi-hop
 
     try {
       for (let i = 0; i < path.pools.length; i++) {
@@ -31,26 +30,23 @@ export const estimateBestPath = async (
         console.log(`Output Token: ${outputToken}`);
 
         if (
-          typeof inputToken !== "string" ||
-          typeof outputToken !== "string" ||
-          typeof poolAddress !== "string"
+          typeof inputToken !== 'string' ||
+          typeof outputToken !== 'string' ||
+          typeof poolAddress !== 'string'
         ) {
-          throw new Error("Invalid token addresses");
+          throw new Error('Invalid token addresses');
         }
 
-        const { output, idealOutput, priceImpact, lpFee } =
-          await estimateSingleHopOutput(
-            secretjs,
-            poolAddress,
-            amountIn,
-            inputToken,
-            outputToken
-          );
+        const { output, idealOutput, priceImpact, lpFee } = await estimateSingleHopOutput(
+          secretjs,
+          poolAddress,
+          amountIn,
+          inputToken,
+          outputToken
+        );
 
         console.log(`Output from hop ${i + 1}: ${output.toString()}`);
-        console.log(
-          `Ideal Output from hop ${i + 1}: ${idealOutput.toString()}`
-        );
+        console.log(`Ideal Output from hop ${i + 1}: ${idealOutput.toString()}`);
 
         if (output.isNegative()) {
           console.error(`Negative output detected after hop ${i + 1}`);
@@ -63,20 +59,14 @@ export const estimateBestPath = async (
         cumulativeIdealOutput = idealOutput; // Update cumulative ideal output to reflect the most recent hop
       }
 
-      const totalGasCost =
-        hopGasCost.mul(path.pools.length).toFixed(2) + " SCRT";
+      const totalGasCost = hopGasCost.mul(path.pools.length).toFixed(2) + ' SCRT';
 
       // Directly use the last output amount without subtracting the lpFee again
       const adjustedFinalOutput = amountIn;
 
-      console.log(
-        `Final Output after all hops: ${adjustedFinalOutput.toString()}`
-      );
+      console.log(`Final Output after all hops: ${adjustedFinalOutput.toString()}`);
 
-      if (
-        !bestEstimation ||
-        adjustedFinalOutput.greaterThan(bestEstimation.finalOutput)
-      ) {
+      if (!bestEstimation || adjustedFinalOutput.greaterThan(bestEstimation.finalOutput)) {
         bestEstimation = {
           path,
           finalOutput: adjustedFinalOutput,
@@ -87,7 +77,7 @@ export const estimateBestPath = async (
         };
       }
     } catch (error) {
-      console.error("Error estimating path output:", error);
+      console.error('Error estimating path output:', error);
     }
   }
 

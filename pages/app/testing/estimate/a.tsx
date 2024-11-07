@@ -1,23 +1,22 @@
-import { Window as KeplrWindow } from "@keplr-wallet/types";
-import { useState, useEffect } from "react";
-import { SecretNetworkClient, TxOptions, TxResultCode } from "secretjs";
-import Decimal from "decimal.js";
-import { getTokenDecimals, getTokenName } from "@/utils/apis/tokenInfo";
-import { fullPoolsData } from "../../../../components/app/Testing/fullPoolsData";
-import SelectComponent2 from "@/components/app/Testing/SelectComponent2";
-import SwapResult from "@/components/app/Testing/SwapResult";
-import ViewingKeyModal from "@/components/app/Testing/ViewingKeyModal";
-import { useViewingKeyStore } from "@/store/viewingKeyStore";
-import { SecretString } from "@/types";
-import AllowanceBox from "@/components/app/Testing/AllowanceBox";
-import isNotNullish from "@/utils/isNotNullish";
-import { Window } from "@keplr-wallet/types";
+import AllowanceBox from '@/components/app/Testing/AllowanceBox';
+import SelectComponent2 from '@/components/app/Testing/SelectComponent2';
+import SwapResult from '@/components/app/Testing/SwapResult';
+import ViewingKeyModal from '@/components/app/Testing/ViewingKeyModal';
+import { useViewingKeyStore } from '@/store/viewingKeyStore';
+import { SecretString } from '@/types';
+import { getTokenDecimals, getTokenName } from '@/utils/apis/tokenInfo';
+import isNotNullish from '@/utils/isNotNullish';
+import { Window as KeplrWindow, Window } from '@keplr-wallet/types';
+import Decimal from 'decimal.js';
+import { useEffect, useState } from 'react';
+import { SecretNetworkClient, TxOptions, TxResultCode } from 'secretjs';
+import { fullPoolsData } from '../../../../components/app/Testing/fullPoolsData';
 
 interface PoolQueryResponse {
   assets: {
     info: {
       token: {
-        contract_addr: string;
+        contract_addr: SecretString;
         token_code_hash: string;
         viewing_key: string;
       };
@@ -29,13 +28,13 @@ interface PoolQueryResponse {
 
 interface PoolData {
   reserves: {
-    [token: string]: { amount: Decimal; decimals: number };
+    [token: SecretString]: { amount: Decimal; decimals: number };
   };
   fee: number;
 }
 
 interface TokenPoolMap {
-  [tokenAddress: string]: string[]; // Maps token address to a list of pool addresses
+  [tokenAddress: string]: SecretString[] | undefined; // Changed index signature to string
 }
 
 const buildTokenPoolMap = (pools: typeof fullPoolsData): TokenPoolMap => {
@@ -49,34 +48,30 @@ const buildTokenPoolMap = (pools: typeof fullPoolsData): TokenPoolMap => {
         if (!(tokenAddr in tokenPoolMap)) {
           tokenPoolMap[tokenAddr] = [];
         }
-        tokenPoolMap[tokenAddr]?.push(pool.contract_address);
+        (tokenPoolMap[tokenAddr] as SecretString[]).push(pool.contract_address as SecretString);
       });
   });
 
   return tokenPoolMap;
 };
 const getPossibleOutputsForToken = (
-  startToken: string,
+  startToken: SecretString,
   pools: typeof fullPoolsData,
   maxHops: number = 5
-): string[] => {
+): SecretString[] => {
   const tokenPoolMap = buildTokenPoolMap(pools);
-  const reachableTokens = findAllReachableTokens(
-    tokenPoolMap,
-    startToken,
-    maxHops
-  );
+  const reachableTokens = findAllReachableTokens(tokenPoolMap, startToken, maxHops);
   return Array.from(reachableTokens);
 };
 const findAllReachableTokens = (
   tokenPoolMap: TokenPoolMap,
-  startToken: string,
+  startToken: SecretString,
   maxHops: number = 5 // Allows flexibility in the depth of search
-): Set<string> => {
-  const reachableTokens: Set<string> = new Set();
-  const visited: Set<string> = new Set();
+): Set<SecretString> => {
+  const reachableTokens: Set<SecretString> = new Set();
+  const visited: Set<SecretString> = new Set();
 
-  const dfs = (currentToken: string, hops: number) => {
+  const dfs = (currentToken: SecretString, hops: number) => {
     if (hops > maxHops || visited.has(currentToken)) return;
 
     visited.add(currentToken);
@@ -86,7 +81,7 @@ const findAllReachableTokens = (
       const poolTokens = fullPoolsData
         .find((pool) => pool.contract_address === poolAddress)
         ?.query_result.assets.filter((asset) => asset.info.token !== undefined)
-        .map((asset) => asset.info.token!.contract_addr);
+        .map((asset) => asset.info.token!.contract_addr as SecretString);
 
       poolTokens?.forEach((nextToken) => {
         if (nextToken !== currentToken && !reachableTokens.has(nextToken)) {
@@ -104,20 +99,20 @@ const findAllReachableTokens = (
   return reachableTokens;
 };
 export interface Path {
-  pools: string[]; // Array of pool addresses
-  tokens: string[]; // Array of token addresses in the path
+  pools: SecretString[]; // Array of pool addresses
+  tokens: SecretString[]; // Array of token addresses in the path
 }
 
 const findPaths = (
   tokenPoolMap: TokenPoolMap,
-  startToken: string,
-  endToken: string,
+  startToken: SecretString,
+  endToken: SecretString,
   maxHops: number = 3
 ): Path[] => {
   const paths: Path[] = [];
-  const visited: Set<string> = new Set();
+  const visited: Set<SecretString> = new Set();
 
-  const dfs = (currentToken: string, path: Path, hops: number) => {
+  const dfs = (currentToken: SecretString, path: Path, hops: number) => {
     if (hops > maxHops || visited.has(currentToken)) return;
     if (currentToken === endToken) {
       paths.push({ pools: [...path.pools], tokens: [...path.tokens] });
@@ -131,7 +126,7 @@ const findPaths = (
       const poolTokens = fullPoolsData
         .find((pool) => pool.contract_address === poolAddress)
         ?.query_result.assets.filter((asset) => asset.info.token !== undefined)
-        .map((asset) => asset.info.token!.contract_addr);
+        .map((asset) => asset.info.token!.contract_addr as SecretString);
 
       poolTokens?.forEach((nextToken) => {
         if (nextToken !== currentToken) {
@@ -172,8 +167,7 @@ const estimateBestPath = async (
     let totalLpFee = new Decimal(0);
     let totalPriceImpact = new Decimal(0);
     let cumulativeIdealOutput = new Decimal(0); // Track cumulative ideal output
-    const hopGasCost =
-      path.pools.length > 1 ? new Decimal(0.2) : new Decimal(0.12); // 0.12 for single-hop, 0.20 for multi-hop
+    const hopGasCost = path.pools.length > 1 ? new Decimal(0.2) : new Decimal(0.12); // 0.12 for single-hop, 0.20 for multi-hop
 
     try {
       for (let i = 0; i < path.pools.length; i++) {
@@ -186,26 +180,23 @@ const estimateBestPath = async (
         console.log(`Output Token: ${outputToken}`);
 
         if (
-          typeof inputToken !== "string" ||
-          typeof outputToken !== "string" ||
-          typeof poolAddress !== "string"
+          typeof inputToken !== 'string' ||
+          typeof outputToken !== 'string' ||
+          typeof poolAddress !== 'string'
         ) {
-          throw new Error("Invalid token addresses");
+          throw new Error('Invalid token addresses');
         }
 
-        const { output, idealOutput, priceImpact, lpFee } =
-          await estimateSingleHopOutput(
-            secretjs,
-            poolAddress,
-            amountIn,
-            inputToken,
-            outputToken
-          );
+        const { output, idealOutput, priceImpact, lpFee } = await estimateSingleHopOutput(
+          secretjs,
+          poolAddress,
+          amountIn,
+          inputToken,
+          outputToken
+        );
 
         console.log(`Output from hop ${i + 1}: ${output.toString()}`);
-        console.log(
-          `Ideal Output from hop ${i + 1}: ${idealOutput.toString()}`
-        );
+        console.log(`Ideal Output from hop ${i + 1}: ${idealOutput.toString()}`);
 
         if (output.isNegative()) {
           console.error(`Negative output detected after hop ${i + 1}`);
@@ -218,20 +209,14 @@ const estimateBestPath = async (
         cumulativeIdealOutput = idealOutput; // Update cumulative ideal output to reflect the most recent hop
       }
 
-      const totalGasCost =
-        hopGasCost.mul(path.pools.length).toFixed(2) + " SCRT";
+      const totalGasCost = hopGasCost.mul(path.pools.length).toFixed(2) + ' SCRT';
 
       // Directly use the last output amount without subtracting the lpFee again
       const adjustedFinalOutput = amountIn;
 
-      console.log(
-        `Final Output after all hops: ${adjustedFinalOutput.toString()}`
-      );
+      console.log(`Final Output after all hops: ${adjustedFinalOutput.toString()}`);
 
-      if (
-        !bestEstimation ||
-        adjustedFinalOutput.greaterThan(bestEstimation.finalOutput)
-      ) {
+      if (!bestEstimation || adjustedFinalOutput.greaterThan(bestEstimation.finalOutput)) {
         bestEstimation = {
           path,
           finalOutput: adjustedFinalOutput,
@@ -242,31 +227,29 @@ const estimateBestPath = async (
         };
       }
     } catch (error) {
-      console.error("Error estimating path output:", error);
+      console.error('Error estimating path output:', error);
     }
   }
 
   return bestEstimation;
 };
 
-const isValidReserve = (
-  reserve: unknown
-): reserve is { amount: Decimal; decimals: number } => {
+const isValidReserve = (reserve: unknown): reserve is { amount: Decimal; decimals: number } => {
   return (
     reserve !== null &&
-    typeof reserve === "object" &&
-    "amount" in reserve &&
+    typeof reserve === 'object' &&
+    'amount' in reserve &&
     reserve.amount instanceof Decimal &&
-    "decimals" in reserve &&
-    typeof reserve.decimals === "number"
+    'decimals' in reserve &&
+    typeof reserve.decimals === 'number'
   );
 };
 
 const calculateSingleHopOutput = (
   amountIn: Decimal,
   poolData: PoolData,
-  inputToken: string,
-  outputToken: string
+  inputToken: SecretString,
+  outputToken: SecretString
 ): {
   output: Decimal;
   idealOutput: Decimal;
@@ -277,7 +260,7 @@ const calculateSingleHopOutput = (
   const rawOutputReserve = poolData.reserves[outputToken];
 
   if (!isValidReserve(rawInputReserve) || !isValidReserve(rawOutputReserve)) {
-    throw new Error("Invalid token addresses or malformed reserve data");
+    throw new Error('Invalid token addresses or malformed reserve data');
   }
 
   console.log(`\n--- Calculation Start ---`);
@@ -299,9 +282,7 @@ const calculateSingleHopOutput = (
   const outputReserve = rawOutputReserve.amount;
 
   // Adjust input amount by input token decimals
-  const amountInAdjusted = amountIn.mul(
-    Decimal.pow(10, rawInputReserve.decimals)
-  );
+  const amountInAdjusted = amountIn.mul(Decimal.pow(10, rawInputReserve.decimals));
   console.log(`Amount In Adjusted: ${amountInAdjusted.toString()}`);
 
   // Calculate fee and adjust input amount
@@ -324,38 +305,24 @@ const calculateSingleHopOutput = (
 
   // Calculate ideal output assuming infinite liquidity (no price impact)
   const idealOutput = amountInAdjusted.mul(outputReserve).div(inputReserve);
-  console.log(
-    `Ideal Output Before Decimal Adjustment: ${idealOutput.toString()}`
-  );
+  console.log(`Ideal Output Before Decimal Adjustment: ${idealOutput.toString()}`);
 
   // Adjust ideal output by output token decimals
-  let idealOutputAdjusted = idealOutput.div(
-    Decimal.pow(10, rawOutputReserve.decimals)
-  );
-  console.log(
-    `Ideal Output After Decimal Adjustment: ${idealOutputAdjusted.toString()}`
-  );
+  let idealOutputAdjusted = idealOutput.div(Decimal.pow(10, rawOutputReserve.decimals));
+  console.log(`Ideal Output After Decimal Adjustment: ${idealOutputAdjusted.toString()}`);
 
   // Ensure ideal output isn't negative
   if (idealOutputAdjusted.isNegative()) {
-    console.warn(
-      "Calculated ideal output is negative after decimal adjustment."
-    );
+    console.warn('Calculated ideal output is negative after decimal adjustment.');
     idealOutputAdjusted = new Decimal(0);
   }
 
   // Calculate price impact
-  const priceImpact = idealOutputAdjusted
-    .sub(output)
-    .div(idealOutputAdjusted)
-    .mul(100)
-    .toFixed(2);
+  const priceImpact = idealOutputAdjusted.sub(output).div(idealOutputAdjusted).mul(100).toFixed(2);
   console.log(`Price Impact: ${priceImpact}%`);
 
   // Correct calculation of Liquidity Provider Fee
-  const lpFee = amountIn.sub(
-    amountInWithFee.div(Decimal.pow(10, rawInputReserve.decimals))
-  );
+  const lpFee = amountIn.sub(amountInWithFee.div(Decimal.pow(10, rawInputReserve.decimals)));
   console.log(`Liquidity Provider Fee: ${lpFee.toString()}`);
   console.log(`--- Calculation End ---\n`);
 
@@ -370,10 +337,10 @@ const calculateSingleHopOutput = (
 
 const estimateSingleHopOutput = async (
   secretjs: SecretNetworkClient,
-  poolAddress: string,
+  poolAddress: SecretString,
   amountIn: Decimal,
-  inputToken: string,
-  outputToken: string
+  inputToken: SecretString,
+  outputToken: SecretString
 ): Promise<{
   output: Decimal;
   idealOutput: Decimal;
@@ -390,7 +357,7 @@ const estimateSingleHopOutput = async (
   );
 
   // Gas cost for a single hop
-  const gasCost = "0.12 SCRT";
+  const gasCost = '0.12 SCRT';
 
   return {
     output,
@@ -403,25 +370,22 @@ const estimateSingleHopOutput = async (
 
 const getPoolData = async (
   secretjs: SecretNetworkClient,
-  poolAddress: string
+  poolAddress: SecretString
 ): Promise<PoolData> => {
-  const response: PoolQueryResponse =
-    await secretjs.query.compute.queryContract({
-      contract_address: poolAddress,
-      code_hash:
-        "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
-      query: { pool: {} },
-    });
+  const response: PoolQueryResponse = await secretjs.query.compute.queryContract({
+    contract_address: poolAddress,
+    code_hash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
+    query: { pool: {} },
+  });
 
-  if (typeof response !== "object" || response === null) {
-    throw new Error("Invalid response from pool contract");
+  if (typeof response !== 'object' || response === null) {
+    throw new Error('Invalid response from pool contract');
   }
 
   const reserves = response.assets.reduce(
-    (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
+    (acc: { [key: SecretString]: { amount: Decimal; decimals: number } }, asset) => {
       const decimals =
-        asset.info.token?.contract_addr ===
-        "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
+        asset.info.token?.contract_addr === 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek'
           ? 6
           : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
       console.log({ decimals });
@@ -441,31 +405,23 @@ const getPoolData = async (
 };
 
 const SwapPage = () => {
-  const [amountIn, setAmountIn] = useState<string>("");
-  const [estimatedOutput, setEstimatedOutput] = useState<string>("");
+  const [amountIn, setAmountIn] = useState<string>('');
+  const [estimatedOutput, setEstimatedOutput] = useState<string>('');
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [inputToken, setInputToken] = useState<SecretString | "">("");
-  const [outputToken, setOutputToken] = useState<SecretString | "">("");
+  const [inputToken, setInputToken] = useState<SecretString | ''>('');
+  const [outputToken, setOutputToken] = useState<SecretString | ''>('');
   const [outputOptions, setOutputOptions] = useState<SecretString[]>([]);
-  const [bestPathEstimation, setBestPathEstimation] =
-    useState<PathEstimation | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [bestPathEstimation, setBestPathEstimation] = useState<PathEstimation | null>(null);
+  const [walletAddress, setWalletAddress] = useState<SecretString | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const inputViewingKey = useViewingKeyStore((state) =>
-    state.getViewingKey(inputToken)
-  );
-  const outputViewingKey = useViewingKeyStore((state) =>
-    state.getViewingKey(outputToken)
-  );
+  const inputViewingKey = useViewingKeyStore((state) => state.getViewingKey(inputToken));
+  const outputViewingKey = useViewingKeyStore((state) => state.getViewingKey(outputToken));
 
   useEffect(() => {
-    setEstimatedOutput("");
+    setEstimatedOutput('');
     setBestPathEstimation(null);
     if (inputToken) {
-      const possibleOutputs = getPossibleOutputsForToken(
-        inputToken,
-        fullPoolsData
-      ) as SecretString[];
+      const possibleOutputs = getPossibleOutputsForToken(inputToken, fullPoolsData);
       setOutputOptions(possibleOutputs);
     }
   }, [inputToken, outputToken]);
@@ -473,33 +429,34 @@ const SwapPage = () => {
   useEffect(() => {
     const connectKeplr = async () => {
       if (!isNotNullish((window as unknown as Window).keplr)) {
-        alert("Please install Keplr extension");
+        alert('Please install Keplr extension');
         return;
       }
 
-      await (window as unknown as Window).keplr?.enable("secret-4");
+      await (window as unknown as Window).keplr?.enable('secret-4');
 
-      const offlineSigner = (
-        window as unknown as KeplrWindow
-      ).getOfflineSigner?.("secret-4");
+      const offlineSigner = (window as unknown as KeplrWindow).getOfflineSigner?.('secret-4');
       const accounts = await offlineSigner?.getAccounts();
 
       if (!accounts || accounts.length === 0 || accounts[0] === undefined) {
-        alert("No accounts found");
+        alert('No accounts found');
         return;
       }
+
+      setWalletAddress(accounts[0].address as SecretString);
+
+      // Ensure offlineSigner is not undefined before creating client
       if (!offlineSigner) {
-        alert("No offline signer found");
+        alert('Failed to get offline signer');
         return;
       }
 
       const client = new SecretNetworkClient({
-        chainId: "secret-4",
-        url: "https://lcd.mainnet.secretsaturn.net",
+        chainId: 'secret-4',
+        url: 'https://lcd.mainnet.secretsaturn.net',
         wallet: offlineSigner,
         walletAddress: accounts[0].address,
       });
-      setWalletAddress(accounts[0].address);
 
       setSecretjs(client);
     };
@@ -520,29 +477,25 @@ const SwapPage = () => {
       const paths = findPaths(tokenPoolMap, inputToken, outputToken);
 
       if (paths.length === 0) {
-        console.log("No available paths found for the selected tokens.");
+        console.log('No available paths found for the selected tokens.');
         return;
       }
 
-      const bestPathEstimation = await estimateBestPath(
-        secretjs,
-        paths,
-        amountInDecimal
-      );
+      const bestPathEstimation = await estimateBestPath(secretjs, paths, amountInDecimal);
 
       if (bestPathEstimation) {
-        console.log("--- Best Path Estimation in handleEstimate ---");
-        console.log("Best Path Estimation:", bestPathEstimation);
-        console.log("Final Output:", bestPathEstimation.finalOutput.toString());
-        console.log("Ideal Output:", bestPathEstimation.idealOutput.toString());
-        console.log("LP Fee:", bestPathEstimation.totalLpFee.toString());
-        console.log("Total Price Impact:", bestPathEstimation.totalPriceImpact);
-        console.log("Total Gas Cost:", bestPathEstimation.totalGasCost);
-        console.log("--- End Best Path Estimation in handleEstimate ---");
+        console.log('--- Best Path Estimation in handleEstimate ---');
+        console.log('Best Path Estimation:', bestPathEstimation);
+        console.log('Final Output:', bestPathEstimation.finalOutput.toString());
+        console.log('Ideal Output:', bestPathEstimation.idealOutput.toString());
+        console.log('LP Fee:', bestPathEstimation.totalLpFee.toString());
+        console.log('Total Price Impact:', bestPathEstimation.totalPriceImpact);
+        console.log('Total Gas Cost:', bestPathEstimation.totalGasCost);
+        console.log('--- End Best Path Estimation in handleEstimate ---');
 
         setBestPathEstimation(bestPathEstimation);
       } else {
-        setEstimatedOutput("Error in estimating the best route");
+        setEstimatedOutput('Error in estimating the best route');
       }
     }
   };
@@ -555,18 +508,18 @@ const SwapPage = () => {
 
   const handleSwap = async () => {
     if (!secretjs) {
-      console.error("SecretNetworkClient is not initialized");
+      console.error('SecretNetworkClient is not initialized');
       return;
     }
 
     const path = bestPathEstimation?.path;
     if (!path) {
-      console.error("No path found for swap execution");
+      console.error('No path found for swap execution');
       return;
     }
 
     if (inputViewingKey === undefined || outputViewingKey === undefined) {
-      alert("Viewing keys are missing. Please sync them before swapping.");
+      alert('Viewing keys are missing. Please sync them before swapping.');
       return;
     }
 
@@ -577,18 +530,18 @@ const SwapPage = () => {
       });
 
       const baseAccount = accountInfo as {
-        "@type": "/cosmos.auth.v1beta1.BaseAccount";
+        '@type': '/cosmos.auth.v1beta1.BaseAccount';
         sequence?: string;
         account_number?: string;
       };
 
       // Check if sequence number is available
       const sequence =
-        baseAccount.sequence != null && baseAccount.sequence !== ""
+        baseAccount.sequence != null && baseAccount.sequence !== ''
           ? parseInt(baseAccount.sequence, 10)
           : null;
       const accountNumber =
-        baseAccount.account_number != null && baseAccount.account_number !== ""
+        baseAccount.account_number != null && baseAccount.account_number !== ''
           ? parseInt(baseAccount.account_number, 10)
           : null;
 
@@ -599,14 +552,12 @@ const SwapPage = () => {
 
         console.log(`Executing swap ${i + 1} on pool ${poolAddress}`);
         console.log(`Swapping ${inputToken} for ${outputToken}`);
-        if (typeof inputToken !== "string") {
+        if (typeof inputToken !== 'string') {
           throw new Error(`Input token is not a string (undefined)`);
         }
         const decimals = getTokenDecimals(inputToken);
         if (decimals === undefined) {
-          throw new Error(
-            `Decimals for token ${inputToken} could not be determined`
-          );
+          throw new Error(`Decimals for token ${inputToken} could not be determined`);
         }
 
         const swapMsg = {
@@ -616,54 +567,51 @@ const SwapPage = () => {
                 token: {
                   contract_addr: inputToken,
                   token_code_hash:
-                    "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+                    '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
                   viewing_key: inputViewingKey,
                 },
               },
-              amount: bestPathEstimation.finalOutput
-                .mul(Decimal.pow(10, decimals))
-                .toFixed(0),
+              amount: bestPathEstimation.finalOutput.mul(Decimal.pow(10, decimals)).toFixed(0),
             },
-            belief_price: "0",
-            max_spread: "0.5",
+            belief_price: '0',
+            max_spread: '0.5',
             to: walletAddress,
           },
         };
 
-        console.log("Swapping with message:", JSON.stringify(swapMsg, null, 2));
+        console.log('Swapping with message:', JSON.stringify(swapMsg, null, 2));
 
         const txOptions: TxOptions = {
           gasLimit: 200_000,
           gasPriceInFeeDenom: 0.25,
-          feeDenom: "uscrt",
+          feeDenom: 'uscrt',
           // Only include explicitSignerData if both sequence and accountNumber are available
           ...(sequence !== null && accountNumber !== null
             ? {
                 explicitSignerData: {
                   accountNumber: accountNumber,
                   sequence: sequence + i,
-                  chainId: "secret-4",
+                  chainId: 'secret-4',
                 },
               }
             : {}),
         };
 
-        if (typeof poolAddress !== "string") {
-          throw new Error("Pool address is undefined");
+        if (typeof poolAddress !== 'string') {
+          throw new Error('Pool address is undefined');
         }
         const result = await secretjs.tx.compute.executeContract(
           {
             sender: walletAddress!,
             contract_address: poolAddress,
-            code_hash:
-              "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+            code_hash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
             msg: swapMsg,
             sent_funds: [],
           },
           txOptions
         );
 
-        console.log("Transaction Result:", result);
+        console.log('Transaction Result:', result);
 
         if (result.code !== TxResultCode.Success) {
           throw new Error(`Swap failed at step ${i + 1}: ${result.rawLog}`);
@@ -672,29 +620,27 @@ const SwapPage = () => {
         console.log(`Swap ${i + 1} executed successfully!`);
       }
 
-      alert("Swap completed successfully!");
-      setEstimatedOutput("Swap completed successfully!");
+      alert('Swap completed successfully!');
+      setEstimatedOutput('Swap completed successfully!');
     } catch (error) {
-      console.error("Error during swap execution:", error);
-      alert("Swap failed. Check the console for more details.");
-      setEstimatedOutput("Error during swap execution. Please try again.");
+      console.error('Error during swap execution:', error);
+      alert('Swap failed. Check the console for more details.');
+      setEstimatedOutput('Error during swap execution. Please try again.');
     }
   };
 
   return (
     <div className="bg-gradient-to-r from-adamant-box-dark to-adamant-box-veryDark min-h-screen flex items-center justify-center">
       <div className="bg-adamant-app-boxHighlight rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center text-white mb-8">
-          Secret Swap Estimator
-        </h1>
+        <h1 className="text-3xl font-bold text-center text-white mb-8">Secret Swap Estimator</h1>
         <div className="flex flex-col space-y-4">
           <SelectComponent2
             setFrom={setInputToken}
             setTo={setOutputToken}
             outputOptions={outputOptions}
           />
-          {inputToken !== "" &&
-            typeof walletAddress === "string" &&
+          {inputToken !== '' &&
+            typeof walletAddress === 'string' &&
             inputViewingKey !== undefined &&
             outputViewingKey !== undefined &&
             (() => {
@@ -711,8 +657,7 @@ const SwapPage = () => {
                   (asset) => asset.info.token?.contract_addr === inputToken
                 );
 
-                const tokenCodeHash =
-                  tokenAsset?.info.token?.token_code_hash ?? "";
+                const tokenCodeHash = tokenAsset?.info.token?.token_code_hash ?? '';
                 const spenderAddress = pool.contract_address;
 
                 return (
@@ -720,10 +665,10 @@ const SwapPage = () => {
                     secretjs={secretjs!}
                     tokenAddress={inputToken}
                     spenderAddress={spenderAddress as SecretString}
-                    walletAddress={walletAddress as SecretString}
+                    walletAddress={walletAddress}
                     tokenCodeHash={tokenCodeHash}
                     requiredAmount={amountIn}
-                    viewingKey={inputViewingKey || ""}
+                    viewingKey={inputViewingKey || ''}
                   />
                 );
               } else {
@@ -737,7 +682,7 @@ const SwapPage = () => {
                 type="number"
                 value={amountIn}
                 onChange={(e) => setAmountIn(e.target.value)}
-                placeholder={`Amount of ${getTokenName(inputToken) ?? "Token"}`}
+                placeholder={`Amount of ${getTokenName(inputToken) ?? 'Token'}`}
                 className="px-4 py-2 border border-gray-700 bg-adamant-app-input rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg text-white"
               />
               <button
@@ -751,17 +696,15 @@ const SwapPage = () => {
                 <SwapResult
                   bestRoute={bestPathEstimation.path.tokens
                     .map((address) => getTokenName(address))
-                    .join(" -> ")}
-                  idealOutput={`${bestPathEstimation.idealOutput.toFixed(
-                    8
-                  )} ${getTokenName(outputToken)}`}
-                  actualOutput={`${bestPathEstimation.finalOutput.toFixed(
-                    8
-                  )} ${getTokenName(outputToken)}`}
-                  priceImpact={bestPathEstimation.totalPriceImpact + "%"}
-                  lpFee={`${bestPathEstimation.totalLpFee.toFixed(
-                    6
-                  )} ${getTokenName(inputToken)}`}
+                    .join(' -> ')}
+                  idealOutput={`${bestPathEstimation.idealOutput.toFixed(8)} ${getTokenName(
+                    outputToken
+                  )}`}
+                  actualOutput={`${bestPathEstimation.finalOutput.toFixed(8)} ${getTokenName(
+                    outputToken
+                  )}`}
+                  priceImpact={bestPathEstimation.totalPriceImpact + '%'}
+                  lpFee={`${bestPathEstimation.totalLpFee.toFixed(6)} ${getTokenName(inputToken)}`}
                   gasCost={bestPathEstimation.totalGasCost}
                   difference={`${bestPathEstimation.idealOutput
                     .sub(bestPathEstimation.finalOutput)
@@ -780,8 +723,7 @@ const SwapPage = () => {
               >
                 Sync Viewing Keys
               </button>
-              {inputViewingKey !== undefined &&
-              outputViewingKey !== undefined ? (
+              {inputViewingKey !== undefined && outputViewingKey !== undefined ? (
                 <button
                   onClick={() => void handleSwap()}
                   className="bg-adamant-accentBg hover:brightness-90 text-black font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-adamant-accentBg"
@@ -790,15 +732,14 @@ const SwapPage = () => {
                 </button>
               ) : (
                 <p className="text-xl text-center text-red-400">
-                  Viewing keys are required to execute the swap. Sync them
-                  first.
+                  Viewing keys are required to execute the swap. Sync them first.
                 </p>
               )}
             </>
           )}
         </div>
       </div>
-      {isModalOpen && inputToken !== "" && outputToken !== "" && (
+      {isModalOpen && inputToken !== '' && outputToken !== '' && (
         <ViewingKeyModal
           tokenIn={inputToken}
           tokenOut={outputToken}
