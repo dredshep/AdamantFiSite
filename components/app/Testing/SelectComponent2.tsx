@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from "react";
-import fullPoolsData from "@/outputs/fullPoolsData.json";
-import { fetchTokenData, getTokenName } from "@/utils/apis/tokenInfo";
-import { SecretString } from "@/types";
+import fullPoolsData from '@/outputs/fullPoolsData.json';
+import { SecretString } from '@/types';
+import { fetchTokenData, getTokenName } from '@/utils/apis/tokenInfo';
+import React, { useEffect, useState } from 'react';
 
 interface SelectComponentProps {
   apiUrl?: string;
-  setFrom?: (from: SecretString | "") => void;
-  setTo?: (to: SecretString | "") => void;
+  setFrom?: (from: SecretString | '') => void;
+  setTo?: (to: SecretString | '') => void;
   outputOptions?: SecretString[];
 }
 
 const SelectComponent2: React.FC<SelectComponentProps> = ({
-  apiUrl = "/api/tokens",
+  apiUrl = '/api/tokens',
   setFrom,
   setTo,
   outputOptions = [] as SecretString[],
 }) => {
   const [fromTokens, setFromTokens] = useState<SecretString[]>([]);
   const [toTokens, setToTokens] = useState<SecretString[]>([]);
-  const [selectedFrom, setSelectedFrom] = useState<SecretString | "">("");
-  const [selectedTo, setSelectedTo] = useState<SecretString | "">("");
+  const [selectedFrom, setSelectedFrom] = useState<SecretString | ''>('');
+  const [selectedTo, setSelectedTo] = useState<SecretString | ''>('');
   const [tokenNames, setTokenNames] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -37,16 +37,12 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
 
       const names = fullPoolsData
         .flatMap((pool) => pool.query_result.assets)
-        .map((asset) => {
-          const address =
-            asset.info.token?.contract_addr ??
-            asset.info.native_token?.denom ??
-            "";
-          return address ? [address, getTokenName(address) ?? ""] : null;
-        })
-        .filter((item): item is [string, string] => item !== null)
-        .reduce((acc, [address, name]) => {
-          acc[address] = name;
+        .map((asset) => getTokenName(asset.info.token.contract_addr))
+        // transform from [string, string] to {string: string}
+        .reduce((acc, name) => {
+          if (name !== undefined) {
+            acc[name] = name;
+          }
           return acc;
         }, {} as { [key: string]: string });
 
@@ -54,16 +50,7 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
 
       const fromOptions = fullPoolsData
         .flatMap((pool) => pool.query_result.assets)
-        .map(
-          (asset) =>
-            asset.info.token?.contract_addr ??
-            asset.info.native_token?.denom ??
-            ""
-        )
-        .filter(
-          (addressOrDenom): addressOrDenom is SecretString =>
-            addressOrDenom !== "" && addressOrDenom !== "uscrt"
-        );
+        .map((asset) => asset.info.token.contract_addr as SecretString);
 
       setFromTokens(Array.from(new Set(fromOptions)));
     };
@@ -80,19 +67,12 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
     } else {
       const toOptions = fullPoolsData
         .filter((pool) =>
-          pool.query_result.assets.some(
-            (asset) =>
-              asset.info.token?.contract_addr === fromToken ||
-              asset.info.native_token?.denom === fromToken
-          )
+          pool.query_result.assets.some((asset) => asset.info.token.contract_addr === fromToken)
         )
         .flatMap((pool) =>
           pool.query_result.assets.map((asset) => {
-            const addr =
-              asset.info.token?.contract_addr ??
-              asset.info.native_token?.denom ??
-              "";
-            return addr !== "" &&
+            const addr = asset.info.token.contract_addr;
+            return addr !== '' &&
               addr !== fromToken &&
               tokenNames[addr] !== null &&
               tokenNames[addr] !== undefined
@@ -101,12 +81,12 @@ const SelectComponent2: React.FC<SelectComponentProps> = ({
           })
         )
         .filter((addr): addr is SecretString => addr !== null)
-        .filter((addr) => !addr.startsWith("uscrt"));
+        .filter((addr) => !addr.startsWith('uscrt'));
 
       setToTokens(Array.from(new Set(toOptions)));
     }
 
-    setSelectedTo("");
+    setSelectedTo('');
   };
 
   const handleToSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {

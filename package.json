@@ -49,6 +49,7 @@
     "marked": "^12.0.2",
     "moment": "^2.30.1",
     "next": "^14.2.15",
+    "p-throttle": "^6.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.51.5",
@@ -77,5 +78,6 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.4"
-  }
+  },
+  "packageManager": "yarn@1.22.22"
 }

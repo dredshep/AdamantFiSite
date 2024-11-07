@@ -1,6 +1,7 @@
 // TokenInfo.ts
-import { AzureTokensToken } from "@/types/api/azure";
-import { SecretToken } from "@/types/api/azure/secret_tokens";
+import { SecretString } from '@/types';
+import { AzureTokensToken } from '@/types/api/azure';
+import { SecretToken } from '@/types/api/azure/secret_tokens';
 
 // Define an interface for the token details
 interface TokenDetails {
@@ -17,7 +18,7 @@ export const fetchTokenData = async (apiUrl: string): Promise<void> => {
     const response = await fetch(apiUrl);
     const data = (await response.json()) as (AzureTokensToken | SecretToken)[];
     data.forEach((token) => {
-      const address = "address" in token ? token.address : token.dst_address;
+      const address = 'address' in token ? token.address : token.dst_address;
       if (address) {
         tokenData.set(address, {
           name: token.name,
@@ -26,20 +27,20 @@ export const fetchTokenData = async (apiUrl: string): Promise<void> => {
       }
     });
   } catch (error) {
-    console.error("Error fetching token data:", error);
+    console.error('Error fetching token data:', error);
   }
 };
 
 // Get token name by address
 export const getTokenName = (address: string): string | undefined => {
   const internalMapping = {
-    secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek: "sSCRT",
-    secret1xzlgeyuuyqje79ma6vllregprkmgwgavk8y798: "FATS",
-    uscrt: "USCRT",
-    secret1rgm2m5t530tdzyd99775n6vzumxa5luxcllml4: "SIENNA",
+    secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek: 'sSCRT',
+    secret1xzlgeyuuyqje79ma6vllregprkmgwgavk8y798: 'FATS',
+    uscrt: 'USCRT',
+    secret1rgm2m5t530tdzyd99775n6vzumxa5luxcllml4: 'SIENNA',
   } as { [key: string]: string };
   const attemptedName = tokenData.get(address)?.name;
-  if (typeof attemptedName === "string") {
+  if (typeof attemptedName === 'string') {
     return attemptedName;
   }
   const internalName = internalMapping[address];
@@ -51,12 +52,57 @@ export const getTokenName = (address: string): string | undefined => {
 };
 
 // Get token decimals by address
-export const getTokenDecimals = (address: string): number | undefined => {
-  if (address === "uscrt") {
-    return 6;
+// export const getTokenDecimals = (address: string): number | undefined => {
+//   if (address === 'uscrt') {
+//     return 6;
+//   }
+//   if (address === 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek') {
+//     return 6;
+//   }
+//   return tokenData.get(address)?.decimals;
+// };
+
+export const getTokenDecimals = (address: SecretString): number => {
+  const info = getTokenInfo(address);
+  if (!info) {
+    console.warn(`No token info found for address: ${address}`);
+    return 6; // Default to 6 decimals as a fallback
   }
-  if (address === "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek") {
-    return 6;
+  return info.decimals;
+};
+interface TokenInfo {
+  decimals: number;
+  symbol: string;
+}
+
+// Add more tokens as needed
+const TOKEN_INFO: Record<string, TokenInfo> = {
+  uscrt: {
+    decimals: 6,
+    symbol: 'SCRT',
+  },
+  secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek: {
+    // sSCRT
+    decimals: 6,
+    symbol: 'sSCRT',
+  },
+  secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4: {
+    // SATOM
+    decimals: 6,
+    symbol: 'SATOM',
+  },
+  // Add other tokens here
+};
+
+export const getTokenInfo = (address: SecretString): TokenInfo | undefined => {
+  return TOKEN_INFO[address];
+};
+
+export const getTokenSymbol = (address: SecretString): string => {
+  const info = getTokenInfo(address);
+  if (!info) {
+    console.warn(`No token symbol found for address: ${address}`);
+    return 'UNKNOWN';
   }
-  return tokenData.get(address)?.decimals;
+  return info.symbol;
 };

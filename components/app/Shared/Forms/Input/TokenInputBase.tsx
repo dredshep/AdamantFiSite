@@ -1,83 +1,70 @@
-import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
-import { PoolTokenInputs, SecretString, SwapTokenInputs } from "@/types";
-import * as Dialog from "@radix-ui/react-dialog";
-import React from "react";
-import TokenSelectionModal from "../Select/TokenSelectionModal";
-import InputLabel from "./InputLabel";
+import PlaceholderImageFromSeed from '@/components/app/Shared/PlaceholderImageFromSeed';
+import { useSecretNetwork } from '@/hooks/useSecretNetwork';
+import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { PoolTokenInputs, SecretString, SwapTokenInputs } from '@/types';
+import * as Dialog from '@radix-ui/react-dialog';
+import React, { useEffect } from 'react';
+import { PiApproximateEquals } from 'react-icons/pi';
+import TopRightBalance from '../../TopRightBalance';
+import PoolSelectionModal from '../Select/PoolSelectionModal';
+import TokenSelectionModal from '../Select/TokenSelectionModal';
+import InputLabel from './InputLabel';
+
+export type SwapInputIdentifier = keyof SwapTokenInputs;
+export type PoolInputIdentifier = keyof PoolTokenInputs;
+export type InputIdentifier = SwapInputIdentifier | PoolInputIdentifier;
 
 interface TokenInputBaseProps {
   inputValue: string;
   onInputChange: (value: string) => void;
   tokenSymbol: string;
   tokenAddress: SecretString;
-  // balance: string;
-  // onMaxClick: () => void;
   showEstimatedPrice?: boolean;
   estimatedPrice?: string;
-  swapInputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
+  inputIdentifier: InputIdentifier;
   label: string;
   hasMax: boolean;
 }
-
-// function TopRightBalance({
-//   // balance,
-//   // tokenSymbol,
-//   onMaxClick,
-//   hasMax,
-// }: {
-//   balance: number;
-//   tokenSymbol: string;
-//   // onMaxClick: () => void;
-//   hasMax: boolean;
-// }) {
-//   return (
-//     <div className="flex gap-2.5 normal-case text-gray-400 items-center">
-//       <div className="flex gap-2 tracking-wide text-sm font-light">
-//         {/* <div>Available: </div>
-//         <div>
-//           {balance.toFixed(2)} {tokenSymbol}
-//         </div> */}
-//       </div>
-//       {hasMax && (
-//         <button
-//           className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md px-2"
-//           onClick={onMaxClick}
-//         >
-//           max
-//         </button>
-//       )}
-//     </div>
-//   );
-// }
 
 const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   inputValue,
   onInputChange,
   tokenSymbol,
   tokenAddress,
-  // balance,
-  // onMaxClick,
-  showEstimatedPrice = false,
-  estimatedPrice = "",
-  swapInputIdentifier: inputIdentifier,
+  estimatedPrice,
+  inputIdentifier,
   label,
-  // hasMax,
+  hasMax,
 }) => {
+  const { secretjs, connect } = useSecretNetwork();
+  const tokenData = useTokenBalance(tokenAddress);
+
+  // Attempt to connect if not connected
+  useEffect(() => {
+    if (secretjs === null) {
+      void connect();
+    }
+  }, [secretjs, connect]);
+
+  // Don't convert null to 0 - pass it through as null
+  const balance = tokenData.amount !== null ? Number(tokenData.amount) : null;
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2.5 bg-adamant-app-input p-2.5 rounded-md">
       <div className="flex justify-between">
         <InputLabel label={label} caseType="normal-case" />
-        {/* <TopRightBalance
-          balance={Number(balance ?? 0)}
+        <TopRightBalance
+          balance={balance}
           tokenSymbol={tokenSymbol}
           hasMax={hasMax}
-          onMaxClick={onMaxClick}
-        /> */}
+          inputIdentifier={inputIdentifier}
+          loading={tokenData.loading}
+          error={tokenData.error}
+        />
       </div>
-      <div className="flex items-center bg-adamant-app-input bg-opacity-50 rounded-lg p-4">
+      <div className="flex items-center">
         <input
           type="text"
-          className="bg-transparent border-none outline-none text-2xl font-medium flex-grow"
+          className="bg-transparent border-none outline-none text-2xl font-light flex-grow"
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           placeholder="0.0"
@@ -87,25 +74,17 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             <PlaceholderImageFromSeed seed={tokenAddress} size={24} />
             {tokenSymbol}
           </Dialog.Trigger>
-          {inputIdentifier.startsWith("swap") ? (
-            <TokenSelectionModal
-              inputIdentifier={inputIdentifier as keyof SwapTokenInputs}
-            />
+          {inputIdentifier.startsWith('swap') ? (
+            <TokenSelectionModal inputIdentifier={inputIdentifier as keyof SwapTokenInputs} />
           ) : (
-            // <TokenSelectionModal
-            //   inputIdentifier={inputIdentifier as keyof PoolTokenInputs}
-            // />
-            // <PoolSelectionModal
-            //   inputIdentifier={inputIdentifier as keyof PoolTokenInputs}
-            // />
-            // <div className="text-sm text-gray-400">Not implemented</div>
-            <></>
+            <PoolSelectionModal />
           )}
         </Dialog.Root>
       </div>
-      {showEstimatedPrice && (
-        <div className="text-sm text-gray-400">≈ {estimatedPrice}</div>
-      )}
+      <div className="text-sm text-gray-400 place-self-end flex items-center gap-1">
+        <PiApproximateEquals className="h-3 w-3" />
+        <span>{estimatedPrice ?? 'price not implemented'}</span>
+      </div>
     </div>
   );
 };

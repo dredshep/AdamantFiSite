@@ -1,17 +1,14 @@
-import "@radix-ui/themes/styles.css";
-import "@/styles/globals.css";
-import type { AppProps } from "next/app";
+import '@/styles/globals.css';
+import '@radix-ui/themes/styles.css';
+import type { AppProps } from 'next/app';
 // import { Theme } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
-import {
-  ApiToken,
-  getApiToken,
-  getApiTokenAddress,
-} from "@/utils/apis/getSwappableTokens";
-import { useSwapStore } from "@/store/swapStore";
-import { useTokenStore } from "@/store/tokenStore";
+import { useSwapStore } from '@/store/swapStore';
+import { useTokenStore } from '@/store/tokenStore';
+import { ApiToken, getApiToken, getApiTokenAddress } from '@/utils/apis/getSwappableTokens';
+import { useEffect, useState } from 'react';
 // import { SwappableToken } from "@/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SecretNetworkProvider } from '@/contexts/SecretNetworkContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export default function App({ Component, pageProps }: AppProps) {
   const setSwappableTokens = useSwapStore((state) => state.setSwappableTokens);
@@ -34,23 +31,22 @@ export default function App({ Component, pageProps }: AppProps) {
     const fetchTokens = async () => {
       const tokens = await getApiToken();
       setSwappableTokens(tokens);
-      const indexedTokens = tokens.reduce(
-        (acc: Record<string, ApiToken>, token) => {
-          acc[getApiTokenAddress(token)] = token;
-          return acc;
-        },
-        {}
-      );
+      const indexedTokens = tokens.reduce((acc: Record<string, ApiToken>, token) => {
+        acc[getApiTokenAddress(token)] = token;
+        return acc;
+      }, {});
       initializeTokens(indexedTokens);
     };
 
     void fetchTokens();
   }, [setSwappableTokens, initializeTokens]);
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="bg-[#151321] min-h-screen text-white">
-        <Component {...pageProps} />
-      </div>
-    </QueryClientProvider>
+    <SecretNetworkProvider>
+      <QueryClientProvider client={queryClient}>
+        <div className="bg-[#151321] min-h-screen text-white">
+          <Component {...pageProps} />
+        </div>
+      </QueryClientProvider>
+    </SecretNetworkProvider>
   );
 }

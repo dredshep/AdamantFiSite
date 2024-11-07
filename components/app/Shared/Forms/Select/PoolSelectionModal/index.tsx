@@ -64,8 +64,8 @@ const PoolSelectionModal: React.FC = () => {
                 onClick={() => {
                   setSelectedPool({
                     address: pool.pair.contract_addr,
-                    token0: pool.token0!,
-                    token1: pool.token1!,
+                    token0: pool.token0,
+                    token1: pool.token1,
                     pairInfo: pool.pair,
                   });
                   const close = document.querySelector(
