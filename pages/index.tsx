@@ -1,9 +1,9 @@
-import Logo from "@/components/SVG/logo";
-import CoolBox from "@/components/site/CoolBox";
-import InfoBox from "@/components/site/InfoBox";
-import Footer from "@/components/site/Footer";
-import Head from "next/head";
-import Link from "next/link";
+import Logo from '@/components/SVG/logo';
+import CoolBox from '@/components/site/CoolBox';
+import Footer from '@/components/site/Footer';
+import InfoBox from '@/components/site/InfoBox';
+import Head from 'next/head';
+import Link from 'next/link';
 
 const coolBoxes = (
   <div className="flex flex-wrap gap-8">
@@ -58,7 +58,8 @@ const infoBoxes = (
 
 export default function Home() {
   return (
-    <div className={"bg-tubeshapes-dark bg-cover min-h-screen text-white"}>
+    <div className={'bg-tubeshapes-dark bg-cover min-h-screen text-white'}>
+      {/* <JiriBgAbsolute> */}
       <Head>
         <title>Adamant Finance - Secure & Private DeFi Solutions</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -104,8 +105,7 @@ export default function Home() {
               ADAMANT<span className="text-adamant-dark">.FI</span>
             </div>
             <div className="leading-10 text-2xl max-w-[585px] brightness-50 text-center">
-              Permissionless, opensource and community owned liquidity protocol
-              on Secret Network
+              Permissionless, opensource and community owned liquidity protocol on Secret Network
             </div>
             <div className="uppercase px-9 py-3 leading-6 text-lg bg-gradient-to-br from-adamant-gradientBright to-adamant-gradientDark text-adamant-contrastDark rounded-lg font-bold">
               Swap Tokens
@@ -116,6 +116,7 @@ export default function Home() {
         <div className="mt-32">{infoBoxes}</div>
         <Footer />
       </div>
+      {/* </JiriBgAbsolute> */}
     </div>
   );
 }

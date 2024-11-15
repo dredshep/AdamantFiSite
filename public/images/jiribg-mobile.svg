@@ -1,0 +1,14 @@
+<svg viewBox="0 0 768 1024" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Adjusted elements for mobile -->
+  <rect width="768" height="1024" fill="#151321"/>
+  <g opacity="0.3" filter="url(#mobile_filter0)">
+    <rect x="100" y="100" width="200" height="200" fill="#6369FC" fill-opacity="0.6"/>
+  </g>
+  <!-- Additional elements as needed -->
+  <defs>
+    <filter id="mobile_filter0" x="-100" y="-100" width="500" height="500" filterUnits="userSpaceOnUse">
+      <!-- Filter definitions -->
+      <feGaussianBlur stdDeviation="50"/>
+    </filter>
+  </defs>
+</svg>
