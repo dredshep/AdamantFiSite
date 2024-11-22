@@ -1,18 +1,18 @@
-import { create } from "zustand";
 import { Token } from "@/types";
 import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
+import { create } from "zustand";
 
 interface TokenStoreState {
-  tokens: Record<string, Token> | null;
+  tokens: Record<string, Token>;
   setToken: (address: string, token: Token) => void;
   initializeTokens: (tokens: Record<string, Token>) => void;
-  listAllTokens: () => Token[] | null;
+  listAllTokens: () => Token[];
   getTokenByAddress: (address: string) => Token | null;
   getTokenBySymbol: (symbol: string) => Token | null;
 }
 
 export const useTokenStore = create<TokenStoreState>((set, get) => ({
-  tokens: null,
+  tokens: {},
 
   setToken: (address, token) => {
     if (address !== token.address) {
@@ -29,11 +29,6 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
   },
 
   initializeTokens: (tokens) => {
-    // let's see if we can find SSCRT in the tokens
-    // const sscrtToken = tokens["secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"];
-    // if (!sscrtToken) {
-    //   throw new Error("SSCRT token not found");
-    // }
     set(() => ({
       tokens,
     }));
@@ -41,20 +36,20 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
 
   listAllTokens: () => {
     const { tokens } = get();
-    return tokens ? Object.values(tokens) : null;
+    return Object.values(tokens);
   },
 
   getTokenByAddress: (address) => {
     const { tokens } = get();
-    return tokens !== null && tokens[address] ? tokens[address] : null;
+    return tokens[address] ?? null;
   },
 
   getTokenBySymbol: (symbol) => {
     const { tokens } = get();
-    return tokens
-      ? Object.values(tokens).find(
-          (token) => getApiTokenSymbol(token) === symbol
-        ) || null
-      : null;
+    return (
+      Object.values(tokens).find(
+        (token) => getApiTokenSymbol(token) === symbol
+      ) || null
+    );
   },
 }));

@@ -2,7 +2,7 @@
  * Main update state function
  */
 function updateState<
-  State,
+  State extends Record<string, unknown>,
   TopKey extends keyof State,
   NestedKey extends keyof State[TopKey]
 >(
@@ -12,12 +12,11 @@ function updateState<
   newValue: State[TopKey][NestedKey]
 ): State {
   const updatedNestedState = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(state[topKey] as any),
+    ...(state[topKey] as Record<string, unknown>),
     [nestedKey]: newValue,
   } as State[TopKey];
 
-  const updatedState = {
+  const updatedState: State = {
     ...state,
     [topKey]: updatedNestedState,
   };

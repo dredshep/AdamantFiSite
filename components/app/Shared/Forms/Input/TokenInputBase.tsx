@@ -12,7 +12,7 @@ import InputLabel from './InputLabel';
 
 export type SwapInputIdentifier = keyof SwapTokenInputs;
 export type PoolInputIdentifier = keyof PoolTokenInputs;
-export type InputIdentifier = SwapInputIdentifier | PoolInputIdentifier;
+export type InputIdentifier = SwapInputIdentifier  ;
 
 interface TokenInputBaseProps {
   inputValue: string;
@@ -48,6 +48,10 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
 
   // Don't convert null to 0 - pass it through as null
   const balance = tokenData.amount !== null ? Number(tokenData.amount) : null;
+
+  const isSwapInput = typeof inputIdentifier === 'string' && 
+    inputIdentifier.startsWith('swap.');
+
   return (
     <div className="flex flex-col gap-2.5 bg-adamant-app-input p-2.5 rounded-md">
       <div className="flex justify-between">
@@ -74,8 +78,8 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             <PlaceholderImageFromSeed seed={tokenAddress} size={24} />
             {tokenSymbol}
           </Dialog.Trigger>
-          {inputIdentifier.startsWith('swap') ? (
-            <TokenSelectionModal inputIdentifier={inputIdentifier as keyof SwapTokenInputs} />
+          {isSwapInput ? (
+            <TokenSelectionModal inputIdentifier={inputIdentifier} />
           ) : (
             <PoolSelectionModal />
           )}

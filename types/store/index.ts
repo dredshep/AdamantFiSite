@@ -1,4 +1,6 @@
 export * from "./SharedSettings";
-export * from "./TokenInputState";
-export * from "./TokenInputs";
 export * from "./SwapStoreState";
+export * from "./TokenInputs";
+export * from "./TokenInputState";
+export * from "./WalletState";
+

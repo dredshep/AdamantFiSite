@@ -1,14 +1,14 @@
-import '@/styles/globals.css';
-import '@radix-ui/themes/styles.css';
-import type { AppProps } from 'next/app';
-// import { Theme } from "@radix-ui/themes";
+import { SecretNetworkProvider } from '@/contexts/SecretNetworkContext';
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
+import '@/styles/globals.css';
 import { ApiToken, getApiToken, getApiTokenAddress } from '@/utils/apis/getSwappableTokens';
-import { useEffect, useState } from 'react';
-// import { SwappableToken } from "@/types";
-import { SecretNetworkProvider } from '@/contexts/SecretNetworkContext';
+import '@radix-ui/themes/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { AppProps } from 'next/app';
+import { useEffect, useState } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function App({ Component, pageProps }: AppProps) {
   const setSwappableTokens = useSwapStore((state) => state.setSwappableTokens);
@@ -32,7 +32,8 @@ export default function App({ Component, pageProps }: AppProps) {
       const tokens = await getApiToken();
       setSwappableTokens(tokens);
       const indexedTokens = tokens.reduce((acc: Record<string, ApiToken>, token) => {
-        acc[getApiTokenAddress(token)] = token;
+        const address = getApiTokenAddress(token);
+        acc[address] = token;
         return acc;
       }, {});
       initializeTokens(indexedTokens);
@@ -40,11 +41,23 @@ export default function App({ Component, pageProps }: AppProps) {
 
     void fetchTokens();
   }, [setSwappableTokens, initializeTokens]);
+
   return (
     <SecretNetworkProvider>
       <QueryClientProvider client={queryClient}>
         <div className="bg-[#151321] min-h-screen text-white">
           <Component {...pageProps} />
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
         </div>
       </QueryClientProvider>
     </SecretNetworkProvider>

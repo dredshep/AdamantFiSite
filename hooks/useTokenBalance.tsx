@@ -13,6 +13,7 @@ const REFRESH_INTERVAL = 30000; // 30 seconds
 export enum TokenBalanceError {
   NO_KEPLR = 'NO_KEPLR',
   NO_VIEWING_KEY = 'NO_VIEWING_KEY',
+  VIEWING_KEY_REJECTED = 'VIEWING_KEY_REJECTED',
   NO_SECRET_JS = 'NO_SECRET_JS',
   NETWORK_ERROR = 'NETWORK_ERROR',
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
@@ -23,6 +24,15 @@ interface ErrorConfig {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+}
+
+interface TokenBalanceHookReturn {
+  amount: string | null;
+  loading: boolean;
+  error: TokenBalanceError | null;
+  lastUpdated: number | null;
+  refetch: () => Promise<void>;
+  isRejected: boolean;
 }
 
 const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
@@ -42,6 +52,12 @@ const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
         '_blank'
       ),
   },
+  [TokenBalanceError.VIEWING_KEY_REJECTED]: {
+    title: 'Viewing Key Rejected',
+    message: 'You rejected the viewing key request. Click to try again.',
+    actionLabel: 'Try Again',
+    onAction: () => {},
+  },
   [TokenBalanceError.NO_SECRET_JS]: {
     title: 'Connection Error',
     message: 'Not connected to Secret Network. Please refresh the page.',
@@ -56,19 +72,88 @@ const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
   },
 };
 
-export function useTokenBalance(tokenAddress: SecretString | undefined) {
+export function useTokenBalance(tokenAddress: SecretString | undefined): TokenBalanceHookReturn {
   const { secretjs } = useSecretNetworkContext();
   const { setBalance, getBalance, setLoading, setError } = useTokenBalanceStore();
   const [toastShown, setToastShown] = useState<string | null>(null);
+  const [isRejected, setIsRejected] = useState(false);
 
   const tokenService = useMemo(() => (secretjs ? new TokenService(secretjs) : null), [secretjs]);
+
+  const fetchBalance = useCallback(async () => {
+    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0 || !secretjs || !tokenService) {
+      return;
+    }
+
+    const currentBalance = getBalance(tokenAddress);
+    if (
+      currentBalance?.error === null &&
+      typeof currentBalance?.lastUpdated === 'number' &&
+      Date.now() - currentBalance.lastUpdated < REFRESH_INTERVAL
+    ) {
+      return;
+    }
+
+    setLoading(tokenAddress, true);
+
+    try {
+      const tokenCodeHash = getCodeHashByAddress(tokenAddress);
+      const rawAmount = await tokenService.getBalance(tokenAddress, tokenCodeHash);
+      const decimals = getTokenDecimals(tokenAddress);
+      const value = Number(rawAmount) / Math.pow(10, decimals);
+
+      setBalance(tokenAddress, {
+        amount: value.toString(),
+        loading: false,
+        lastUpdated: Date.now(),
+        error: null,
+      });
+
+      setIsRejected(false);
+      setToastShown(null);
+    } catch (err) {
+      let errorType = TokenBalanceError.UNKNOWN_ERROR;
+      if (err instanceof Error) {
+        console.log('Error caught in useTokenBalance:', err.message);
+        if (err.message.includes('Viewing key request rejected')) {
+          errorType = TokenBalanceError.VIEWING_KEY_REJECTED;
+          setIsRejected(true);
+        } else if (err.message.includes('Keplr not installed')) {
+          errorType = TokenBalanceError.NO_KEPLR;
+        } else if (err.message.includes('Viewing key required')) {
+          errorType = TokenBalanceError.NO_VIEWING_KEY;
+        } else if (err.message.includes('network')) {
+          errorType = TokenBalanceError.NETWORK_ERROR;
+        }
+      }
+
+      setError(tokenAddress, errorType);
+      console.log('Showing error toast for:', errorType);
+      showErrorToast(errorType, err instanceof Error ? err.message : undefined);
+    }
+  }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError]);
 
   const showErrorToast = useCallback(
     (errorType: TokenBalanceError, details?: string) => {
       const errorKey = `${errorType}-${details ?? ''}`;
+      console.log('Toast state:', { errorType, errorKey, toastShown });
       if (toastShown === errorKey) return;
 
-      const errorConfig = ERROR_MESSAGES[errorType];
+      const errorConfig = { ...ERROR_MESSAGES[errorType] };
+      
+      if (
+        errorType === TokenBalanceError.VIEWING_KEY_REJECTED && 
+        tokenService && 
+        typeof tokenAddress === 'string' && 
+        tokenAddress.length > 0
+      ) {
+        errorConfig.onAction = () => {
+          tokenService.clearRejectedViewingKey(tokenAddress);
+          setToastShown(null);
+          void fetchBalance();
+        };
+      }
+
       toast.error(
         <ErrorToast
           title={errorConfig.title}
@@ -78,13 +163,13 @@ export function useTokenBalance(tokenAddress: SecretString | undefined) {
           onActionClick={errorConfig.onAction}
         />,
         {
-          autoClose: 6000,
+          autoClose: errorType === TokenBalanceError.VIEWING_KEY_REJECTED ? false : 6000,
           toastId: errorKey,
         }
       );
       setToastShown(errorKey);
     },
-    [toastShown]
+    [toastShown, tokenService, tokenAddress, fetchBalance]
   );
 
   useEffect(() => {
@@ -96,61 +181,24 @@ export function useTokenBalance(tokenAddress: SecretString | undefined) {
     }
     if (!tokenService) return;
 
-    const fetchBalance = async () => {
-      const currentBalance = getBalance(tokenAddress);
-      if (
-        currentBalance?.error === null &&
-        typeof currentBalance?.lastUpdated === 'number' &&
-        Date.now() - currentBalance.lastUpdated < REFRESH_INTERVAL
-      ) {
-        return;
-      }
-
-      setLoading(tokenAddress, true);
-
-      try {
-        const tokenCodeHash = getCodeHashByAddress(tokenAddress);
-        const rawAmount = await tokenService.getBalance(tokenAddress, tokenCodeHash);
-        const decimals = getTokenDecimals(tokenAddress);
-        const value = Number(rawAmount) / Math.pow(10, decimals);
-
-        setBalance(tokenAddress, {
-          amount: value.toString(),
-          loading: false,
-          lastUpdated: Date.now(),
-          error: null,
-        });
-
-        // Clear error toast state on success
-        setToastShown(null);
-      } catch (err) {
-        let errorType = TokenBalanceError.UNKNOWN_ERROR;
-        if (err instanceof Error) {
-          if (err.message.includes('Keplr not installed')) {
-            errorType = TokenBalanceError.NO_KEPLR;
-          } else if (err.message.includes('Viewing key required')) {
-            errorType = TokenBalanceError.NO_VIEWING_KEY;
-          } else if (err.message.includes('network')) {
-            errorType = TokenBalanceError.NETWORK_ERROR;
-          }
-        }
-
-        setError(tokenAddress, errorType);
-        showErrorToast(errorType, err instanceof Error ? err.message : undefined);
-      }
-    };
-
     void fetchBalance();
-    const interval = setInterval(() => void fetchBalance(), REFRESH_INTERVAL);
+    const interval = setInterval(() => {
+      if (!isRejected) {
+        void fetchBalance();
+      }
+    }, REFRESH_INTERVAL);
+    
     return () => clearInterval(interval);
-  }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError, showErrorToast]);
+  }, [tokenService, tokenAddress, secretjs, fetchBalance, isRejected, setError, showErrorToast]);
 
-  return (
-    getBalance(tokenAddress ?? '') ?? {
-      amount: null,
-      loading: true,
-      error: null,
-      lastUpdated: null,
-    }
-  );
+  const currentBalance = getBalance(tokenAddress ?? '');
+  
+  return {
+    amount: currentBalance?.amount ?? null,
+    loading: currentBalance?.loading ?? true,
+    error: currentBalance?.error ?? null,
+    lastUpdated: currentBalance?.lastUpdated ?? null,
+    refetch: fetchBalance,
+    isRejected,
+  };
 }

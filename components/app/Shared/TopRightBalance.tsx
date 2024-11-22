@@ -5,9 +5,8 @@ import { BiErrorCircle } from 'react-icons/bi';
 import SwapMaxButton from './Forms/Input/TokenInput/MaxButton';
 import PoolMaxButton from './Forms/Input/TokenInput/PoolMaxButton';
 import {
-  InputIdentifier,
-  PoolInputIdentifier,
-  SwapInputIdentifier,
+    InputIdentifier,
+    PoolInputIdentifier
 } from './Forms/Input/TokenInputBase';
 
 interface TopRightBalanceProps {
@@ -27,6 +26,17 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   loading = false,
   error = null,
 }) => {
+  const showMaxButton = 
+    hasMax && 
+    typeof inputIdentifier === 'string' && 
+    inputIdentifier.length > 0 && 
+    !loading && 
+    error === null && 
+    balance !== null;
+
+  const isSwapInput = typeof inputIdentifier === 'string' && 
+    inputIdentifier.startsWith('swap.');
+
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5 text-gray-400 text-sm">
@@ -46,19 +56,16 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
           </span>
         )}
       </div>
-      {hasMax &&
-        inputIdentifier &&
-        !loading &&
-        error === null &&
-        balance !== null &&
-        (inputIdentifier.startsWith('swap.') ? (
+      {showMaxButton && (
+        isSwapInput ? (
           <SwapMaxButton
-            inputIdentifier={inputIdentifier as SwapInputIdentifier}
+            inputIdentifier={inputIdentifier}
             balance={balance}
           />
         ) : (
           <PoolMaxButton poolInputIdentifier={inputIdentifier as PoolInputIdentifier} />
-        ))}
+        )
+      )}
     </div>
   );
 };

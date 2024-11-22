@@ -6,15 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:start": "next build && next start",
     "lint": "next lint",
     "remote:add": "git remote add origin https://github.com/AdamantFi/AdamantFiSite.git && git remote add personal https://github.com/dredshep/AdamantFiSite.git",
     "push": "git push origin main && git push personal main",
-    "prebuild": "yarn type-check",
+    "prebuild": "pnpm run type-check",
     "type-check": "tsc --noEmit",
-    "lint-full": "yarn lint && yarn type-check",
-    "lint-and-open": "yarn type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
-    "lint-and-open:cursor": "yarn type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
-    "lint-and-open:code": "yarn type-check > type-errors.txt 2>&1 && node scripts/openErrors.js code"
+    "lint-full": "pnpm run lint && pnpm run type-check",
+    "lint-and-open": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
+    "lint-and-open:cursor": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
+    "lint-and-open:code": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js code"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.3",
@@ -27,10 +28,12 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-popover": "^1.0.7",
     "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.1.1",
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/themes": "^2.0.3",
     "@shadeprotocol/shadejs": "^1.5.4",
     "@tanstack/react-query": "^5.59.16",
+    "@types/react-toastify": "^4.1.0",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
     "@typescript-eslint/typescript-estree": "^8.12.2",
@@ -54,7 +57,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.51.5",
     "react-icons": "^5.2.1",
-    "react-toastify": "^10.0.5",
+    "react-toastify": "^10.0.6",
     "react-tooltip": "^5.28.0",
     "react-vega": "^7.6.0",
     "secretjs": "^1.12.5",
@@ -79,5 +82,5 @@
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.4"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "pnpm@9.14.2"
 }

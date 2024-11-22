@@ -1,12 +1,16 @@
-import { create } from "zustand";
+import updateState from "@/store/utils/updateState";
 import {
   SecretString,
   SharedSettings,
   SwapStoreState,
-  TokenInputState,
   SwapTokenInputs,
+  TokenInputState,
+  WalletState,
 } from "@/types";
-import updateState from "@/store/utils/updateState";
+import { ApiToken } from "@/utils/apis/getSwappableTokens";
+import { create } from "zustand";
+
+
 
 export const useSwapStore = create<SwapStoreState>((set) => ({
   swapTokenInputs: {
@@ -29,8 +33,8 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
     address: null,
     SCRTBalance: "0",
     ADMTBalance: "0",
-  },
-  swappableTokens: [],
+  } as WalletState,
+  swappableTokens: [] as ApiToken[],
   chainId: "secret-4",
   connectionRefused: false,
 
@@ -49,25 +53,32 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
   setSharedSetting: <T extends keyof SharedSettings>(
     setting: T,
     value: SharedSettings[T]
-  ) => set((state) => updateState(state, "sharedSettings", setting, value)),
+  ) => set((state) => ({ ...state, sharedSettings: { ...state.sharedSettings, [setting]: value } })),
 
   connectWallet: (address: SecretString) =>
-    set((state) => updateState(state, "wallet", "address", address)),
+    set((state) => ({
+      ...state,
+      wallet: { ...state.wallet, address },
+    })),
 
   disconnectWallet: () =>
-    set((state) => updateState(state, "wallet", "address", null)),
+    set((state) => ({
+      ...state,
+      wallet: { ...state.wallet, address: null },
+    })),
 
   updateBalance: (tokenSymbol: "SCRT" | "ADMT", balance: string) =>
-    set((state) =>
-      updateState(state, "wallet", `${tokenSymbol}Balance`, balance)
-    ),
+    set((state) => ({
+      ...state,
+      wallet: { ...state.wallet, [`${tokenSymbol}Balance`]: balance },
+    })),
 
   setSwappableTokens: (tokens) => set({ swappableTokens: tokens }),
   setChainId: (chainId) => set({ chainId }),
   setConnectionRefused: (refused) => set({ connectionRefused: refused }),
   setPoolTokens: (token0Address: SecretString, token1Address: SecretString) =>
     set((state) => ({
-      ...state, // Keep all other state
+      ...state,
       swapTokenInputs: {
         ...state.swapTokenInputs,
         "swap.pay": {
