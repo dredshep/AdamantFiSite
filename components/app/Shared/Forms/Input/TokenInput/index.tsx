@@ -85,12 +85,13 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
   //   }
   // };
 
-  if (!token) {
+  if (token === undefined || token === null) {
     return null;
   }
+  const price = token.price;
 
   const estimatedPrice = `$${(
-    parseFloat(tokenData.amount || '0') * parseFloat(token.price ?? '0')
+    parseFloat(tokenData.amount || '0') * parseFloat(price ?? '0')
   ).toFixed(2)}`;
 
   const isSwap = formType === 'swap';

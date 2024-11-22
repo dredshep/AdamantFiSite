@@ -12,7 +12,7 @@ import InputLabel from './InputLabel';
 
 export type SwapInputIdentifier = keyof SwapTokenInputs;
 export type PoolInputIdentifier = keyof PoolTokenInputs;
-export type InputIdentifier = SwapInputIdentifier  ;
+export type InputIdentifier = SwapInputIdentifier | PoolInputIdentifier;
 
 interface TokenInputBaseProps {
   inputValue: string;
@@ -79,7 +79,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             {tokenSymbol}
           </Dialog.Trigger>
           {isSwapInput ? (
-            <TokenSelectionModal inputIdentifier={inputIdentifier} />
+            <TokenSelectionModal inputIdentifier={inputIdentifier as SwapInputIdentifier} />
           ) : (
             <PoolSelectionModal />
           )}
