@@ -18,7 +18,7 @@ export interface PoolInfo {
 
 export interface Pair {
   asset_infos: AssetInfo[];
-  contract_addr: string;
+  contract_addr: SecretString;
   liquidity_token: string;
   token_code_hash: string;
   asset0_volume: string;
@@ -31,7 +31,7 @@ export interface AssetInfo {
 }
 
 export interface TokenClass {
-  contract_addr: string;
+  contract_addr: SecretString;
   token_code_hash: string;
   viewing_key: string;
 }
@@ -52,7 +52,7 @@ export interface Token0Class {
   display_props: DisplayProps;
   price: string;
   _id: string;
-  address: string;
+  address: SecretString;
   usage: Usage[];
 }
 
@@ -92,8 +92,8 @@ export function usePoolsAndTokens() {
 
               return {
                 pair,
-                token0: getTokenFromAddress(token0Address as SecretString),
-                token1: getTokenFromAddress(token1Address as SecretString),
+                token0: getTokenFromAddress(token0Address),
+                token1: getTokenFromAddress(token1Address),
               };
             }
             return null;

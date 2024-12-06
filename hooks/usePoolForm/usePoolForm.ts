@@ -1,11 +1,12 @@
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useTxStore } from '@/store/txStore';
-import { PoolTokenInputs } from '@/types';
+import { PoolTokenInputs, SecretString } from '@/types';
 import { Asset, ContractInfo } from '@/types/secretswap/shared';
 import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import isNotNullish from '@/utils/isNotNullish';
 import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
 import { provideLiquidity } from '@/utils/secretjs/provideLiquidity';
+import { withdrawLiquidity } from '@/utils/secretjs/withdrawLiquidity';
 import { calculatePriceImpact, calculateTxFee } from '@/utils/swap';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
@@ -13,8 +14,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 import { fetchPoolData, validatePoolAddress } from './queryFunctions';
-import type { LoadingState, SelectedPoolType, UsePoolDepositFormResult } from './types';
-import { withdrawLiquidity } from '@/utils/secretjs/withdrawLiquidity';
+import type { LoadingState, SelectedPoolType, UsePoolDepositFormResult, WithdrawEstimate } from './types';
 
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
@@ -150,7 +150,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
           token1: pool.token1,
           pairInfo: {
             ...pool.pairInfo,
-            liquidity_token: '',
+            liquidity_token: '' as SecretString,
             token_code_hash: '',
             asset0_volume: '0',
             asset1_volume: '0',
@@ -281,18 +281,18 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
   const handleWithdrawClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
     if (!secretjs) return;
+    if (!selectedPool.pairInfo.liquidity_token || !selectedPool.pairInfo.token_code_hash) {
+      toast.error('LP token info not available');
+      return;
+    }
 
-    // FIXME:
-    // - these tokens and amounts should not be user inputs
-    // - user input is how many LP tokens to remove
-    // - the amounts returned need to be calcluated and show to the user
-    // - maybe user should be allowed to input an amount of one token, and we calculate the amount of the other
+    const inputIdentifier = `pool.withdraw.lpToken`;
+    const amount = safeTokenInputs[inputIdentifier]?.amount ?? '0';
 
-    const inputIdentifier1 = `pool.withdraw.tokenA`;
-    const inputIdentifier2 = `pool.withdraw.tokenB`;
-
-    const amount1 = safeTokenInputs[inputIdentifier1]?.amount ?? '0';
-    const amount2 = safeTokenInputs[inputIdentifier2]?.amount ?? '0';
+    if (amount === '0') {
+      toast.error('Please enter an amount of LP tokens to withdraw');
+      return;
+    }
 
     // TODO: Map pair address to code_hash. They will all be the same for now.
     const pairContract: ContractInfo = {
@@ -308,18 +308,12 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
 
     console.log('Withdraw clicked', {
       pool: pairContract.address,
-      token0: getApiTokenSymbol(selectedPool.token0),
-      amount1,
-      token1: getApiTokenSymbol(selectedPool.token1),
-      amount2,
       lpToken: lpTokenContract.address,
+      amount,
     });
 
     try {
       setPending(true);
-
-      // FIXME: Get this amount of LP tokens from the form.
-      const amount = '0';
       const result = await withdrawLiquidity(secretjs, lpTokenContract, pairContract, amount);
 
       setPending(false);
@@ -328,7 +322,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       console.log('Transaction Result:', JSON.stringify(result, null, 4));
 
       if (result.code !== TxResultCode.Success) {
-        throw new Error(`Swap failed: ${result.rawLog}`);
+        throw new Error(`Withdrawal failed: ${result.rawLog}`);
       }
     } catch (error) {
       console.error('Error during tx execution:', error);
@@ -344,19 +338,116 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     }
   };
 
-  const typedSelectedPool = selectedPool
-    ? {
-        address: selectedPool.address,
-        token0: selectedPool.token0!,
-        token1: selectedPool.token1!,
-        pairInfo: {
-          contract_addr: selectedPool.pairInfo.contract_addr,
-          asset_infos: selectedPool.pairInfo.asset_infos,
-          liquidity_token: selectedPool.pairInfo.liquidity_token,
-          token_code_hash: selectedPool.pairInfo.token_code_hash,
-        },
+  const [withdrawEstimate, setWithdrawEstimate] = useState<WithdrawEstimate | null>(null);
+
+  // Add calculation effect
+  useEffect(() => {
+    if (data?.pairPoolData === undefined || selectedPool === undefined || selectedPool === null) return;
+    
+    const lpAmount = safeTokenInputs['pool.withdraw.lpToken']?.amount;
+    if (lpAmount === undefined || parseFloat(lpAmount) === 0) {
+      setWithdrawEstimate(null);
+      return;
+    }
+
+    const { assets, total_share } = data.pairPoolData;
+    if (!Array.isArray(assets) || assets.length !== 2 || total_share === undefined) {
+      return;
+    }
+
+    // Add validation for zero values
+    if (total_share === "0") {
+      console.log('Pool has no liquidity');
+      setWithdrawEstimate({
+        token0Amount: "0",
+        token1Amount: "0"
+      });
+      return;
+    }
+
+    const asset0Amount = assets[0]?.amount;
+    const asset1Amount = assets[1]?.amount;
+    
+    if (asset0Amount === undefined || asset1Amount === undefined) {
+      return;
+    }
+
+    // Calculate proportion of pool
+    const proportion = parseFloat(lpAmount) / parseFloat(total_share);
+    
+    // Validate the proportion calculation
+    if (!isFinite(proportion) || isNaN(proportion)) {
+      console.log('Invalid proportion calculation');
+      setWithdrawEstimate({
+        token0Amount: "0",
+        token1Amount: "0"
+      });
+      return;
+    }
+    
+    // Calculate expected amounts
+    const token0Amount = (parseFloat(asset0Amount) * proportion).toFixed(6);
+    const token1Amount = (parseFloat(asset1Amount) * proportion).toFixed(6);
+
+    // Validate final amounts
+    if (isNaN(parseFloat(token0Amount)) || isNaN(parseFloat(token1Amount))) {
+      setWithdrawEstimate({
+        token0Amount: "0",
+        token1Amount: "0"
+      });
+      return;
+    }
+
+    setWithdrawEstimate({
+      token0Amount,
+      token1Amount
+    });
+  }, [data?.pairPoolData, safeTokenInputs['pool.withdraw.lpToken']?.amount, selectedPool]);
+
+  const typedSelectedPool = (() => {
+    if (selectedPool === undefined || selectedPool === null) return null;
+    if (!selectedPool.token0 || !selectedPool.token1) return null;
+    
+    // Ensure all contract addresses match the secret1 format
+    const isSecret1Address = (addr: string): addr is `secret1${string}` => 
+      addr.startsWith('secret1');
+
+    const contractAddr = selectedPool.pairInfo.contract_addr;
+    const liquidityToken = selectedPool.pairInfo.liquidity_token;
+    
+    if (!isSecret1Address(contractAddr) || !isSecret1Address(liquidityToken)) return null;
+
+    const typedAssetInfos = selectedPool.pairInfo.asset_infos.map(info => {
+      if (!isSecret1Address(info.token.contract_addr)) return null;
+      return {
+        token: {
+          contract_addr: info.token.contract_addr,
+          token_code_hash: info.token.token_code_hash,
+          viewing_key: info.token.viewing_key
+        }
+      };
+    });
+
+    if (typedAssetInfos.some(info => info === null)) return null;
+
+    return {
+      address: selectedPool.address,
+      token0: selectedPool.token0,
+      token1: selectedPool.token1,
+      pairInfo: {
+        contract_addr: contractAddr,
+        asset_infos: typedAssetInfos as {
+          token: {
+            contract_addr: `secret1${string}`;
+            token_code_hash: string;
+            viewing_key: string;
+          };
+        }[],
+        liquidity_token: liquidityToken,
+        token_code_hash: selectedPool.pairInfo.token_code_hash
       }
-    : null;
+    };
+  })();
 
   return {
     tokenInputs: safeTokenInputs,
@@ -368,5 +459,6 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     poolDetails: data?.poolDetails,
     pairPoolData: data?.pairPoolData,
     handleClick,
+    withdrawEstimate,
   };
 }

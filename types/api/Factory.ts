@@ -1,3 +1,5 @@
+import { SecretString } from "../SecretString";
+
 export interface TokenInfo {
   contract_addr: string;
   token_code_hash: string;
@@ -12,8 +14,8 @@ interface AssetInfo {
 
 export interface Pair {
   asset_infos: AssetInfo[];
-  contract_addr: string;
-  liquidity_token: string;
+  contract_addr: SecretString;
+  liquidity_token: SecretString;
   token_code_hash: string;
   asset0_volume: string;
   asset1_volume: string;

@@ -1,3 +1,4 @@
+import { SecretString } from '@/types';
 import { ApiToken } from '@/utils/apis/getSwappableTokens';
 
 export interface PairPoolData {
@@ -8,7 +9,7 @@ export interface PairPoolData {
 export interface PoolAsset {
   info: {
     token: {
-      contract_addr: string;
+      contract_addr: SecretString;
       token_code_hash: string;
       viewing_key: string;
     };
@@ -17,7 +18,7 @@ export interface PoolAsset {
 }
 
 export interface PoolDetails {
-  contract_address: string;
+  contract_address: SecretString;
   name: string;
   about: string;
 }
@@ -34,10 +35,10 @@ export interface LoadingState {
 }
 
 export interface PairInfo {
-  contract_addr: string;
+  contract_addr: SecretString;
   asset_infos: Array<{
     token: {
-      contract_addr: string;
+      contract_addr: SecretString;
       token_code_hash: string;
       viewing_key: string;
     };
@@ -47,10 +48,15 @@ export interface PairInfo {
 }
 
 export interface SelectedPoolType {
-  address: string;
+  address: SecretString;
   token0: ApiToken;
   token1: ApiToken;
   pairInfo: PairInfo;
+}
+
+export interface WithdrawEstimate {
+  token0Amount: string;
+  token1Amount: string;
 }
 
 export interface UsePoolDepositFormResult {
@@ -58,9 +64,9 @@ export interface UsePoolDepositFormResult {
   setTokenInputAmount: (key: string, value: string) => void;
   setMax: (inputIdentifier: string) => void;
   selectedPool: SelectedPoolType | null;
-  // handleDepositClick: () => void;
   handleClick: (intent: 'deposit' | 'withdraw') => void;
   loadingState: LoadingState;
   poolDetails: PoolDetails | undefined;
   pairPoolData: PairPoolData | undefined;
+  withdrawEstimate: WithdrawEstimate | null;
 }

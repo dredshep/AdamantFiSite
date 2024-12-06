@@ -1,10 +1,10 @@
-import { create } from "zustand";
-import { ApiToken } from "@/utils/apis/getSwappableTokens";
+import { PoolTokenInputs, SecretString, TokenInputState } from "@/types";
 import { Pair } from "@/types/api/Factory";
-import { PoolTokenInputs, TokenInputState } from "@/types";
+import { ApiToken } from "@/utils/apis/getSwappableTokens";
+import { create } from "zustand";
 
 interface SelectedPool {
-  address: string;
+  address: SecretString;
   token0?: ApiToken;
   token1?: ApiToken;
   pairInfo: Pair;
