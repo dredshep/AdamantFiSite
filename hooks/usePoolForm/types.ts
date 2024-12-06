@@ -1,4 +1,4 @@
-import { ApiToken } from "@/utils/apis/getSwappableTokens";
+import { ApiToken } from '@/utils/apis/getSwappableTokens';
 
 export interface PairPoolData {
   assets: PoolAsset[];
@@ -29,7 +29,7 @@ export interface PoolQueryResult {
 }
 
 export interface LoadingState {
-  status: "loading" | "error" | "success";
+  status: 'loading' | 'error' | 'success';
   message: string | undefined;
 }
 
@@ -42,6 +42,8 @@ export interface PairInfo {
       viewing_key: string;
     };
   }>;
+  liquidity_token: string;
+  token_code_hash: string;
 }
 
 export interface SelectedPoolType {
@@ -57,7 +59,7 @@ export interface UsePoolDepositFormResult {
   setMax: (inputIdentifier: string) => void;
   selectedPool: SelectedPoolType | null;
   // handleDepositClick: () => void;
-  handleClick: (intent: "deposit" | "withdraw") => void;
+  handleClick: (intent: 'deposit' | 'withdraw') => void;
   loadingState: LoadingState;
   poolDetails: PoolDetails | undefined;
   pairPoolData: PairPoolData | undefined;

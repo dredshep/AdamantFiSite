@@ -14,6 +14,7 @@ import { toast } from 'react-toastify';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 import { fetchPoolData, validatePoolAddress } from './queryFunctions';
 import type { LoadingState, SelectedPoolType, UsePoolDepositFormResult } from './types';
+import { withdrawLiquidity } from '@/utils/secretjs/withdrawLiquidity';
 
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
@@ -277,9 +278,15 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     }
   };
 
-  // TODO: make this async
-  const handleWithdrawClick = (): void => {
+  const handleWithdrawClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
+    if (!secretjs) return;
+
+    // FIXME:
+    // - these tokens and amounts should not be user inputs
+    // - user input is how many LP tokens to remove
+    // - the amounts returned need to be calcluated and show to the user
+    // - maybe user should be allowed to input an amount of one token, and we calculate the amount of the other
 
     const inputIdentifier1 = `pool.withdraw.tokenA`;
     const inputIdentifier2 = `pool.withdraw.tokenB`;
@@ -287,24 +294,48 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     const amount1 = safeTokenInputs[inputIdentifier1]?.amount ?? '0';
     const amount2 = safeTokenInputs[inputIdentifier2]?.amount ?? '0';
 
-    if (amount1 === '0' || amount2 === '0') {
-      toast.error('Please enter an amount for both tokens');
-      return;
-    }
+    // TODO: Map pair address to code_hash. They will all be the same for now.
+    const pairContract: ContractInfo = {
+      address: selectedPool.address,
+      code_hash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
+    };
 
-    const priceImpact = calculatePriceImpact(amount1);
-    const txFee = calculateTxFee(amount1);
+    // TODO: Map token address to code_hash. They will all be the same for now.
+    const lpTokenContract: ContractInfo = {
+      address: selectedPool.pairInfo.liquidity_token,
+      code_hash: selectedPool.pairInfo.token_code_hash,
+    };
 
     console.log('Withdraw clicked', {
-      pool: selectedPool.address,
+      pool: pairContract.address,
       token0: getApiTokenSymbol(selectedPool.token0),
       amount1,
       token1: getApiTokenSymbol(selectedPool.token1),
       amount2,
-      priceImpact,
-      txFee,
+      lpToken: lpTokenContract.address,
     });
+
+    try {
+      setPending(true);
+
+      // FIXME: Get this amount of LP tokens from the form.
+      const amount = '0';
+      const result = await withdrawLiquidity(secretjs, lpTokenContract, pairContract, amount);
+
+      setPending(false);
+      setResult(result);
+
+      console.log('Transaction Result:', JSON.stringify(result, null, 4));
+
+      if (result.code !== TxResultCode.Success) {
+        throw new Error(`Swap failed: ${result.rawLog}`);
+      }
+    } catch (error) {
+      console.error('Error during tx execution:', error);
+      alert('Transaction failed. Check the console for more details.');
+    }
   };
+
   const handleClick = (intent: 'deposit' | 'withdraw'): void => {
     if (intent === 'deposit') {
       void handleDepositClick();
@@ -321,6 +352,8 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
         pairInfo: {
           contract_addr: selectedPool.pairInfo.contract_addr,
           asset_infos: selectedPool.pairInfo.asset_infos,
+          liquidity_token: selectedPool.pairInfo.liquidity_token,
+          token_code_hash: selectedPool.pairInfo.token_code_hash,
         },
       }
     : null;
@@ -331,7 +364,6 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       setTokenInputAmount(key as keyof typeof tokenInputs, value),
     setMax,
     selectedPool: typedSelectedPool,
-    // handleDepositClick,
     loadingState,
     poolDetails: data?.poolDetails,
     pairPoolData: data?.pairPoolData,

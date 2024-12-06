@@ -1,14 +1,14 @@
-import { SecretNetworkClient } from "secretjs";
-import { ContractInfo } from "@/types/secretswap/shared";
-import { Cw20HookMsg } from "@/types/secretswap/pair";
+import { SecretNetworkClient } from 'secretjs';
+import { ContractInfo } from '@/types/secretswap/shared';
+import { Cw20HookMsg } from '@/types/secretswap/pair';
 
 // Withdrawing liquidity is done by sending LP tokens to the Pair contract with a callback message.
 
 export async function withdrawLiquidity(
   secretjs: SecretNetworkClient,
-  token_contract: ContractInfo,
+  lp_token_contract: ContractInfo,
   pair_contract: ContractInfo,
-  amount: string,
+  amount: string
 ) {
   const withdraw_liquidity: Cw20HookMsg = {
     withdraw_liquidity: {},
@@ -16,8 +16,8 @@ export async function withdrawLiquidity(
 
   const tx = await secretjs.tx.snip20.send({
     sender: secretjs.address,
-    contract_address: token_contract.address,
-    code_hash: token_contract.code_hash,
+    contract_address: lp_token_contract.address,
+    code_hash: lp_token_contract.code_hash,
     msg: {
       send: {
         recipient: pair_contract.address,
@@ -31,3 +31,5 @@ export async function withdrawLiquidity(
 
   return tx;
 }
+
+// TODO: have a way to know the LP token contract for the pair
