@@ -1,6 +1,6 @@
-import React from "react";
-import Link from "next/link";
 import { CaretRightIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
+import React from "react";
 
 interface BreadcrumbProps {
   linkPath: string;
