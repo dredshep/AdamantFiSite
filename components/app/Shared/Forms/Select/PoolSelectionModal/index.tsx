@@ -34,6 +34,9 @@ const PoolSelectionModal: React.FC = () => {
     );
   });
 
+  const isSecret1Address = (addr: string): addr is `secret1${string}` => 
+    addr.startsWith('secret1');
+
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
@@ -62,11 +65,19 @@ const PoolSelectionModal: React.FC = () => {
                 key={index}
                 className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors"
                 onClick={() => {
+                  if (!isSecret1Address(pool.pair.liquidity_token)) {
+                    console.error('Invalid liquidity token format');
+                    return;
+                  }
+
                   setSelectedPool({
                     address: pool.pair.contract_addr,
                     token0: pool.token0,
                     token1: pool.token1,
-                    pairInfo: pool.pair,
+                    pairInfo: {
+                      ...pool.pair,
+                      liquidity_token: pool.pair.liquidity_token
+                    },
                   });
                   const close = document.querySelector(
                     '[data-radix-collection-item]'
