@@ -74,25 +74,50 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     tokenCodeHash: string
   ) {
     const keplr = (window as unknown as Window).keplr;
-
-    // TODO: probably don't want to use alerts
     if (!keplr) {
       alert('Please install the Keplr extension');
       return;
     }
 
-    const viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress);
+    try {
+      // First try to get the viewing key
+      let viewingKey = await keplr
+        .getSecret20ViewingKey('secret-4', tokenAddress)
+        .catch(() => null);
+      
+      // If no viewing key, suggest the token first
+      if (viewingKey === null) {
+        try {
+          await keplr.suggestToken('secret-4', tokenAddress);
+          // Try getting the key again after suggesting
+          viewingKey = await keplr
+            .getSecret20ViewingKey('secret-4', tokenAddress)
+            .catch(() => null);
+        } catch (error) {
+          console.error('Error suggesting token:', error);
+          return null;
+        }
+      }
 
-    const balance = await secretjs.query.snip20.getBalance({
-      contract: {
-        address: tokenAddress,
-        code_hash: tokenCodeHash,
-      },
-      address: secretjs.address,
-      auth: { key: viewingKey },
-    });
+      if (viewingKey === null) {
+        console.error('No viewing key available after suggesting token');
+        return null;
+      }
 
-    return balance;
+      const balance = await secretjs.query.snip20.getBalance({
+        contract: {
+          address: tokenAddress,
+          code_hash: tokenCodeHash,
+        },
+        address: secretjs.address,
+        auth: { key: viewingKey },
+      });
+
+      return balance;
+    } catch (error) {
+      console.error('Error getting token balance:', error);
+      return null;
+    }
   }
 
   useEffect(() => {

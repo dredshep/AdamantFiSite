@@ -221,7 +221,28 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
           .catch(() => null);
         
         if (typeof viewingKey === 'string' && viewingKey.length > 0) {
-          void fetchBalance();
+          // Try to fetch balance with the viewing key
+          const tokenCodeHash = getCodeHashByAddress(tokenAddress);
+          const response = await tokenService.getBalance(tokenAddress, tokenCodeHash).catch((err: unknown) => {
+            // Type guard for Error objects
+            if (err instanceof Error) {
+              const errorMessage = err.message;
+              // Explicit string comparison
+              if (
+                typeof errorMessage === 'string' && (
+                  errorMessage.includes('unauthorized') || 
+                  errorMessage.includes('viewing key')
+                )
+              ) {
+                return null;
+              }
+            }
+            throw err; // Re-throw other errors
+          });
+          
+          if (response !== null) {
+            void fetchBalance();
+          }
         }
       } catch (error) {
         console.log('Viewing key check failed:', error);
