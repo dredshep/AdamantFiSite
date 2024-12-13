@@ -5,6 +5,7 @@ import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
 import { SecretString } from '@/types';
 import { getTokenDecimals } from '@/utils/apis/tokenInfo';
 import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
+import { Keplr, Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 
@@ -198,6 +199,41 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
     },
     [toastShown, tokenService, tokenAddress, fetchBalance]
   );
+
+  const checkViewingKey = useCallback(async () => {
+    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0 || !secretjs || !tokenService) {
+      return;
+    }
+
+    try {
+      const keplr: Keplr | undefined = (window as unknown as Window).keplr;
+
+      if (!keplr) {
+        toast.error('Keplr not installed', {
+          toastId: 'keplr-not-installed',
+        });
+        return;
+      }
+
+      try {
+        const viewingKey = await keplr
+          .getSecret20ViewingKey('secret-4', tokenAddress)
+          .catch(() => null);
+        
+        if (typeof viewingKey === 'string' && viewingKey.length > 0) {
+          void fetchBalance();
+        }
+      } catch (error) {
+        console.log('Viewing key check failed:', error);
+      }
+    } catch (error) {
+      console.log('Keplr check failed:', error);
+    }
+  }, [tokenAddress, secretjs, tokenService, fetchBalance]);
+
+  useEffect(() => {
+    void checkViewingKey();
+  }, [checkViewingKey]);
 
   useEffect(() => {
     if (!autoFetch) return;

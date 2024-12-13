@@ -30,7 +30,6 @@ interface QueryParams {
   }
 
   async getBalance(tokenAddress: string, codeHash: string): Promise<string> {
-    // Don't even try if the viewing key was rejected
     if (this.rejectedViewingKeys.has(tokenAddress)) {
       throw new Error('Viewing key request was rejected');
     }
@@ -45,13 +44,25 @@ interface QueryParams {
         throw new Error('Keplr not installed');
       }
 
-      const viewingKey = await keplr
+      let viewingKey = await keplr
         .getSecret20ViewingKey('secret-4', tokenAddress)
         .catch(() => null);
       
       if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
         try {
           await keplr.suggestToken('secret-4', tokenAddress);
+          
+          // Add delay to allow Keplr to process the viewing key
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // After suggesting token, try to get the viewing key again
+          viewingKey = await keplr
+            .getSecret20ViewingKey('secret-4', tokenAddress)
+            .catch(() => null);
+          
+          if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
+            throw new Error('Viewing key required. Please set a viewing key and try again.');
+          }
         } catch (error) {
           if (error instanceof Error) {
             this.rejectedViewingKeys.add(tokenAddress);
@@ -60,7 +71,6 @@ interface QueryParams {
             throw new Error('Unknown error');
           }
         }
-        throw new Error('Viewing key required. Please set a viewing key and try again.');
       }
 
       const response = await this.throttledQuery({
@@ -71,6 +81,16 @@ interface QueryParams {
         address: this.secretjs.address,
         auth: { key: viewingKey },
       });
+
+      if (
+        response === null || 
+        response === undefined || 
+        !('balance' in response) || 
+        !('amount' in response.balance) || 
+        typeof response.balance.amount !== 'string'
+      ) {
+        throw new Error('Invalid balance response from contract');
+      }
 
       this.lastError = null;
       this.errorTimestamp = 0;
