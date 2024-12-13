@@ -1,7 +1,7 @@
-import React, { ReactNode } from "react";
-import Head from "next/head";
-import { Roboto } from "next/font/google";
 import Navbar from "@/components/app/Global/Navbar";
+import { Roboto } from "next/font/google";
+import Head from "next/head";
+import { ReactNode } from "react";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -17,7 +17,7 @@ export default function Layout({ children }: LayoutProps) {
     <div
       className={
         roboto.className +
-        " bg-tubeshapes-light bg-cover bg-fixed min-h-screen text-white"
+        " bg-adamant-background bg-cover bg-fixed min-h-screen text-white"
       }
     >
       <Head>

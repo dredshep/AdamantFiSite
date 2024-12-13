@@ -36,6 +36,7 @@ const config = {
           contrastDark: "#3F331D",
           gradientBright: "#A68C57",
           gradientDark: "#B59D6B",
+          background: "#151321",
           box: {
             dark: "#0C0C20",
             veryDark: "#0B0B16",

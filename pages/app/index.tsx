@@ -1,6 +1,6 @@
-import { Roboto } from "next/font/google";
 import AppLayout from "@/components/app/Global/AppLayout";
 import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
+import { Roboto } from "next/font/google";
 // import { useStore } from "@/store/swapStore";
 // import { useTokenStore } from "@/store/tokenStore";
 
@@ -22,7 +22,7 @@ export default function Swap() {
     <div
       className={
         roboto.className +
-        " bg-tubeshapes-light bg-cover min-h-screen text-white"
+        " bg-adamant-background bg-cover min-h-screen text-white"
       }
     >
       <AppLayout>
