@@ -1,48 +1,13 @@
 import { SecretString } from '@/types';
-// import { Pair } from '@/types/api/Factory';
+import { Pair } from '@/types/api/Factory';
 import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
 import { ApiToken, getApiToken, getTokenFromAddress } from '@/utils/apis/getSwappableTokens';
 import { useEffect, useState } from 'react';
-
-// export interface PoolInfo {
-//   pair: Pair;
-//   token0?: ApiToken;
-//   token1?: ApiToken;
-// }
 
 export interface PoolInfo {
   pair: Pair;
   token0: Token0Class;
   token1: Token0Class;
-}
-
-export interface Pair {
-  asset_infos: AssetInfo[];
-  contract_addr: SecretString;
-  liquidity_token: string;
-  token_code_hash: string;
-  asset0_volume: string;
-  asset1_volume: string;
-  factory: Factory;
-}
-
-export interface AssetInfo {
-  token: TokenClass;
-}
-
-export interface TokenClass {
-  contract_addr: SecretString;
-  token_code_hash: string;
-  viewing_key: string;
-}
-
-// export enum ViewingKey {
-//   SecretSwap = 'SecretSwap',
-// }
-
-export interface Factory {
-  address: string;
-  code_hash: string;
 }
 
 export interface Token0Class {
@@ -86,14 +51,20 @@ export function usePoolsAndTokens() {
 
         const poolsWithTokenInfo = pairs
           .map((pair) => {
-            if (pair.asset_infos[0] !== undefined && pair.asset_infos[1] !== undefined) {
-              const token0Address = pair.asset_infos[0].token?.contract_addr;
-              const token1Address = pair.asset_infos[1].token?.contract_addr;
+            if (pair.asset_infos[0]?.token && pair.asset_infos[1]?.token) {
+              const token0Address = pair.asset_infos[0].token.contract_addr;
+              const token1Address = pair.asset_infos[1].token.contract_addr;
+
+              // Validate addresses have correct format
+              if (!token0Address.startsWith('secret1') || !token1Address.startsWith('secret1')) {
+                console.error('Invalid token address format:', { token0Address, token1Address });
+                return null;
+              }
 
               return {
                 pair,
-                token0: getTokenFromAddress(token0Address),
-                token1: getTokenFromAddress(token1Address),
+                token0: getTokenFromAddress(token0Address as `secret1${string}`),
+                token1: getTokenFromAddress(token1Address as `secret1${string}`),
               };
             }
             return null;

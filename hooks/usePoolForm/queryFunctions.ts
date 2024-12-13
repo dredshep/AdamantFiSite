@@ -1,9 +1,10 @@
-import { getTablePools } from "@/utils/apis/getTablePools";
-import { queryPool } from "@/utils/apis/getPairPool";
+import { SecretString } from "@/types";
 import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
+import { queryPool } from "@/utils/apis/getPairPool";
 import { getApiToken } from "@/utils/apis/getSwappableTokens";
-import { PoolQueryResult, PairPoolData, SelectedPoolType } from "./types";
+import { getTablePools } from "@/utils/apis/getTablePools";
 import { setupPoolTokens } from "./poolTokens";
+import { PairInfo, PairPoolData, PoolDetails, PoolQueryResult, SelectedPoolType } from "./types";
 
 export async function fetchPoolData(
   poolAddress: string,
@@ -22,13 +23,37 @@ export async function fetchPoolData(
 
   const pair = factoryPairs.find((p) => p.contract_addr === poolAddress);
   if (pair) {
-    setupPoolTokens(pair, tokens, poolAddress, setSelectedPool);
+    const isValidPair = pair.asset_infos.every(info => 
+      info.token?.contract_addr?.startsWith('secret1')
+    );
+
+    if (!isValidPair) {
+      console.error('Invalid token addresses in pair:', pair);
+      throw new Error('Invalid token addresses in pair');
+    }
+
+    const pairInfo = {
+      ...pair,
+      asset_infos: pair.asset_infos.map(info => ({
+        token: {
+          ...info.token,
+          contract_addr: info.token.contract_addr as SecretString
+        }
+      }))
+    } satisfies PairInfo;
+
+    setupPoolTokens(pairInfo, tokens, poolAddress, setSelectedPool);
   }
 
+  const poolDetails: PoolDetails[] = poolsData.map(pool => ({
+    ...pool,
+    contract_address: pool.contract_address as SecretString
+  }));
+
   return {
-    pools: poolsData,
+    pools: poolDetails,
     pairPoolData: pairData as PairPoolData,
-    poolDetails: poolsData.find((p) => p.contract_address === poolAddress),
+    poolDetails: poolDetails.find((p) => p.contract_address === poolAddress),
   };
 }
 

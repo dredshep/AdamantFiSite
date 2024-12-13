@@ -12,7 +12,7 @@ import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type TopBoxesProps = {
@@ -65,9 +65,9 @@ function TopBoxes({ poolAddress }: TopBoxesProps) {
 }
 
 export default function PoolPage() {
-  const router = useRouter();
+  const params = useParams();
   const [pageError, setPageError] = useState<Error | null>(null);
-  const { pool } = router.query;
+  const pool = params['pool'];
   const { pools, loading, error } = usePoolsAndTokens();
   const { setSelectedPool } = usePoolStore();
 
@@ -75,9 +75,18 @@ export default function PoolPage() {
     if (typeof pool === 'string' && pools.length > 0) {
       const selectedPool = pools.find((p) => p.pair.contract_addr === pool);
       if (selectedPool) {
+        const liquidityToken = selectedPool.pair.liquidity_token;
+        if (!liquidityToken.startsWith('secret1')) {
+          console.error('Invalid liquidity token format:', liquidityToken);
+          return;
+        }
+        
         setSelectedPool({
           address: pool as SecretString,
-          pairInfo: selectedPool.pair,
+          pairInfo: {
+            ...selectedPool.pair,
+            liquidity_token: liquidityToken as SecretString,
+          },
           token0: selectedPool.token0,
           token1: selectedPool.token1,
         });

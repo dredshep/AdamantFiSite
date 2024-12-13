@@ -1,3 +1,4 @@
+import { SecretString } from "@/types";
 import { ApiToken, getApiTokenAddress } from "@/utils/apis/getSwappableTokens";
 import { PairInfo, SelectedPoolType } from "./types";
 
@@ -20,8 +21,13 @@ export function setupPoolTokens(
     const token1 = tokens.find((t) => getApiTokenAddress(t) === token1Address);
 
     if (token0 && token1) {
+      if (!poolAddress.startsWith('secret1')) {
+        console.error('Invalid pool address format:', poolAddress);
+        return;
+      }
+
       setSelectedPool({
-        address: poolAddress,
+        address: poolAddress as SecretString,
         token0,
         token1,
         pairInfo: pair,
