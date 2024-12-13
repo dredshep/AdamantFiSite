@@ -1,24 +1,24 @@
-import React from "react";
-import { useWalletStore } from "@/store/walletStore";
 import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
-import {
-  RiSettings3Line,
-  RiArrowUpSLine,
-  RiFileCopyLine,
-} from "react-icons/ri";
-import { toast } from "react-toastify"; // Assuming you're using react-toastify for notifications
-import { useTokenStore } from "@/store/tokenStore";
 import { useModalStore } from "@/store/modalStore";
+import { useTokenStore } from "@/store/tokenStore";
+import { useWalletStore } from "@/store/walletStore";
 import {
   getApiTokenAddress,
   getApiTokenSymbol,
 } from "@/utils/apis/getSwappableTokens";
+import React from "react";
+import {
+  RiArrowUpSLine,
+  RiFileCopyLine,
+  RiSettings3Line,
+} from "react-icons/ri";
+import { toast } from "react-toastify"; // Assuming you're using react-toastify for notifications
 
 const WalletModal: React.FC = () => {
   const { closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
   const { listAllTokens } = useTokenStore();
-  const tokens = listAllTokens();
+  const tokens = listAllTokens() ?? [];
   // const balance =
   //   getTokenByAddress("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek")
   //     ?.balance ?? "N/A";
@@ -77,24 +77,22 @@ const WalletModal: React.FC = () => {
         <div className="text-sm font-semibold mb-2 ml-6 uppercase text-gray-500">
           Tokens
         </div>
-        {tokens?.map((token, index) => (
-          <div
-            key={index}
-            className="flex justify-between items-center cursor-pointer hover:bg-adamant-app-boxHighlight py-2 rounded-xl mx-2 px-6"
-          >
-            <PlaceholderImageFromSeed
-              seed={getApiTokenAddress(token)}
-              size={40}
-            />
-            <div className="flex-grow ml-3 flex flex-col">
-              <span className="font-bold">{getApiTokenSymbol(token)}</span>
-              {/* <span className="text-gray-500 text-xs font-medium">
-                {token.network}
-              </span> */}
+        {tokens.length > 0 ? (
+          tokens.map((token, index) => (
+            <div
+              key={index}
+              className="flex justify-between items-center cursor-pointer hover:bg-adamant-app-boxHighlight py-2 rounded-xl mx-2 px-6"
+            >
+              <PlaceholderImageFromSeed
+                seed={getApiTokenAddress(token)}
+                size={40}
+              />
+              <div className="flex-grow ml-3 flex flex-col">
+                <span className="font-bold">{getApiTokenSymbol(token)}</span>
+              </div>
             </div>
-            {/* <span className="font-bold">{token.balance}</span> */}
-          </div>
-        )) || (
+          ))
+        ) : (
           <div>
             Token store not correctly initialized. Check your internet
             connection or availability of the API server.

@@ -7,7 +7,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { usePoolForm } from '@/hooks/usePoolForm';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { SecretString } from '@/types';
 import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
@@ -76,16 +75,16 @@ export default function PoolPage() {
       const selectedPool = pools.find((p) => p.pair.contract_addr === pool);
       if (selectedPool) {
         const liquidityToken = selectedPool.pair.liquidity_token;
-        if (!liquidityToken.startsWith('secret1')) {
-          console.error('Invalid liquidity token format:', liquidityToken);
+        if (!liquidityToken.startsWith('secret1') || !pool.startsWith('secret1')) {
+          console.error('Invalid address format:', { liquidityToken, pool });
           return;
         }
         
         setSelectedPool({
-          address: pool as SecretString,
+          address: pool as `secret1${string}`,
           pairInfo: {
             ...selectedPool.pair,
-            liquidity_token: liquidityToken as SecretString,
+            liquidity_token: liquidityToken,
           },
           token0: selectedPool.token0,
           token1: selectedPool.token1,
