@@ -37,7 +37,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   hasMax,
 }) => {
   const { secretjs, connect } = useSecretNetwork();
-  const tokenData = useTokenBalance(tokenAddress);
+  const tokenData = useTokenBalance(tokenAddress, false);
 
   // Attempt to connect if not connected
   useEffect(() => {
@@ -63,6 +63,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           inputIdentifier={inputIdentifier}
           loading={tokenData.loading}
           error={tokenData.error}
+          onFetchBalance={() => void tokenData.refetch()}
         />
       </div>
       <div className="flex items-center">

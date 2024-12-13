@@ -2,11 +2,13 @@ import { TokenBalanceError } from '@/hooks/useTokenBalance';
 import React from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { BiErrorCircle } from 'react-icons/bi';
+import { FiRefreshCw } from 'react-icons/fi';
 import SwapMaxButton from './Forms/Input/TokenInput/MaxButton';
 import PoolMaxButton from './Forms/Input/TokenInput/PoolMaxButton';
 import {
-    InputIdentifier,
-    PoolInputIdentifier
+  InputIdentifier,
+  PoolInputIdentifier,
+  SwapInputIdentifier
 } from './Forms/Input/TokenInputBase';
 
 interface TopRightBalanceProps {
@@ -16,6 +18,7 @@ interface TopRightBalanceProps {
   inputIdentifier?: InputIdentifier;
   loading?: boolean;
   error?: TokenBalanceError | null;
+  onFetchBalance?: () => void;
 }
 
 const TopRightBalance: React.FC<TopRightBalanceProps> = ({
@@ -25,6 +28,7 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   inputIdentifier,
   loading = false,
   error = null,
+  onFetchBalance
 }) => {
   const showMaxButton = 
     hasMax && 
@@ -49,7 +53,15 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
             <span>Error</span>
           </div>
         ) : balance === null ? (
-          <span className="text-gray-500">--</span>
+          <button
+            onClick={onFetchBalance}
+            className="px-2 py-0.5 text-xs bg-gray-700/30 hover:bg-gray-700/50 rounded-full transition-colors flex items-center gap-1"
+            title="Fetch balance"
+            disabled={loading}
+          >
+            <FiRefreshCw className="h-3 w-3" />
+            <span>Fetch</span>
+          </button>
         ) : (
           <span className="tabular-nums">
             {balance.toFixed(6)} {tokenSymbol}
@@ -59,7 +71,7 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
       {showMaxButton && (
         isSwapInput ? (
           <SwapMaxButton
-            inputIdentifier={inputIdentifier}
+            inputIdentifier={inputIdentifier as SwapInputIdentifier}
             balance={balance}
           />
         ) : (
