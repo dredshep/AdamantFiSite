@@ -19,7 +19,7 @@ interface ValidatedPool extends TablePool {
 export default function PoolsPage() {
   const [pools, setPools] = useState<ValidatedPool[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAllPools, setShowAllPools] = useState(false);
+  // const [showAllPools, setShowAllPools] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -51,9 +51,7 @@ export default function PoolsPage() {
     const matchesSearch =
       pool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pool.contract_address.toLowerCase().includes(searchTerm.toLowerCase());
-    return showAllPools
-      ? matchesSearch
-      : matchesSearch && pool.isValid === true;
+    return matchesSearch;
   });
 
   if (loading) {
@@ -75,7 +73,7 @@ export default function PoolsPage() {
               placeholder="Search pool or paste address"
               onSearch={setSearchTerm}
             />
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <label className="text-sm text-gray-400">Show all pools</label>
               <input
                 type="checkbox"
@@ -83,14 +81,14 @@ export default function PoolsPage() {
                 onChange={(e) => setShowAllPools(e.target.checked)}
                 className="form-checkbox h-4 w-4 text-adamant-primary rounded border-gray-300"
               />
-            </div>
+            </div> */}
           </div>
-          {showAllPools === true && (
-            <div className="text-yellow-500 text-sm">
+          {/* {showAllPools === true && ( */}
+            {/* <div className="text-yellow-500 text-sm">
               Warning: Some pools shown may not be properly configured and could
               cause errors when interacting with them.
-            </div>
-          )}
+            </div> */}
+          {/* )} */}
         </div>
 
         <TableHeaders
