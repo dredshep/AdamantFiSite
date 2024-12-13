@@ -7,6 +7,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { usePoolForm } from '@/hooks/usePoolForm';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
+import { SecretString } from '@/types';
 import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
@@ -81,7 +82,7 @@ export default function PoolPage() {
         }
         
         setSelectedPool({
-          address: pool as `secret1${string}`,
+          address: pool as SecretString,
           pairInfo: {
             ...selectedPool.pair,
             liquidity_token: liquidityToken,

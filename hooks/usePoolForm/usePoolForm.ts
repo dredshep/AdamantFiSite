@@ -434,7 +434,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     if (!selectedPool.token0 || !selectedPool.token1) return null;
     
     // Ensure all contract addresses match the secret1 format
-    const isSecret1Address = (addr: string): addr is `secret1${string}` => 
+    const isSecret1Address = (addr: string): addr is SecretString => 
       addr.startsWith('secret1');
 
     const contractAddr = selectedPool.pairInfo.contract_addr;
@@ -463,7 +463,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
         contract_addr: contractAddr,
         asset_infos: typedAssetInfos as {
           token: {
-            contract_addr: `secret1${string}`;
+            contract_addr: SecretString;
             token_code_hash: string;
             viewing_key: string;
           };

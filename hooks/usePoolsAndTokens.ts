@@ -63,8 +63,8 @@ export function usePoolsAndTokens() {
 
               return {
                 pair,
-                token0: getTokenFromAddress(token0Address as `secret1${string}`),
-                token1: getTokenFromAddress(token1Address as `secret1${string}`),
+                token0: getTokenFromAddress(token0Address as SecretString),
+                token1: getTokenFromAddress(token1Address as SecretString),
               };
             }
             return null;

@@ -1,6 +1,7 @@
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
+import { SecretString } from '@/types';
 import { ApiToken, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import React, { useState } from 'react';
@@ -34,7 +35,7 @@ const PoolSelectionModal: React.FC = () => {
     );
   });
 
-  const isSecret1Address = (addr: string): addr is `secret1${string}` => 
+  const isSecret1Address = (addr: string): addr is SecretString => 
     addr.startsWith('secret1');
 
   return (
