@@ -34,8 +34,12 @@ const isPoolInput = (
 
 const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) => {
   const { swapTokenInputs, setTokenInputProperty } = useSwapStore();
-  const { selectedPool } = usePoolStore();
-  const { tokenInputs: poolTokenInputs, setTokenInputAmount } = usePoolForm(selectedPool?.address);
+  
+  // Only use pool-related hooks when formType is 'pool'
+  const { selectedPool } = formType === 'pool' ? usePoolStore() : { selectedPool: undefined };
+  const poolForm = formType === 'pool' ? usePoolForm(selectedPool?.address) : null;
+  const poolTokenInputs = poolForm?.tokenInputs;
+  const setTokenInputAmount = poolForm?.setTokenInputAmount;
 
   // Get typed token data
   const getTokenData = (): TokenData => {
@@ -48,8 +52,10 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
         balance: String(data.balance || '0'),
       };
     } else if (formType === 'pool' && isPoolInput(inputIdentifier)) {
+      if (!poolTokenInputs) throw new Error('Pool inputs not available');
       const data = poolTokenInputs[inputIdentifier];
       if (data === undefined) throw new Error('Invalid pool input data');
+      
       // For pool inputs, use the token address from the selected pool
       const isTokenA = inputIdentifier.endsWith('tokenA');
       return {
@@ -64,26 +70,16 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
   };
 
   const tokenData = getTokenData();
-  // const token = useTokenStore().tokens?.[tokenData.tokenAddress];
   const { tokens } = useTokenStore();
   const token = tokens?.[tokenData.tokenAddress];
 
   const handleInputChange = (value: string) => {
     if (formType === 'swap' && isSwapInput(inputIdentifier)) {
       setTokenInputProperty(inputIdentifier, 'amount', value);
-    } else {
+    } else if (setTokenInputAmount) {
       setTokenInputAmount(inputIdentifier as keyof PoolTokenInputs, value);
     }
   };
-
-  // const handleMaxClick = () => {
-  //   const balanceStr = String(tokenData.balance);
-  //   if (formType === "swap" && isSwapInput(inputIdentifier)) {
-  //     setTokenInputProperty(inputIdentifier, "amount", balanceStr);
-  //   } else {
-  //     setTokenInputAmount(inputIdentifier as keyof PoolTokenInputs, balanceStr);
-  //   }
-  // };
 
   if (token === undefined || token === null) {
     return null;
@@ -111,8 +107,6 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
       onInputChange={handleInputChange}
       tokenSymbol={getApiTokenSymbol(token)}
       tokenAddress={getApiTokenAddress(token)}
-      // balance={tokenData.balance}
-      // onMaxClick={handleMaxClick}
       showEstimatedPrice={true}
       estimatedPrice={estimatedPrice}
       label={getLabel()}
