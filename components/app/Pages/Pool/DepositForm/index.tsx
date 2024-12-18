@@ -1,9 +1,9 @@
 import FormButton from '@/components/app/Shared/Forms/FormButton';
-import PoolTokenInput from '@/components/app/Shared/Forms/Input/PoolTokenInput';
+import TokenInput from '@/components/app/Shared/Forms/Input/TokenInput';
 import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
 import { usePoolForm } from '@/hooks/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
+import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import React from 'react';
 
@@ -61,23 +61,13 @@ const DepositForm: React.FC = () => {
           <PoolSelectionModal />
         </Dialog.Root>
 
-        <PoolTokenInput
-          poolInputIdentifier={`pool.deposit.tokenA`}
-          token={{
-            symbol: getApiTokenSymbol(selectedPool.token0!),
-            // balance: Number(selectedPool.token0!.balance),
-            address: getApiTokenAddress(selectedPool.token0!),
-          }}
-          label="Deposit"
+        <TokenInput
+          inputIdentifier="pool.deposit.tokenA"
+          formType="pool"
         />
-        <PoolTokenInput
-          poolInputIdentifier={`pool.deposit.tokenB`}
-          token={{
-            symbol: getApiTokenSymbol(selectedPool.token1!),
-            // balance: Number(selectedPool.token1!.balance),
-            address: getApiTokenAddress(selectedPool.token1!),
-          }}
-          label="And"
+        <TokenInput
+          inputIdentifier="pool.deposit.tokenB"
+          formType="pool"
         />
         {/* <div className="flex flex-col gap-2 px-2.5 text-gray-400 text-sm">
           <div className="flex justify-between">

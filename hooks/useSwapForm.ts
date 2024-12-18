@@ -1,13 +1,23 @@
-import { useState, useEffect } from "react";
 import { useSwapStore } from "@/store/swapStore";
 import { useTokenStore } from "@/store/tokenStore";
 import {
-  fetchSwappableTokens,
+  calculateMinReceive,
   calculatePriceImpact,
   calculateTxFee,
-  calculateMinReceive,
+  fetchSwappableTokens,
 } from "@/utils/swap";
+import { useEffect, useState } from "react";
 // new imports
+import { useTxStore } from "@/store/txStore";
+import { Hop } from "@/types";
+import { getTokenDecimals } from "@/utils/apis/tokenInfo";
+import {
+  PathEstimation,
+  buildTokenPoolMap,
+  estimateBestPath,
+  findPaths,
+} from "@/utils/swap/estimate";
+import Decimal from "decimal.js";
 import {
   SecretNetworkClient,
   TxOptions,
@@ -15,16 +25,6 @@ import {
   TxResultCode,
 } from "secretjs";
 import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
-import { Hop } from "@/types";
-import Decimal from "decimal.js";
-import {
-  PathEstimation,
-  buildTokenPoolMap,
-  findPaths,
-  estimateBestPath,
-} from "@/utils/swap/estimate";
-import { getTokenDecimals } from "@/utils/apis/tokenInfo";
-import { useTxStore } from "@/store/txStore";
 // TODO: Find a way to not need to import this.
 import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
 import {
@@ -32,10 +32,10 @@ import {
   getApiTokenAddress,
   getApiTokenSymbol,
 } from "@/utils/apis/getSwappableTokens";
-import { toast } from "react-toastify";
 import isNotNullish from "@/utils/isNotNullish";
-import { Window } from "@keplr-wallet/types";
 import { getCodeHashByAddress } from "@/utils/secretjs/getCodeHashByAddress";
+import { Window } from "@keplr-wallet/types";
+import { toast } from "react-toastify";
 
 export const useSwapForm = () => {
   const [swappableTokens, setSwappableTokens] = useState<ApiToken[]>([]);
@@ -49,6 +49,7 @@ export const useSwapForm = () => {
     (state) => state.tokens?.[receiveDetails.tokenAddress],
   );
   const slippage = useSwapStore((state) => state.sharedSettings.slippage);
+  const setSlippage = useSwapStore((state) => state.setSlippage);
   const gas = useSwapStore((state) => state.sharedSettings.gas);
 
   const [priceImpact, setPriceImpact] = useState("0.7");
@@ -453,6 +454,7 @@ RawData: ${JSON.stringify(
     receiveDetails,
     receiveToken,
     slippage,
+    setSlippage,
     gas,
     priceImpact,
     txFee,

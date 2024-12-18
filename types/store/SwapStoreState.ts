@@ -3,8 +3,8 @@
 import { SharedSettings } from "@/types/store/SharedSettings";
 import { SwapTokenInputs } from "@/types/store/TokenInputs";
 import { TokenInputState } from "@/types/store/TokenInputState";
-import { SecretString } from "../SecretString";
 import { ApiToken } from "@/utils/apis/getSwappableTokens";
+import { SecretString } from "../SecretString";
 
 export interface SwapStoreState {
   [key: string]: unknown;
@@ -35,4 +35,5 @@ export interface SwapStoreState {
   setChainId: (chainId: string) => void;
   setSwappableTokens: (tokens: ApiToken[]) => void;
   setConnectionRefused: (refused: boolean) => void;
+  setSlippage: (slippage: number) => void;
 }

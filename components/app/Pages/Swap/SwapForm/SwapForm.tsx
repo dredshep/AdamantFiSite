@@ -2,7 +2,7 @@ import FormButton from '@/components/app/Shared/Forms/FormButton';
 import TokenInput from '@/components/app/Shared/Forms/Input/TokenInput';
 import { useSwapForm } from '@/hooks/useSwapForm';
 import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 // import BestRouteEstimator from '../../BestRouteEstimator';
 
 const SwapForm: React.FC = () => {
@@ -15,7 +15,15 @@ const SwapForm: React.FC = () => {
     txFee,
     minReceive,
     handleSwapClick,
+    slippage,
+    setSlippage,
   } = useSwapForm();
+
+  const [minReceiveInput, setMinReceiveInput] = useState(minReceive?.toString() ?? '');
+
+  useEffect(() => {
+    setMinReceiveInput(minReceive?.toString() ?? '');
+  }, [minReceive]);
 
   // function BottomRightPrice({ amount, tokenSymbol }: { amount: number; tokenSymbol: string }) {
   //   return (
@@ -66,11 +74,37 @@ const SwapForm: React.FC = () => {
               {((parseFloat(txFee) / parseFloat(payDetails.amount)) * 100).toFixed(2)}%
             </span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between items-center">
             <span>Min receive</span>
-            <span>
-              {minReceive} {getApiTokenSymbol(receiveToken)}
-            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={minReceiveInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setMinReceiveInput(value);
+                }}
+                className="w-24 bg-adamant-app-input bg-opacity-50 rounded px-2 py-1 text-right"
+              />
+              <span>{getApiTokenSymbol(receiveToken)}</span>
+            </div>
+          </div>
+          <div className="flex justify-between items-center">
+            <span>Slippage</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={slippage}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (!isNaN(value) && value >= 0) {
+                    setSlippage(value);
+                  }
+                }}
+                className="w-24 bg-adamant-app-input bg-opacity-50 rounded px-2 py-1 text-right"
+              />
+              <span>%</span>
+            </div>
           </div>
         </div>
       )}

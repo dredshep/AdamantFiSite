@@ -1,11 +1,11 @@
 import updateState from "@/store/utils/updateState";
 import {
-  SecretString,
-  SharedSettings,
-  SwapStoreState,
-  SwapTokenInputs,
-  TokenInputState,
-  WalletState,
+    SecretString,
+    SharedSettings,
+    SwapStoreState,
+    SwapTokenInputs,
+    TokenInputState,
+    WalletState,
 } from "@/types";
 import { ApiToken } from "@/utils/apis/getSwappableTokens";
 import { create } from "zustand";
@@ -92,5 +92,14 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
           amount: "",
         },
       },
+    })),
+
+  setSlippage: (slippage: number) => 
+    set((state) => ({
+      ...state,
+      sharedSettings: {
+        ...state.sharedSettings,
+        slippage,
+      }
     })),
 }));
