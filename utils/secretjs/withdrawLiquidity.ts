@@ -14,22 +14,25 @@ export async function withdrawLiquidity(
     withdraw_liquidity: {},
   };
 
-  const tx = await secretjs.tx.snip20.send({
-    sender: secretjs.address,
-    contract_address: lp_token_contract.address,
-    code_hash: lp_token_contract.code_hash,
-    msg: {
-      send: {
-        recipient: pair_contract.address,
-        amount,
-        msg: btoa(JSON.stringify(withdraw_liquidity)),
+  const tx = await secretjs.tx.snip20.send(
+    {
+      sender: secretjs.address,
+      contract_address: lp_token_contract.address,
+      code_hash: lp_token_contract.code_hash,
+      msg: {
+        send: {
+          recipient: pair_contract.address,
+          amount,
+          msg: btoa(JSON.stringify(withdraw_liquidity)),
+        },
       },
     },
-  });
+    {
+      gasLimit: 400_000,
+    }
+  );
 
   console.debug(JSON.stringify(tx, null, 4));
 
   return tx;
 }
-
-// TODO: have a way to know the LP token contract for the pair
