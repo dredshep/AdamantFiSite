@@ -1,9 +1,9 @@
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
 import {
-  calculateMinReceive,
-  calculatePriceImpact,
-  calculateTxFee,
+  // calculateMinReceive,
+  // calculatePriceImpact,
+  // calculateTxFee,
   fetchSwappableTokens,
 } from '@/utils/swap';
 import { useEffect, useState } from 'react';
@@ -25,6 +25,7 @@ import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
 import { ApiToken, getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import isNotNullish from '@/utils/isNotNullish';
 import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
+import { estimateSwapOutput } from '@/utils/swap/poolEstimation';
 import { Window } from '@keplr-wallet/types';
 import { toast } from 'react-toastify';
 
@@ -39,26 +40,115 @@ export const useSwapForm = () => {
   const setSlippage = useSwapStore((state) => state.setSlippage);
   const gas = useSwapStore((state) => state.sharedSettings.gas);
 
-  const [priceImpact, setPriceImpact] = useState('0.7');
-  const [txFee, setTxFee] = useState('0.1');
-  const [minReceive, setMinReceive] = useState('70');
+  const [priceImpact, setPriceImpact] = useState('0');
+  const [poolFee, setPoolFee] = useState('0');
+  const [txFee, setTxFee] = useState('0');
+  const [minReceive, setMinReceive] = useState('0');
 
   // new state
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [bestPathEstimation, setBestPathEstimation] = useState<PathEstimation | null>(null);
-  const [estimatedOutput, setEstimatedOutput] = useState<string>('');
+  const [estimatedOutput, setEstimatedOutput] = useState<string>('0');
   const { setPending, setResult } = useTxStore.getState();
+  const [isEstimating, setIsEstimating] = useState(false);
 
   useEffect(() => {
     void fetchSwappableTokens().then(setSwappableTokens);
   }, []);
 
+  // Update the estimation effect
   useEffect(() => {
-    setPriceImpact(calculatePriceImpact(payDetails.amount));
-    setTxFee(calculateTxFee(payDetails.amount));
-    setMinReceive(calculateMinReceive(receiveDetails.amount));
-  }, [payDetails.amount, receiveDetails.amount]);
+    const runEstimate = async () => {
+      console.log('=== Starting Estimation Process ===');
+      console.log('Current conditions:', {
+        hasSecretJs: !!secretjs,
+        payAmount: payDetails.amount,
+        payTokenAddress: payToken?.address,
+        receiveTokenAddress: receiveToken?.address,
+      });
+
+      // Set default "0" when conditions aren't met
+      if (!secretjs) {
+        console.log('❌ Estimation failed: secretjs not initialized');
+        setEstimatedOutput('0');
+        setPriceImpact('0');
+        setPoolFee('0');
+        setTxFee('0');
+        setIsEstimating(false);
+        return;
+      }
+
+      if (
+        typeof payDetails.amount !== 'string' ||
+        payDetails.amount === '' ||
+        payDetails.amount === '0'
+      ) {
+        console.log('❌ Estimation failed: no pay amount or amount is zero');
+        setEstimatedOutput('0');
+        setPriceImpact('0');
+        setPoolFee('0');
+        setTxFee('0');
+        setIsEstimating(false);
+        return;
+      }
+
+      const amount = parseFloat(payDetails.amount);
+      if (isNaN(amount) || amount <= 0) {
+        console.log('❌ Estimation failed: pay amount is invalid or less than or equal to zero');
+        setEstimatedOutput('0');
+        setPriceImpact('0');
+        setPoolFee('0');
+        setTxFee('0');
+        setIsEstimating(false);
+        return;
+      }
+
+      if (!payToken || !receiveToken) {
+        console.log('❌ Estimation failed: tokens not properly initialized');
+        setEstimatedOutput('0');
+        setPriceImpact('0');
+        setPoolFee('0');
+        setTxFee('0');
+        setIsEstimating(false);
+        return;
+      }
+
+      setIsEstimating(true);
+
+      try {
+        const poolAddress = 'secret1qyt4l47yq3x43ezle4nwlh5q0sn6f9sesat7ap';
+        const estimation = await estimateSwapOutput(
+          secretjs,
+          poolAddress,
+          payToken,
+          receiveToken,
+          payDetails.amount
+        );
+
+        setEstimatedOutput(estimation.outputAmount);
+        setPriceImpact(estimation.priceImpact);
+        setPoolFee(estimation.poolFee);
+        setTxFee(estimation.txFee);
+
+        // Calculate min receive based on output and slippage
+        const minReceiveAmount = new Decimal(estimation.outputAmount)
+          .mul(new Decimal(1).sub(slippage / 100))
+          .toFixed(6);
+        setMinReceive(minReceiveAmount);
+      } catch (error) {
+        console.error('❌ Error during estimation:', error);
+        setEstimatedOutput('0');
+        setPriceImpact('0');
+        setPoolFee('0');
+        setTxFee('0');
+      } finally {
+        setIsEstimating(false);
+      }
+    };
+
+    void runEstimate();
+  }, [payDetails.amount, payToken, receiveToken, secretjs, slippage]);
 
   // new effects
   useEffect(() => {
@@ -210,12 +300,12 @@ export const useSwapForm = () => {
         // TODO: explicitSignerData is probably not needed. I think secretjs handles this.
         ...(sequence !== null && accountNumber !== null
           ? {
-            explicitSignerData: {
-              accountNumber: accountNumber,
-              sequence: sequence,
-              chainId: 'secret-4',
-            },
-          }
+              explicitSignerData: {
+                accountNumber: accountNumber,
+                sequence: sequence,
+                chainId: 'secret-4',
+              },
+            }
           : {}),
       };
 
@@ -388,37 +478,36 @@ Slippage: ${slippage}
 Gas: ${gas}
 
 Price Impact: ${priceImpact}% = ${(
-        (parseFloat(priceImpact) / 100) *
-        parseFloat(payDetails.amount)
-      ).toFixed(4)} ${getApiTokenSymbol(payToken)}
+      (parseFloat(priceImpact) / 100) *
+      parseFloat(payDetails.amount)
+    ).toFixed(4)} ${getApiTokenSymbol(payToken)}
 TX Fee: ${txFee} ${getApiTokenSymbol(payToken)} = ${(
-        (parseFloat(txFee) / parseFloat(payDetails.amount)) *
-        100
-      ).toFixed(2)}%
+      (parseFloat(txFee) / parseFloat(payDetails.amount)) *
+      100
+    ).toFixed(2)}%
 Min Receive: ${minReceive} ${getApiTokenSymbol(receiveToken)}
 
 RawData: ${JSON.stringify(
-        {
-          payToken,
-          payDetails,
-          receiveToken,
-          receiveDetails,
-          slippage,
-          gas,
-          priceImpact,
-          txFee,
-          minReceive,
-        },
-        null,
-        2
-      )}`;
+      {
+        payToken,
+        payDetails,
+        receiveToken,
+        receiveDetails,
+        slippage,
+        gas,
+        priceImpact,
+        txFee,
+        minReceive,
+      },
+      null,
+      2
+    )}`;
 
     alert(alertMessage);
   };
 
   return {
     swappableTokens,
-    // chartData,
     payDetails,
     payToken,
     receiveDetails,
@@ -427,9 +516,11 @@ RawData: ${JSON.stringify(
     setSlippage,
     gas,
     priceImpact,
+    poolFee,
     txFee,
     minReceive,
     estimatedOutput,
+    isEstimating,
     handleEstimate,
     handleSwapClick,
   };

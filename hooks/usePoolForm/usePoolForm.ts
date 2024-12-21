@@ -7,9 +7,10 @@ import isNotNullish from '@/utils/isNotNullish';
 import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
 import { provideLiquidity } from '@/utils/secretjs/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/withdrawLiquidity';
-import { calculatePriceImpact, calculateTxFee } from '@/utils/swap';
+// import { calculatePriceImpact, calculateTxFee } from '@/utils/swap';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
+import Decimal from 'decimal.js';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
@@ -24,6 +25,46 @@ import type {
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
   [key: string]: { amount: string; balance: string };
+}
+
+// Add new interface for pool calculations
+interface PoolMetrics {
+  poolShare: string;
+  txFee: string;
+  ratioDeviation: string; // How much the provided ratio deviates from pool ratio (in %)
+}
+
+// Standard network fee for Secret Network
+const SCRT_TX_FEE = '0.0001';
+
+function calculatePoolMetrics(
+  amount0: string,
+  amount1: string,
+  reserve0: string,
+  reserve1: string
+): PoolMetrics {
+  const amt0 = new Decimal(amount0);
+  const amt1 = new Decimal(amount1);
+  const res0 = new Decimal(reserve0);
+  const res1 = new Decimal(reserve1);
+
+  // Calculate pool share
+  const totalSupply0 = res0.add(amt0);
+  const poolShare = amt0.div(totalSupply0).mul(100).toFixed(6);
+
+  // Calculate ratio deviation
+  let ratioDeviation = '0';
+  if (!res0.isZero() && !res1.isZero() && !amt0.isZero() && !amt1.isZero()) {
+    const poolRatio = res0.div(res1);
+    const providedRatio = amt0.div(amt1);
+    ratioDeviation = providedRatio.sub(poolRatio).div(poolRatio).mul(100).abs().toFixed(6);
+  }
+
+  return {
+    poolShare,
+    ratioDeviation,
+    txFee: SCRT_TX_FEE,
+  };
 }
 
 export function usePoolForm(poolAddress: string | string[] | undefined): UsePoolDepositFormResult {
@@ -201,8 +242,8 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       isLoading === true
         ? 'Loading pool data...'
         : error instanceof Error
-          ? error.message
-          : undefined,
+        ? error.message
+        : undefined,
   };
 
   const safeTokenInputs = tokenInputs as unknown as TokenInputs;
@@ -228,6 +269,10 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
   const handleDepositClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
     if (!secretjs) return;
+    if (!data?.pairPoolData) {
+      toast.error('Pool data not available');
+      return;
+    }
 
     const inputIdentifier1 = `pool.deposit.tokenA`;
     const inputIdentifier2 = `pool.deposit.tokenB`;
@@ -248,8 +293,20 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       return;
     }
 
-    const priceImpact = calculatePriceImpact(amount1);
-    const txFee = calculateTxFee(amount1);
+    // Get current pool reserves
+    const { assets } = data.pairPoolData;
+    if (!Array.isArray(assets) || assets.length !== 2) {
+      toast.error('Invalid pool data');
+      return;
+    }
+
+    // Calculate pool metrics
+    const metrics = calculatePoolMetrics(
+      amount0,
+      amount1,
+      assets[0]?.amount ?? '0',
+      assets[1]?.amount ?? '0'
+    );
 
     // TODO: Map pair address to code_hash. They will all be the same for now.
     const pairContract: ContractInfo = {
@@ -285,8 +342,9 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       amount0,
       token1: getApiTokenSymbol(selectedPool.token1),
       amount1,
-      priceImpact,
-      txFee,
+      poolShare: metrics.poolShare,
+      ratioDeviation: metrics.ratioDeviation,
+      txFee: metrics.txFee,
     });
 
     try {
@@ -300,11 +358,11 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       console.log('Transaction Result:', JSON.stringify(result, null, 4));
 
       if (result.code !== TxResultCode.Success) {
-        throw new Error(`Swap failed: ${result.rawLog}`);
+        throw new Error(`Deposit failed: ${result.rawLog}`);
       }
     } catch (error) {
       console.error('Error during tx execution:', error);
-      alert('Transaction failed. Check the console for more details.');
+      toast.error('Transaction failed. Check the console for more details.');
     }
   };
 

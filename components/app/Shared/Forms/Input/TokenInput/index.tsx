@@ -11,6 +11,8 @@ type FormType = 'swap' | 'pool';
 interface TokenInputProps {
   inputIdentifier: keyof SwapTokenInputs | keyof PoolTokenInputs;
   formType: FormType;
+  value?: string;
+  isLoading?: boolean;
 }
 
 type TokenData = {
@@ -32,9 +34,21 @@ const isPoolInput = (
   return id.startsWith('pool.');
 };
 
-const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) => {
+const TokenInput: React.FC<TokenInputProps> = ({
+  inputIdentifier,
+  formType,
+  value,
+  isLoading = false,
+}) => {
   const { swapTokenInputs, setTokenInputProperty } = useSwapStore();
-  
+
+  // console.log('TokenInput Render:', {
+  //   inputIdentifier,
+  //   formType,
+  //   value,
+  //   swapTokenInputs,
+  // });
+
   // Only use pool-related hooks when formType is 'pool'
   const { selectedPool } = formType === 'pool' ? usePoolStore() : { selectedPool: undefined };
   const poolForm = formType === 'pool' ? usePoolForm(selectedPool?.address) : null;
@@ -43,8 +57,12 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
 
   // Get typed token data
   const getTokenData = (): TokenData => {
+    // console.log('Getting token data for:', inputIdentifier);
+
     if (formType === 'swap' && isSwapInput(inputIdentifier)) {
       const data = swapTokenInputs[inputIdentifier];
+      // console.log('Swap input data:', data);
+
       if (data === undefined) throw new Error('Invalid swap input data');
       return {
         tokenAddress: data.tokenAddress,
@@ -55,7 +73,7 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
       if (!poolTokenInputs) throw new Error('Pool inputs not available');
       const data = poolTokenInputs[inputIdentifier];
       if (data === undefined) throw new Error('Invalid pool input data');
-      
+
       // For pool inputs, use the token address from the selected pool
       const isTokenA = inputIdentifier.endsWith('tokenA');
       return {
@@ -71,6 +89,12 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
 
   const tokenData = getTokenData();
   const { tokens } = useTokenStore();
+
+  // console.log('Token lookup:', {
+  //   tokenAddress: tokenData.tokenAddress,
+  //   foundToken: tokens?.[tokenData.tokenAddress],
+  // });
+
   const token = tokens?.[tokenData.tokenAddress];
 
   const handleInputChange = (value: string) => {
@@ -82,6 +106,7 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
   };
 
   if (token === undefined || token === null) {
+    // console.log('Token not found, returning null');
     return null;
   }
   const price = token.price;
@@ -100,10 +125,16 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
     return isPool ? 'Pool' : 'Token';
   }
 
+  // console.log('Rendering TokenInputBase with:', {
+  //   inputValue: value ?? tokenData.amount,
+  //   tokenSymbol: getApiTokenSymbol(token),
+  //   tokenAddress: getApiTokenAddress(token),
+  // });
+
   return (
     <TokenInputBase
       inputIdentifier={inputIdentifier}
-      inputValue={tokenData.amount}
+      inputValue={value ?? tokenData.amount}
       onInputChange={handleInputChange}
       tokenSymbol={getApiTokenSymbol(token)}
       tokenAddress={getApiTokenAddress(token)}
@@ -111,6 +142,7 @@ const TokenInput: React.FC<TokenInputProps> = ({ inputIdentifier, formType }) =>
       estimatedPrice={estimatedPrice}
       label={getLabel()}
       hasMax={true}
+      isLoading={isLoading}
     />
   );
 };

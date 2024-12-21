@@ -1,28 +1,26 @@
-import updateState from "@/store/utils/updateState";
+import updateState from '@/store/utils/updateState';
 import {
-    SecretString,
-    SharedSettings,
-    SwapStoreState,
-    SwapTokenInputs,
-    TokenInputState,
-    WalletState,
-} from "@/types";
-import { ApiToken } from "@/utils/apis/getSwappableTokens";
-import { create } from "zustand";
-
-
+  SecretString,
+  SharedSettings,
+  SwapStoreState,
+  SwapTokenInputs,
+  TokenInputState,
+  WalletState,
+} from '@/types';
+import { ApiToken } from '@/utils/apis/getSwappableTokens';
+import { create } from 'zustand';
 
 export const useSwapStore = create<SwapStoreState>((set) => ({
   swapTokenInputs: {
-    "swap.pay": {
-      tokenAddress: "secret1h6z05y90gwm4sqxzhz4pkyp36cna9xtp7q0urv",
-      amount: "",
-      balance: "",
+    'swap.pay': {
+      tokenAddress: 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek',
+      amount: '',
+      balance: '',
     },
-    "swap.receive": {
-      tokenAddress: "secret15l9cqgz5uezgydrglaak5ahfac69kmx2qpd6xt",
-      amount: "",
-      balance: "",
+    'swap.receive': {
+      tokenAddress: 'secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2',
+      amount: '',
+      balance: '',
     },
   },
   sharedSettings: {
@@ -31,11 +29,11 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
   },
   wallet: {
     address: null,
-    SCRTBalance: "0",
-    ADMTBalance: "0",
+    SCRTBalance: '0',
+    ADMTBalance: '0',
   } as WalletState,
   swappableTokens: [] as ApiToken[],
-  chainId: "secret-4",
+  chainId: 'secret-4',
   connectionRefused: false,
 
   setTokenInputProperty: <T extends keyof TokenInputState>(
@@ -44,16 +42,14 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
     value: TokenInputState[T]
   ) =>
     set((state) =>
-      updateState(state, "swapTokenInputs", inputIdentifier, {
+      updateState(state, 'swapTokenInputs', inputIdentifier, {
         ...state.swapTokenInputs[inputIdentifier],
         [property]: value,
       })
     ),
 
-  setSharedSetting: <T extends keyof SharedSettings>(
-    setting: T,
-    value: SharedSettings[T]
-  ) => set((state) => ({ ...state, sharedSettings: { ...state.sharedSettings, [setting]: value } })),
+  setSharedSetting: <T extends keyof SharedSettings>(setting: T, value: SharedSettings[T]) =>
+    set((state) => ({ ...state, sharedSettings: { ...state.sharedSettings, [setting]: value } })),
 
   connectWallet: (address: SecretString) =>
     set((state) => ({
@@ -67,7 +63,7 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
       wallet: { ...state.wallet, address: null },
     })),
 
-  updateBalance: (tokenSymbol: "SCRT" | "ADMT", balance: string) =>
+  updateBalance: (tokenSymbol: 'SCRT' | 'ADMT', balance: string) =>
     set((state) => ({
       ...state,
       wallet: { ...state.wallet, [`${tokenSymbol}Balance`]: balance },
@@ -81,25 +77,25 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
       ...state,
       swapTokenInputs: {
         ...state.swapTokenInputs,
-        "swap.pay": {
-          ...state.swapTokenInputs["swap.pay"],
+        'swap.pay': {
+          ...state.swapTokenInputs['swap.pay'],
           tokenAddress: token0Address,
-          amount: "",
+          amount: '',
         },
-        "swap.receive": {
-          ...state.swapTokenInputs["swap.receive"],
+        'swap.receive': {
+          ...state.swapTokenInputs['swap.receive'],
           tokenAddress: token1Address,
-          amount: "",
+          amount: '',
         },
       },
     })),
 
-  setSlippage: (slippage: number) => 
+  setSlippage: (slippage: number) =>
     set((state) => ({
       ...state,
       sharedSettings: {
         ...state.sharedSettings,
         slippage,
-      }
+      },
     })),
 }));

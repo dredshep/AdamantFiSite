@@ -1,65 +1,17 @@
-import { Breadcrumb } from "@/components/app/Breadcrumb";
-import AppLayout from "@/components/app/Global/AppLayout";
-import DepositForm from "@/components/app/Pages/Pool/DepositForm";
-import WithdrawForm from "@/components/app/Pages/Pool/WithdrawForm";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-// import { usePoolFor        m } from '@/hooks/usePoolForm';
-import { usePoolsAndTokens } from "@/hooks/usePoolsAndTokens";
-import { usePoolStore } from "@/store/forms/poolStore";
-import { SecretString } from "@/types";
-import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
-import * as Tabs from "@radix-ui/react-tabs";
-import { AlertCircle } from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
-
-// type Top
-
-// function TopBoxes({ poolAddress }: TopBoxesProps) {
-//   const { pairPoolData } = usePoolForm(poolAddress);
-//   if (!pairPoolData) return null;
-//   return (
-//     <div className="grid grid-cols-2 gap-4">
-//       {/* Chart */}
-//       <div className="bg-adamant-app-box p-4 rounded-xl">
-//         <h2 className="text-xl font-bold mb-4">Chart</h2>
-//         {/* Implement chart component */}
-//       </div>
-
-//       {/* Statistics Box */}
-//       <div className="bg-adamant-app-box p-4 rounded-xl">
-//         <h2 className="text-xl font-bold mb-4">Statistics</h2>
-//         <table className="w-full">
-//           <tbody>
-//             <tr>
-//               <td>Total Share</td>
-//               <td>{pairPoolData?.total_share}</td>
-//             </tr>
-//             {pairPoolData?.assets.map((asset, index) => (
-//               <tr key={index}>
-//                 <td>Asset {index + 1}</td>
-//                 <td>{asset.amount}</td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
-
-//       {/* My Positions */}
-//       <div className="bg-adamant-app-box p-4 rounded-xl">
-//         <h2 className="text-xl font-bold mb-4">My Positions</h2>
-//         {/* Implement positions component */}
-//       </div>
-
-//       {/* Unclaimed Rewards */}
-//       <div className="bg-adamant-app-box p-4 rounded-xl">
-//         <h2 className="text-xl font-bold mb-4">Unclaimed Rewards</h2>
-//         {/* Implement unclaimed rewards component */}
-//       </div>
-//     </div>
-//   );
-// }
+import { Breadcrumb } from '@/components/app/Breadcrumb';
+import AppLayout from '@/components/app/Global/AppLayout';
+import DepositForm from '@/components/app/Pages/Pool/DepositForm';
+import WithdrawForm from '@/components/app/Pages/Pool/WithdrawForm';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
+import { usePoolStore } from '@/store/forms/poolStore';
+import { SecretString } from '@/types';
+import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
+import * as Tabs from '@radix-ui/react-tabs';
+import { AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 
 function NotFoundState() {
   const router = useRouter();
@@ -69,9 +21,7 @@ function NotFoundState() {
       <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
         <div className="bg-adamant-app-box p-6 rounded-xl flex flex-col items-center gap-4">
           <AlertCircle className="w-12 h-12 text-red-500" />
-          <div className="text-lg font-medium text-gray-200">
-            Pool not found
-          </div>
+          <div className="text-lg font-medium text-gray-200">Pool not found</div>
           <div className="flex gap-3">
             <button
               onClick={() => router.back()}
@@ -95,83 +45,70 @@ function NotFoundState() {
 }
 
 export default function PoolPage() {
-  const params = useParams();
-
-  if (params === null || typeof params["pool"] !== "string") {
-    return <NotFoundState />;
-  }
-
-  const pool = params["pool"];
+  const router = useRouter();
   const { pools, loading, error } = usePoolsAndTokens();
   const { setSelectedPool } = usePoolStore();
+  const { pool: poolAddress } = router.query;
 
+  // All hooks must be at the top level
   useEffect(() => {
-    if (typeof pool === "string" && pools.length > 0) {
-      const selectedPool = pools.find((p) => p.pair.contract_addr === pool);
-      if (selectedPool) {
-        const liquidityToken = selectedPool.pair.liquidity_token;
-        if (
-          !liquidityToken.startsWith("secret1") || !pool.startsWith("secret1")
-        ) {
-          console.error("Invalid address format:", { liquidityToken, pool });
-          return;
-        }
-
-        setSelectedPool({
-          address: pool as SecretString,
-          pairInfo: {
-            ...selectedPool.pair,
-            liquidity_token: liquidityToken,
-          },
-          token0: selectedPool.token0,
-          token1: selectedPool.token1,
-        });
-      }
+    if (!router.isReady) return;
+    if (typeof poolAddress !== 'string' || !poolAddress.startsWith('secret1')) {
+      console.error('Invalid pool address:', poolAddress);
+      return;
     }
-  }, [pool, pools, setSelectedPool]);
+    if (!Array.isArray(pools) || pools.length === 0) return;
 
-  if (loading) {
+    const selectedPool = pools.find((p) => {
+      const contractAddr = p.pair.contract_addr;
+      return typeof contractAddr === 'string' && contractAddr === poolAddress;
+    });
+
+    if (!selectedPool) {
+      console.error('Pool not found in available pools:', {
+        poolAddress,
+        availablePools: pools.map((p) => p.pair.contract_addr),
+      });
+      return;
+    }
+
+    const liquidityToken = selectedPool.pair.liquidity_token;
+    if (typeof liquidityToken !== 'string' || !liquidityToken.startsWith('secret1')) {
+      console.error('Invalid liquidity token format:', liquidityToken);
+      return;
+    }
+
+    setSelectedPool({
+      address: poolAddress as SecretString,
+      pairInfo: {
+        ...selectedPool.pair,
+        liquidity_token: liquidityToken,
+      },
+      token0: selectedPool.token0,
+      token1: selectedPool.token1,
+    });
+  }, [poolAddress, pools, setSelectedPool, router.isReady]);
+
+  // Handle loading states and errors
+  if (!router.isReady || loading) {
     return (
       <AppLayout>
         <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
           <LoadingSpinner size={40} />
           <div className="text-lg font-medium text-gray-200">
-            Loading pools...
+            {!router.isReady ? 'Loading...' : 'Loading pools...'}
           </div>
         </div>
       </AppLayout>
     );
   }
 
-  const currentPool = pools.find((p) => p.pair.contract_addr === pool);
-  if (!currentPool) {
+  // Handle invalid pool address
+  if (typeof poolAddress !== 'string' || !poolAddress.startsWith('secret1')) {
     return <NotFoundState />;
   }
 
-  if (error) {
-    return (
-      <AppLayout>
-        <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
-          <div className="bg-red-500/10 p-6 rounded-xl flex flex-col items-center gap-4">
-            <AlertCircle className="w-12 h-12 text-red-500" />
-            <div className="text-lg font-medium text-red-500">
-              {error.message || "An error occurred"}
-            </div>
-            <Link
-              href="/app/pools"
-              className="mt-2 bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
-            >
-              Back to Pools
-            </Link>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const symbolA = getApiTokenSymbol(currentPool.token0);
-  const symbolB = getApiTokenSymbol(currentPool.token1);
-
+  // Handle empty pools
   if (!Array.isArray(pools) || pools.length === 0) {
     return (
       <AppLayout>
@@ -188,36 +125,60 @@ export default function PoolPage() {
     );
   }
 
+  // Handle pool not found
+  const currentPool = pools.find((p) => p.pair.contract_addr === poolAddress);
+  if (!currentPool) {
+    console.error('Pool not found in render:', {
+      poolAddress,
+      availablePools: pools.map((p) => p.pair.contract_addr),
+    });
+    return <NotFoundState />;
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col justify-center items-center h-[70vh] gap-4">
+          <div className="bg-red-500/10 p-6 rounded-xl flex flex-col items-center gap-4">
+            <AlertCircle className="w-12 h-12 text-red-500" />
+            <div className="text-lg font-medium text-red-500">
+              {error.message || 'An error occurred'}
+            </div>
+            <Link
+              href="/app/pools"
+              className="mt-2 bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
+            >
+              Back to Pools
+            </Link>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const symbolA = getApiTokenSymbol(currentPool.token0);
+  const symbolB = getApiTokenSymbol(currentPool.token1);
+
+  // Render main content
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto mt-12 flex flex-col gap-4">
-        {/* <TopBoxes poolAddress={pool} /> */}
         <div className="px-2.5">
-          <div className=" max-w-full md:max-w-xl mx-auto">
+          <div className="max-w-full md:max-w-xl mx-auto">
             <Breadcrumb
               linkPath="/app/pools"
               linkText="Pools"
               currentText={`${symbolA}-${symbolB}`}
             />
           </div>
-          {/* Swap Form */}
-          {
-            /* <div className="mt-4 bg-adamant-app-box p-4 rounded-xl flex-1">
-            <h2 className="text-xl font-bold mb-4">Swap</h2>
-            <SwapForm />
-          </div> */
-          }
 
-          {/* Deposit/Withdraw Forms with Tabs */}
           <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto">
             <Tabs.Root className="flex flex-col" defaultValue="deposit">
-              <Tabs.List
-                className="flex mb-4 p-2.5 gap-2.5"
-                aria-label="Manage your liquidity"
-              >
+              <Tabs.List className="flex mb-4 p-2.5 gap-2.5" aria-label="Manage your liquidity">
                 {[
                   { value: 'deposit', label: 'Deposit' },
-                  { value: 'withdraw', label: 'Withdraw' }
+                  { value: 'withdraw', label: 'Withdraw' },
                 ].map(({ value, label }) => (
                   <Tabs.Trigger
                     key={value}
@@ -241,14 +202,6 @@ export default function PoolPage() {
             </Tabs.Root>
           </div>
         </div>
-
-        {/* About Text */}
-        {
-          /* <div className="mt-4 bg-adamant-app-box p-4 rounded-xl">
-          <h2 className="text-xl font-bold mb-4">About {symbolA}-{symbolB}</h2>
-          <div>{currentPool.pair.}</div>
-        </div> */
-        }
       </div>
     </AppLayout>
   );

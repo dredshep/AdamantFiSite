@@ -1,12 +1,12 @@
-import AppLayout from "@/components/app/Global/AppLayout";
-import SwapForm from "@/components/app/Pages/Swap/SwapForm/SwapForm";
-import { Roboto } from "next/font/google";
+import AppLayout from '@/components/app/Global/AppLayout';
+import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
+import { Roboto } from 'next/font/google';
 // import { useStore } from "@/store/swapStore";
 // import { useTokenStore } from "@/store/tokenStore";
 
 const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700", "900"],
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700', '900'],
 });
 
 // Then render infoBoxes where you need it in your component tree.
@@ -19,12 +19,7 @@ export default function Swap() {
   // const receiveToken = tokens?.[receiveTokenAddress];
   // const payToken = tokens?.[payTokenAddress];
   return (
-    <div
-      className={
-        roboto.className +
-        " bg-adamant-background bg-cover min-h-screen text-white"
-      }
-    >
+    <div className={roboto.className + ' bg-adamant-background bg-cover min-h-screen text-white'}>
       <AppLayout>
         <div className="max-w-xl mx-auto mt-28">
           {/* <div className="flex gap-4 justify-between leading-6 px-5">
@@ -50,7 +45,7 @@ export default function Swap() {
               <div>Loading tokens...</div>
             )}
           </div> */}
-          <div className="bg-adamant-app-box bg-opacity-30 leading-none rounded-xl text-xl mt-2">
+          <div className="bg-adamant-app-box bg-opacity-55 leading-none rounded-xl text-xl mt-2">
             <SwapForm />
           </div>
         </div>

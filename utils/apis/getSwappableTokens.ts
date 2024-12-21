@@ -48,18 +48,64 @@ export enum Usage {
   Swap = 'SWAP',
 }
 
-export const getApiToken = async () => Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
+export const getApiTokenFromJson = async () =>
+  Promise.resolve(fullApiTokenOutput) as Promise<ApiToken[]>;
 
-export const getApiTokenAddress = (token: ApiToken) =>
+export const getApiTokenAddressFromJson = (token: ApiToken) =>
   (token.dst_address ?? token.address!) as SecretString;
 
-export const getApiTokenSymbol = (token: ApiToken): string => {
+export const getApiTokenSymbolFromJson = (token: ApiToken): string => {
   return token.display_props.symbol;
 };
 
-export function tokenAddressToApiToken(address: SecretString): ApiToken | undefined {
-  return (fullApiTokenOutput as ApiToken[]).find((token) => getApiTokenAddress(token) === address);
-}
+export const tokenAddressToApiTokenFromJson = (address: SecretString): ApiToken | undefined => {
+  return (fullApiTokenOutput as ApiToken[]).find(
+    (token) => getApiTokenAddressFromJson(token) === address
+  );
+};
+
+export const getApiToken = (): Promise<ApiToken[]> => {
+  const tokens = simpleTokens.map(
+    (token): ApiToken => ({
+      decimals: token.decimals,
+      name: token.token_name,
+      display_props: {
+        symbol: token.token_name,
+        image: '', // SimpleTokens don't have images
+        label: token.token_name,
+      },
+      price: '0', // SimpleTokens don't have price info
+      _id: token.contract_addr,
+      address: token.contract_addr,
+      usage: [Usage.Swap],
+    })
+  );
+
+  return Promise.resolve(tokens);
+};
+
+export const getApiTokenAddress = (token: ApiToken): SecretString => token.address as SecretString;
+
+export const getApiTokenSymbol = (token: ApiToken): string => token.display_props.symbol;
+
+export const tokenAddressToApiToken = (address: SecretString): ApiToken | undefined => {
+  const simpleToken = simpleTokens.find((token) => token.contract_addr === address);
+  if (!simpleToken) return undefined;
+
+  return {
+    decimals: simpleToken.decimals,
+    name: simpleToken.token_name,
+    display_props: {
+      symbol: simpleToken.token_name,
+      image: '',
+      label: simpleToken.token_name,
+    },
+    price: '0',
+    _id: simpleToken.contract_addr,
+    address: simpleToken.contract_addr,
+    usage: [Usage.Swap],
+  };
+};
 
 export function tokenAddressToSimpleToken(address: SecretString): SimpleToken | undefined {
   return simpleTokens.find((token) => token.contract_addr === address);

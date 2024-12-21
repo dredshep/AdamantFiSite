@@ -29,13 +29,18 @@ export default function App({ Component, pageProps }: AppProps) {
 
   useEffect(() => {
     const fetchTokens = async () => {
-      const tokens = await getApiToken();
-      setSwappableTokens(tokens);
-      const indexedTokens = tokens.reduce((acc: Record<string, ApiToken>, token) => {
+      const apiTokens = await getApiToken();
+      console.log('Fetched API tokens:', apiTokens);
+
+      setSwappableTokens(apiTokens);
+
+      const indexedTokens = apiTokens.reduce((acc: Record<string, ApiToken>, token) => {
         const address = getApiTokenAddress(token);
         acc[address] = token;
         return acc;
       }, {});
+      console.log('Indexed tokens for store:', indexedTokens);
+
       initializeTokens(indexedTokens);
     };
 
