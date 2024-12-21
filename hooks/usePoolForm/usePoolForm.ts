@@ -11,7 +11,7 @@ import { withdrawLiquidity } from '@/utils/secretjs/withdrawLiquidity';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 import { fetchPoolData, validatePoolAddress } from './queryFunctions';
@@ -67,6 +67,18 @@ function calculatePoolMetrics(
   };
 }
 
+// Add debounce utility with proper types
+function debounce<T extends (...args: unknown[]) => unknown>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => void func(...args), wait);
+  };
+}
+
 export function usePoolForm(poolAddress: string | string[] | undefined): UsePoolDepositFormResult {
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } = usePoolStore();
 
@@ -118,11 +130,11 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     secretjs: SecretNetworkClient,
     tokenAddress: string,
     tokenCodeHash: string
-  ) {
+  ): Promise<{ balance: { amount: string } } | null> {
     const keplr = (window as unknown as Window).keplr;
     if (!keplr) {
       alert('Please install the Keplr extension');
-      return;
+      return null;
     }
 
     try {
@@ -166,14 +178,28 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     }
   }
 
+  const initialMountRef = useRef(true);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+
+  // @ts-expect-error: Not all code paths return a value.
   useEffect(() => {
     if (!secretjs) return;
 
-    const connectAndFetchBalances = async () => {
+    // Skip the first mount and wait 2 seconds
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
+      const timer = setTimeout(() => {
+        setIsBalanceLoading(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+
+    if (!isBalanceLoading) return;
+
+    const connectAndFetchBalances = debounce(async () => {
       try {
         const keplr = (window as unknown as Window).keplr;
 
-        // TODO: probably don't want to use alerts
         if (!keplr) {
           alert('Please install the Keplr extension');
           return;
@@ -197,18 +223,14 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
 
           console.log('Balance of token0:', balance0);
           console.log('Balance of token1:', balance1);
-
-          // Handle the balances here as needed, such as updating state
-          // setBalance0(balance0);
-          // setBalance1(balance1);
         }
       } catch (error) {
         console.error('Error connecting or fetching balances:', error);
       }
-    };
+    }, 1000);
 
     void connectAndFetchBalances();
-  }, [walletAddress, selectedPool]);
+  }, [walletAddress, selectedPool, secretjs, isBalanceLoading]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['pool-data', poolAddress],
