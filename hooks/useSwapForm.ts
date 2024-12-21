@@ -262,11 +262,16 @@ export const useSwapForm = () => {
         .times(Decimal.pow(10, decimalsIn))
         .toFixed(0);
 
-      const expected_return = bestPathEstimation.finalOutput
+      let expected_return = bestPathEstimation.finalOutput
+        .times(new Decimal(1).minus(slippage))
         .times(Decimal.pow(10, decimalsOut))
         .toFixed(0);
 
-      console.log("Expected Return:", expected_return);
+      // make sure even low value trade won't lose funds
+      if (new Decimal(expected_return).lt(1)) {
+        expected_return = '1';
+      }
+      console.log('Expected Return:', expected_return);
 
       let sendMsg: Snip20SendOptions;
       let result: TxResponse;
@@ -347,8 +352,7 @@ export const useSwapForm = () => {
 
         const swapMsg = {
           swap: {
-            belief_price: expected_return,
-            max_spread: bestPathEstimation.totalPriceImpact,
+            expected_return: expected_return,
             to: walletAddress,
           },
         };
