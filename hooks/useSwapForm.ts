@@ -1,67 +1,53 @@
-import { useSwapStore } from "@/store/swapStore";
-import { useTokenStore } from "@/store/tokenStore";
+import { useSwapStore } from '@/store/swapStore';
+import { useTokenStore } from '@/store/tokenStore';
 import {
   calculateMinReceive,
   calculatePriceImpact,
   calculateTxFee,
   fetchSwappableTokens,
-} from "@/utils/swap";
-import { useEffect, useState } from "react";
+} from '@/utils/swap';
+import { useEffect, useState } from 'react';
 // new imports
-import { useTxStore } from "@/store/txStore";
-import { Hop } from "@/types";
-import { getTokenDecimals } from "@/utils/apis/tokenInfo";
+import { useTxStore } from '@/store/txStore';
+import { Hop } from '@/types';
+import { getTokenDecimals } from '@/utils/apis/tokenInfo';
 import {
   PathEstimation,
   buildTokenPoolMap,
   estimateBestPath,
   findPaths,
-} from "@/utils/swap/estimate";
-import Decimal from "decimal.js";
-import {
-  SecretNetworkClient,
-  TxOptions,
-  TxResponse,
-  TxResultCode,
-} from "secretjs";
-import { Snip20SendOptions } from "secretjs/dist/extensions/snip20/types";
+} from '@/utils/swap/estimate';
+import Decimal from 'decimal.js';
+import { SecretNetworkClient, TxOptions, TxResponse, TxResultCode } from 'secretjs';
+import { Snip20SendOptions } from 'secretjs/dist/extensions/snip20/types';
 // TODO: Find a way to not need to import this.
-import { fullPoolsData } from "@/components/app/Testing/fullPoolsData";
-import {
-  ApiToken,
-  getApiTokenAddress,
-  getApiTokenSymbol,
-} from "@/utils/apis/getSwappableTokens";
-import isNotNullish from "@/utils/isNotNullish";
-import { getCodeHashByAddress } from "@/utils/secretjs/getCodeHashByAddress";
-import { Window } from "@keplr-wallet/types";
-import { toast } from "react-toastify";
+import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
+import { ApiToken, getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
+import isNotNullish from '@/utils/isNotNullish';
+import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
+import { Window } from '@keplr-wallet/types';
+import { toast } from 'react-toastify';
 
 export const useSwapForm = () => {
   const [swappableTokens, setSwappableTokens] = useState<ApiToken[]>([]);
   const { swapTokenInputs: tokenInputs } = useSwapStore();
-  const payDetails = tokenInputs["swap.pay"];
-  const payToken = useTokenStore(
-    (state) => state.tokens?.[payDetails.tokenAddress],
-  );
-  const receiveDetails = tokenInputs["swap.receive"];
-  const receiveToken = useTokenStore(
-    (state) => state.tokens?.[receiveDetails.tokenAddress],
-  );
+  const payDetails = tokenInputs['swap.pay'];
+  const payToken = useTokenStore((state) => state.tokens?.[payDetails.tokenAddress]);
+  const receiveDetails = tokenInputs['swap.receive'];
+  const receiveToken = useTokenStore((state) => state.tokens?.[receiveDetails.tokenAddress]);
   const slippage = useSwapStore((state) => state.sharedSettings.slippage);
   const setSlippage = useSwapStore((state) => state.setSlippage);
   const gas = useSwapStore((state) => state.sharedSettings.gas);
 
-  const [priceImpact, setPriceImpact] = useState("0.7");
-  const [txFee, setTxFee] = useState("0.1");
-  const [minReceive, setMinReceive] = useState("70");
+  const [priceImpact, setPriceImpact] = useState('0.7');
+  const [txFee, setTxFee] = useState('0.1');
+  const [minReceive, setMinReceive] = useState('70');
 
   // new state
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [bestPathEstimation, setBestPathEstimation] =
-    useState<PathEstimation | null>(null);
-  const [estimatedOutput, setEstimatedOutput] = useState<string>("");
+  const [bestPathEstimation, setBestPathEstimation] = useState<PathEstimation | null>(null);
+  const [estimatedOutput, setEstimatedOutput] = useState<string>('');
   const { setPending, setResult } = useTxStore.getState();
 
   useEffect(() => {
@@ -79,32 +65,28 @@ export const useSwapForm = () => {
     const keplr = (window as unknown as Window).keplr;
     const connectKeplr = async () => {
       if (!isNotNullish(keplr)) {
-        alert("Please install Keplr extension");
+        alert('Please install Keplr extension');
         return;
       }
 
-      await keplr.enable("secret-4");
+      await keplr.enable('secret-4');
 
-      const offlineSigner = keplr.getOfflineSignerOnlyAmino("secret-4");
-      const enigmaUtils = keplr.getEnigmaUtils("secret-4");
+      const offlineSigner = keplr.getOfflineSignerOnlyAmino('secret-4');
+      const enigmaUtils = keplr.getEnigmaUtils('secret-4');
       const accounts = await offlineSigner?.getAccounts();
 
-      if (
-        accounts !== undefined &&
-        accounts.length === 0 &&
-        accounts[0] === undefined
-      ) {
-        alert("No accounts found");
+      if (accounts !== undefined && accounts.length === 0 && accounts[0] === undefined) {
+        alert('No accounts found');
         return;
       }
       if (offlineSigner === undefined) {
-        alert("No offline signer found");
+        alert('No offline signer found');
         return;
       }
 
       const client = new SecretNetworkClient({
-        chainId: "secret-4",
-        url: "https://rpc.ankr.com/http/scrt_cosmos",
+        chainId: 'secret-4',
+        url: 'https://rpc.ankr.com/http/scrt_cosmos',
         wallet: offlineSigner,
         walletAddress: accounts[0]!.address,
         encryptionUtils: enigmaUtils,
@@ -129,36 +111,28 @@ export const useSwapForm = () => {
     ) {
       const amountInDecimal = new Decimal(payDetails.amount);
       const tokenPoolMap = buildTokenPoolMap(fullPoolsData);
-      const paths = findPaths(
-        tokenPoolMap,
-        payToken.address,
-        receiveToken.address,
-      );
+      const paths = findPaths(tokenPoolMap, payToken.address, receiveToken.address);
 
       if (paths.length === 0) {
-        console.log("No available paths found for the selected tokens.");
+        console.log('No available paths found for the selected tokens.');
         return;
       }
 
-      const bestPathEstimation = await estimateBestPath(
-        secretjs,
-        paths,
-        amountInDecimal,
-      );
+      const bestPathEstimation = await estimateBestPath(secretjs, paths, amountInDecimal);
 
       if (bestPathEstimation) {
-        console.log("--- Best Path Estimation in handleEstimate ---");
-        console.log("Best Path Estimation:", bestPathEstimation);
-        console.log("Final Output:", bestPathEstimation.finalOutput.toString());
-        console.log("Ideal Output:", bestPathEstimation.idealOutput.toString());
-        console.log("LP Fee:", bestPathEstimation.totalLpFee.toString());
-        console.log("Total Price Impact:", bestPathEstimation.totalPriceImpact);
-        console.log("Total Gas Cost:", bestPathEstimation.totalGasCost);
-        console.log("--- End Best Path Estimation in handleEstimate ---");
+        console.log('--- Best Path Estimation in handleEstimate ---');
+        console.log('Best Path Estimation:', bestPathEstimation);
+        console.log('Final Output:', bestPathEstimation.finalOutput.toString());
+        console.log('Ideal Output:', bestPathEstimation.idealOutput.toString());
+        console.log('LP Fee:', bestPathEstimation.totalLpFee.toString());
+        console.log('Total Price Impact:', bestPathEstimation.totalPriceImpact);
+        console.log('Total Gas Cost:', bestPathEstimation.totalGasCost);
+        console.log('--- End Best Path Estimation in handleEstimate ---');
 
         setBestPathEstimation(bestPathEstimation);
       } else {
-        setEstimatedOutput("Error in estimating the best route");
+        setEstimatedOutput('Error in estimating the best route');
       }
     }
   };
@@ -168,41 +142,41 @@ export const useSwapForm = () => {
   const handleSwapClick = async () => {
     const keplr = (window as unknown as Window).keplr;
     if (!isNotNullish(keplr)) {
-      alert("Keplr extension not detected.");
+      alert('Keplr extension not detected.');
       return;
     }
     showDebugAlert();
     if (payToken === undefined || receiveToken === undefined) {
-      toast.error("Pay or receive token is undefined");
+      toast.error('Pay or receive token is undefined');
       return;
     }
     if (!secretjs) {
-      console.error("SecretNetworkClient is not initialized");
+      console.error('SecretNetworkClient is not initialized');
       return;
     }
 
     const path = bestPathEstimation?.path;
     if (!path) {
-      console.error("No path found for swap execution");
+      console.error('No path found for swap execution');
       return;
     }
 
     if (!isNotNullish(keplr)) {
-      alert("Keplr is not installed");
+      alert('Keplr is not installed');
       return;
     }
 
     const inputViewingKey = await keplr.getSecret20ViewingKey(
-      "secret-4",
-      getApiTokenAddress(payToken),
+      'secret-4',
+      getApiTokenAddress(payToken)
     );
     const outputViewingKey = await keplr.getSecret20ViewingKey(
-      "secret-4",
-      getApiTokenAddress(receiveToken),
+      'secret-4',
+      getApiTokenAddress(receiveToken)
     );
 
     if (inputViewingKey === undefined || outputViewingKey === undefined) {
-      alert("Viewing keys are missing. Please create them before swapping.");
+      alert('Viewing keys are missing. Please create them before swapping.');
       return;
     }
 
@@ -215,7 +189,7 @@ export const useSwapForm = () => {
       });
 
       const baseAccount = accountInfo as {
-        "@type": "/cosmos.auth.v1beta1.BaseAccount";
+        '@type': '/cosmos.auth.v1beta1.BaseAccount';
         sequence?: string;
         account_number?: string;
       };
@@ -231,7 +205,7 @@ export const useSwapForm = () => {
       const txOptions: TxOptions = {
         gasLimit: 500_000,
         gasPriceInFeeDenom: 0.25,
-        feeDenom: "uscrt",
+        feeDenom: 'uscrt',
         // Only include explicitSignerData if both sequence and accountNumber are available
         // TODO: explicitSignerData is probably not needed. I think secretjs handles this.
         ...(sequence !== null && accountNumber !== null
@@ -239,7 +213,7 @@ export const useSwapForm = () => {
             explicitSignerData: {
               accountNumber: accountNumber,
               sequence: sequence,
-              chainId: "secret-4",
+              chainId: 'secret-4',
             },
           }
           : {}),
@@ -247,15 +221,11 @@ export const useSwapForm = () => {
 
       const decimalsIn = getTokenDecimals(getApiTokenAddress(payToken));
       if (decimalsIn === undefined) {
-        throw new Error(
-          `Decimals for token ${payToken.address} could not be determined`,
-        );
+        throw new Error(`Decimals for token ${payToken.address} could not be determined`);
       }
       const decimalsOut = getTokenDecimals(getApiTokenAddress(receiveToken));
       if (decimalsOut === undefined) {
-        throw new Error(
-          `Decimals for token ${receiveToken.address} could not be determined`,
-        );
+        throw new Error(`Decimals for token ${receiveToken.address} could not be determined`);
       }
 
       const send_amount = new Decimal(payDetails.amount)
@@ -278,7 +248,7 @@ export const useSwapForm = () => {
       const hops: Hop[] = [];
 
       if (path.pools.length >= 2) {
-        console.log("Multiple hops. Using Router contract.");
+        console.log('Multiple hops. Using Router contract.');
 
         // Loop to construct the Hop array.
         for (let i = 0; i < path.pools.length; i++) {
@@ -306,27 +276,25 @@ export const useSwapForm = () => {
           hops.push(hop);
 
           console.log(`Hop ${i + 1} on pool ${poolAddress}`);
-          console.log(
-            `Swapping ${inputTokenAddress} for ${outputTokenAddress}`,
-          );
+          console.log(`Swapping ${inputTokenAddress} for ${outputTokenAddress}`);
         }
 
         sendMsg = {
           send: {
             // NOTE: Router Contract
-            recipient: "secret1xy5r5j4zp0v5fzza5r9yhmv7nux06rfp2yfuuv",
+            recipient: 'secret1xy5r5j4zp0v5fzza5r9yhmv7nux06rfp2yfuuv',
             amount: send_amount,
             msg: btoa(
               JSON.stringify({
                 to: walletAddress,
                 hops,
                 expected_return,
-              }),
+              })
             ),
           },
         };
 
-        console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
+        console.log('Swapping with message:', JSON.stringify(sendMsg, null, 2));
 
         result = await secretjs.tx.snip20.send(
           {
@@ -336,10 +304,10 @@ export const useSwapForm = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions,
+          txOptions
         );
       } else {
-        console.log("Single hop. Using Pair contract directly.");
+        console.log('Single hop. Using Pair contract directly.');
 
         const poolAddress = path.pools[0];
         const inputTokenAddress = path.tokens[0];
@@ -363,8 +331,8 @@ export const useSwapForm = () => {
           },
         };
 
-        console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
-        console.log("Callback message:", JSON.stringify(swapMsg, null, 2));
+        console.log('Swapping with message:', JSON.stringify(sendMsg, null, 2));
+        console.log('Callback message:', JSON.stringify(swapMsg, null, 2));
 
         // gasLimit could be changed depending on single swap or multi hop
         txOptions.gasLimit = 500_000;
@@ -377,14 +345,14 @@ export const useSwapForm = () => {
             msg: sendMsg,
             sent_funds: [],
           },
-          txOptions,
+          txOptions
         );
       }
 
       setPending(false);
       setResult(result);
 
-      console.log("Transaction Result:", result);
+      console.log('Transaction Result:', result);
 
       if (result.code !== TxResultCode.Success) {
         throw new Error(`Swap failed: ${result.rawLog}`);
@@ -392,20 +360,20 @@ export const useSwapForm = () => {
 
       console.log(`Swap executed successfully!`);
       // TODO: probably want to take out these alerts
-      alert("Swap completed successfully!");
+      alert('Swap completed successfully!');
       // why is this updating the estimated output? probably a relic of the test page.
       // What (if anything) should be updated with this message instead?
-      setEstimatedOutput("Swap completed successfully!");
+      setEstimatedOutput('Swap completed successfully!');
     } catch (error) {
-      console.error("Error during swap execution:", error);
-      alert("Swap failed. Check the console for more details.");
-      setEstimatedOutput("Error during swap execution. Please try again.");
+      console.error('Error during swap execution:', error);
+      alert('Swap failed. Check the console for more details.');
+      setEstimatedOutput('Error during swap execution. Please try again.');
     }
   };
 
   const showDebugAlert = () => {
     if (payToken === undefined || receiveToken === undefined) {
-      toast.error("Pay or receive token is undefined");
+      toast.error('Pay or receive token is undefined');
       return;
     }
     const alertMessage = `Swapping Details:
@@ -442,7 +410,7 @@ RawData: ${JSON.stringify(
           minReceive,
         },
         null,
-        2,
+        2
       )}`;
 
     alert(alertMessage);
