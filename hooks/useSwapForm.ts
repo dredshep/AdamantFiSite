@@ -286,9 +286,9 @@ export const useSwapForm = () => {
           const inputTokenAddress = path.tokens[i];
           const outputTokenAddress = path.tokens[i + 1];
 
-          // FIXME: How to get code_hash here?? Hardcode known pair details for now.
-          const poolCodeHash = "";
-          const inputTokenCodeHash = "";
+          // TODO: Get poolCodeHash dynamically here.
+          const poolCodeHash = '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490';
+          const inputTokenCodeHash = getCodeHashByAddress(inputTokenAddress!);
 
           const hop: Hop = {
             from_token: {
@@ -328,13 +328,11 @@ export const useSwapForm = () => {
 
         console.log("Swapping with message:", JSON.stringify(sendMsg, null, 2));
 
-        // FIXME: hardcoded contract_address and code_hash to sSCRT
         result = await secretjs.tx.snip20.send(
           {
             sender: walletAddress!,
-            contract_address: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
-            code_hash:
-              "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e",
+            contract_address: path.tokens[0]!,
+            code_hash: getCodeHashByAddress(path.tokens[0]!),
             msg: sendMsg,
             sent_funds: [],
           },
