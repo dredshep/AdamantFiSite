@@ -8,7 +8,7 @@ import PoolMaxButton from './Forms/Input/TokenInput/PoolMaxButton';
 import {
   InputIdentifier,
   PoolInputIdentifier,
-  SwapInputIdentifier
+  SwapInputIdentifier,
 } from './Forms/Input/TokenInputBase';
 
 interface TopRightBalanceProps {
@@ -19,6 +19,7 @@ interface TopRightBalanceProps {
   loading?: boolean;
   error?: TokenBalanceError | null;
   onFetchBalance?: () => void;
+  withLabel?: boolean;
 }
 
 const TopRightBalance: React.FC<TopRightBalanceProps> = ({
@@ -28,23 +29,23 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   inputIdentifier,
   loading = false,
   error = null,
-  onFetchBalance
+  onFetchBalance,
+  withLabel = true,
 }) => {
-  const showMaxButton = 
-    hasMax && 
-    typeof inputIdentifier === 'string' && 
-    inputIdentifier.length > 0 && 
-    !loading && 
-    error === null && 
+  const showMaxButton =
+    hasMax &&
+    typeof inputIdentifier === 'string' &&
+    inputIdentifier.length > 0 &&
+    !loading &&
+    error === null &&
     balance !== null;
 
-  const isSwapInput = typeof inputIdentifier === 'string' && 
-    inputIdentifier.startsWith('swap.');
+  const isSwapInput = typeof inputIdentifier === 'string' && inputIdentifier.startsWith('swap.');
 
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5 text-gray-400 text-sm">
-        <span>Balance:</span>
+        {withLabel && <span>Balance:</span>}
         {loading ? (
           <AiOutlineLoading3Quarters className="animate-spin h-3.5 w-3.5" />
         ) : error !== null ? (
@@ -63,21 +64,20 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
             <span>Fetch</span>
           </button>
         ) : (
-          <span className="tabular-nums">
+          <span className="tabular-nums text-right">
             {balance.toFixed(6)} {tokenSymbol}
           </span>
         )}
       </div>
-      {showMaxButton && (
-        isSwapInput ? (
+      {showMaxButton &&
+        (isSwapInput ? (
           <SwapMaxButton
             inputIdentifier={inputIdentifier as SwapInputIdentifier}
             balance={balance}
           />
         ) : (
           <PoolMaxButton poolInputIdentifier={inputIdentifier as PoolInputIdentifier} />
-        )
-      )}
+        ))}
     </div>
   );
 };

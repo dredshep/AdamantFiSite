@@ -1,54 +1,43 @@
-import PlaceholderImageFromSeed from "@/components/app/Shared/PlaceholderImageFromSeed";
-import { useModalStore } from "@/store/modalStore";
-import { useTokenStore } from "@/store/tokenStore";
-import { useWalletStore } from "@/store/walletStore";
-import {
-  getApiTokenAddress,
-  getApiTokenSymbol,
-} from "@/utils/apis/getSwappableTokens";
-import React from "react";
-import {
-  RiArrowUpSLine,
-  RiFileCopyLine,
-  RiSettings3Line,
-} from "react-icons/ri";
-import { toast } from "react-toastify"; // Assuming you're using react-toastify for notifications
+import PlaceholderImageFromSeed from '@/components/app/Shared/PlaceholderImageFromSeed';
+import { useModalStore } from '@/store/modalStore';
+import { useTokenStore } from '@/store/tokenStore';
+import { useWalletStore } from '@/store/walletStore';
+import React, { useState } from 'react';
+import { HiQrCode } from 'react-icons/hi2';
+import { RiArrowUpSLine, RiFileCopyLine, RiSettings3Line } from 'react-icons/ri';
+import { toast } from 'react-toastify';
+import { ReceiveDialog } from './ReceiveDialog';
+import { SendTokensDialog } from './SendTokensDialog';
+import { TokenListItem } from './TokenListItem';
 
 const WalletModal: React.FC = () => {
   const { closeWalletModal } = useModalStore();
   const { address } = useWalletStore();
   const { listAllTokens } = useTokenStore();
   const tokens = listAllTokens() ?? [];
-  // const balance =
-  //   getTokenByAddress("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek")
-  //     ?.balance ?? "N/A";
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+
   const copyAddressToClipboard = () => {
     if (address === null) return;
     void navigator.clipboard.writeText(address).then(() => {
-      toast.success("Address copied to clipboard!");
+      toast.success('Address copied to clipboard!');
     });
   };
-  const truncatedAddress =
-    address === null ? "" : address.slice(0, 6) + "..." + address.slice(-4);
 
-  // Placeholder function for settings modal
+  const truncatedAddress = address === null ? '' : address.slice(0, 6) + '...' + address.slice(-4);
+
   const openSettingsModal = () => {
-    // Placeholder functionality
-    console.log("Open settings modal");
+    console.log('Open settings modal');
   };
 
   return (
     <div className="bg-adamant-box-veryDark rounded-lg shadow-md absolute top-2 right-2 w-[312px] h-[calc(100vh-16px)] z-10">
       <div className="flex items-center justify-between mb-4 p-6">
         <div className="flex items-center">
-          <PlaceholderImageFromSeed
-            seed={address ?? "secret1 no address"}
-            size={48}
-          />
+          <PlaceholderImageFromSeed seed={address ?? 'secret1 no address'} size={48} />
           <div className="mx-3">
-            <div className="font-bold">
-              {truncatedAddress ?? "secret1 no address"}
-            </div>
+            <div className="font-bold">{truncatedAddress ?? 'secret1 no address'}</div>
           </div>
           <RiFileCopyLine
             className="text-gray-500 p-1 w-6 h-6 rounded-full hover:bg-opacity-10 duration-150 transition-all hover:bg-white cursor-pointer text-base"
@@ -64,38 +53,51 @@ const WalletModal: React.FC = () => {
           onClick={closeWalletModal}
         />
       </div>
-      {/* <div className="my-8 px-6">
-        <div className="text-lg font-semibold text-gray-500">Your balance</div>
-        <div className="text-4xl font-bold top-1">${balance}</div>
-      </div> */}
+
       <div className="px-6">
-        <button className="w-full py-3 rounded-xl bg-adamant-accentBg text-black font-bold my-4 uppercase">
-          Get Tokens
-        </button>
-      </div>
-      <div>
-        <div className="text-sm font-semibold mb-2 ml-6 uppercase text-gray-500">
-          Tokens
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsSendModalOpen(true)}
+            className="flex-1 py-3 rounded-xl bg-adamant-accentBg text-black font-bold my-4 uppercase hover:bg-opacity-90 transition-all"
+          >
+            Send
+          </button>
+          <button
+            onClick={() => setIsReceiveModalOpen(true)}
+            className="flex-1 py-3 rounded-xl bg-adamant-box-dark text-white font-bold my-4 uppercase border border-adamant-accentBg hover:bg-adamant-box-light transition-all flex items-center justify-center gap-2"
+          >
+            <span>Receive</span>
+            <HiQrCode className="w-5 h-5" />
+          </button>
         </div>
+      </div>
+
+      {address !== null && (
+        <>
+          <SendTokensDialog
+            open={isSendModalOpen}
+            onOpenChange={setIsSendModalOpen}
+            walletAddress={address}
+          />
+          <ReceiveDialog
+            open={isReceiveModalOpen}
+            onOpenChange={setIsReceiveModalOpen}
+            walletAddress={address}
+          />
+        </>
+      )}
+
+      <div>
+        <div className="text-sm font-medium mt-10 mb-2 ml-4 text-white">Tokens</div>
         {tokens.length > 0 ? (
-          tokens.map((token, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center cursor-pointer hover:bg-adamant-app-boxHighlight py-2 rounded-xl mx-2 px-6"
-            >
-              <PlaceholderImageFromSeed
-                seed={getApiTokenAddress(token)}
-                size={40}
-              />
-              <div className="flex-grow ml-3 flex flex-col">
-                <span className="font-bold">{getApiTokenSymbol(token)}</span>
-              </div>
-            </div>
-          ))
+          <div className="space-y-1 mt-4">
+            {tokens.map((token, index) => (
+              <TokenListItem key={index} token={token} />
+            ))}
+          </div>
         ) : (
           <div>
-            Token store not correctly initialized. Check your internet
-            connection or availability of the API server.
+            <p className="text-center text-gray-500 py-4">No tokens found</p>
           </div>
         )}
       </div>
