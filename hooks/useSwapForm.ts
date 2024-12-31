@@ -1,33 +1,26 @@
+import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
+import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
-import {
-  // calculateMinReceive,
-  // calculatePriceImpact,
-  // calculateTxFee,
-  fetchSwappableTokens,
-} from '@/utils/swap';
-import { useEffect, useState } from 'react';
-// new imports
 import { useTxStore } from '@/store/txStore';
 import { Hop } from '@/types';
+import { ApiToken, getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import { getTokenDecimals } from '@/utils/apis/tokenInfo';
+import isNotNullish from '@/utils/isNotNullish';
+import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
+import { fetchSwappableTokens } from '@/utils/swap';
 import {
   PathEstimation,
   buildTokenPoolMap,
   estimateBestPath,
   findPaths,
 } from '@/utils/swap/estimate';
-import Decimal from 'decimal.js';
-import { SecretNetworkClient, TxOptions, TxResponse, TxResultCode } from 'secretjs';
-import { Snip20SendOptions } from 'secretjs/dist/extensions/snip20/types';
-// TODO: Find a way to not need to import this.
-import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
-import { ApiToken, getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
-import isNotNullish from '@/utils/isNotNullish';
-import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
 import { estimateSwapOutput } from '@/utils/swap/poolEstimation';
-import { Window } from '@keplr-wallet/types';
+import Decimal from 'decimal.js';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
+import { TxOptions, TxResponse, TxResultCode } from 'secretjs';
+import { Snip20SendOptions } from 'secretjs/dist/extensions/snip20/types';
 
 export const useSwapForm = () => {
   const [swappableTokens, setSwappableTokens] = useState<ApiToken[]>([]);
@@ -45,9 +38,8 @@ export const useSwapForm = () => {
   const [txFee, setTxFee] = useState('0');
   const [minReceive, setMinReceive] = useState('0');
 
-  // new state
-  const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  // Replace the old Keplr connection state and effect with the hook
+  const { secretjs, walletAddress } = useKeplrConnection();
   const [bestPathEstimation, setBestPathEstimation] = useState<PathEstimation | null>(null);
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0');
   const { setPending, setResult } = useTxStore.getState();
@@ -149,46 +141,6 @@ export const useSwapForm = () => {
 
     void runEstimate();
   }, [payDetails.amount, payToken, receiveToken, secretjs, slippage]);
-
-  // new effects
-  useEffect(() => {
-    const keplr = (window as unknown as Window).keplr;
-    const connectKeplr = async () => {
-      if (!isNotNullish(keplr)) {
-        alert('Please install Keplr extension');
-        return;
-      }
-
-      await keplr.enable('secret-4');
-
-      const offlineSigner = keplr.getOfflineSignerOnlyAmino('secret-4');
-      const enigmaUtils = keplr.getEnigmaUtils('secret-4');
-      const accounts = await offlineSigner?.getAccounts();
-
-      if (accounts !== undefined && accounts.length === 0 && accounts[0] === undefined) {
-        alert('No accounts found');
-        return;
-      }
-      if (offlineSigner === undefined) {
-        alert('No offline signer found');
-        return;
-      }
-
-      const client = new SecretNetworkClient({
-        chainId: 'secret-4',
-        url: 'https://rpc.ankr.com/http/scrt_cosmos',
-        wallet: offlineSigner,
-        walletAddress: accounts[0]!.address,
-        encryptionUtils: enigmaUtils,
-      });
-
-      setWalletAddress(accounts[0]!.address);
-
-      setSecretjs(client);
-    };
-
-    void connectKeplr();
-  }, []);
 
   // first, we estimate the full swap details
 

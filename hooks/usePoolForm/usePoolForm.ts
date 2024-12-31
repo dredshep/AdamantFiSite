@@ -1,3 +1,4 @@
+import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useTxStore } from '@/store/txStore';
 import { PoolTokenInputs, SecretString } from '@/types';
@@ -7,7 +8,6 @@ import isNotNullish from '@/utils/isNotNullish';
 import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
 import { provideLiquidity } from '@/utils/secretjs/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/withdrawLiquidity';
-// import { calculatePriceImpact, calculateTxFee } from '@/utils/swap';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
@@ -81,50 +81,11 @@ function debounce<T extends (...args: unknown[]) => unknown>(
 
 export function usePoolForm(poolAddress: string | string[] | undefined): UsePoolDepositFormResult {
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } = usePoolStore();
-
-  // TODO: Find a way to have one secretjs client for the whole app.
-  const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const { secretjs, walletAddress } = useKeplrConnection();
   const { setPending, setResult } = useTxStore.getState();
 
-  // TODO: Reduce this code duplication. The same effect is defined in the swap form.
-  useEffect(() => {
-    const keplr = (window as unknown as Window).keplr;
-    const connectKeplr = async () => {
-      if (!isNotNullish(keplr)) {
-        alert('Please install Keplr extension');
-        return;
-      }
-
-      await keplr.enable('secret-4');
-
-      const offlineSigner = keplr.getOfflineSignerOnlyAmino('secret-4');
-      const enigmaUtils = keplr.getEnigmaUtils('secret-4');
-      const accounts = await offlineSigner?.getAccounts();
-
-      if (accounts !== undefined && accounts.length === 0 && accounts[0] === undefined) {
-        alert('No accounts found');
-        return;
-      }
-      if (offlineSigner === undefined) {
-        alert('No offline signer found');
-        return;
-      }
-
-      const client = new SecretNetworkClient({
-        chainId: 'secret-4',
-        url: 'https://rpc.ankr.com/http/scrt_cosmos',
-        wallet: offlineSigner,
-        walletAddress: accounts[0]!.address,
-        encryptionUtils: enigmaUtils,
-      });
-
-      setWalletAddress(accounts[0]!.address);
-      setSecretjs(client);
-    };
-
-    void connectKeplr();
-  }, []);
+  const initialMountRef = useRef(true);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
 
   async function getTokenBalance(
     secretjs: SecretNetworkClient,
@@ -132,8 +93,8 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     tokenCodeHash: string
   ): Promise<{ balance: { amount: string } } | null> {
     const keplr = (window as unknown as Window).keplr;
-    if (!keplr) {
-      alert('Please install the Keplr extension');
+    if (!isNotNullish(keplr)) {
+      toast.error('Please install the Keplr extension');
       return null;
     }
 
@@ -177,9 +138,6 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       return null;
     }
   }
-
-  const initialMountRef = useRef(true);
-  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
 
   // @ts-expect-error: Not all code paths return a value.
   useEffect(() => {
