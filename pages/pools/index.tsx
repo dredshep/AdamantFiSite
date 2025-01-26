@@ -30,6 +30,9 @@ export default function PoolsPage() {
     const fetchAndValidatePools = async () => {
       try {
         const poolsData = await getTablePools();
+        if ('error' in poolsData) {
+          throw new Error(poolsData.error);
+        }
         const validationResults = await validatePools(poolsData);
 
         const validatedPools: ValidatedPool[] = poolsData.map((pool, index) => ({

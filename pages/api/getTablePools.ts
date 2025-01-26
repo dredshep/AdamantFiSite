@@ -5,10 +5,9 @@ import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
 import { getApiTokenSymbol, getTokenFromAddress } from '@/utils/apis/getSwappableTokens';
 // import { Pair } from "@/types/api/Factory";
 
-const getTablePools = async (
-  _req: NextApiRequest,
-  res: NextApiResponse<TablePool[] | { error: string }>
-) => {
+export type TablePoolResponse = TablePool[] | { error: string };
+
+const getTablePools = async (_req: NextApiRequest, res: NextApiResponse<TablePoolResponse>) => {
   try {
     // const [pairs, pricesData, swappableTokens] = await Promise.all([
     //   queryFactoryPairs(),

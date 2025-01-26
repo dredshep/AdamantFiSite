@@ -91,7 +91,7 @@ export default function Home() {
             Governance
           </Link>
           <Link
-            href="/app"
+            href="/"
             className="text-black uppercase bg-white px-4 py-2 rounded-lg text-base font-bold"
           >
             Launch <span className="hidden sm:inline-block">App</span>
