@@ -10,7 +10,7 @@ import { Window as KeplrWindow, Window } from '@keplr-wallet/types';
 import Decimal from 'decimal.js';
 import { useEffect, useState } from 'react';
 import { SecretNetworkClient, TxOptions, TxResultCode } from 'secretjs';
-import { fullPoolsData } from '../../../../components/app/Testing/fullPoolsData';
+import { fullPoolsData } from '../../../components/app/Testing/fullPoolsData';
 
 interface PoolQueryResponse {
   assets: {

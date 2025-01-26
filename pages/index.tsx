@@ -1,122 +1,55 @@
-import Logo from '@/components/SVG/logo';
-import CoolBox from '@/components/site/CoolBox';
-import Footer from '@/components/site/Footer';
-import InfoBox from '@/components/site/InfoBox';
-import Head from 'next/head';
-import Link from 'next/link';
+import AppLayout from '@/components/app/Global/AppLayout';
+import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
+import { Roboto } from 'next/font/google';
+// import { useStore } from "@/store/swapStore";
+// import { useTokenStore } from "@/store/tokenStore";
 
-const coolBoxes = (
-  <div className="flex flex-wrap gap-8">
-    <CoolBox
-      icon="/icons/coolBox/1.svg"
-      mainText="Exchange tokens without trace"
-      secondaryText="Swap SNIP-20 tokens"
-      buttonText="SWAP PRIVATELY"
-      link="/swap-privately"
-      type="dark"
-    />
-    <CoolBox
-      icon="/icons/coolBox/2.svg"
-      mainText="Provide liquidity and earn by staking"
-      secondaryText="Earn trading fees and incentives"
-      buttonText="ADD LIQUIDITY"
-      link="/add-liquidity"
-      type="light"
-    />
-    <CoolBox
-      icon="/icons/coolBox/3.svg"
-      mainText={
-        <>
-          Explore <br />
-          Secret Network
-        </>
-      }
-      secondaryText="SNIP-20 token list"
-      buttonText="TOKENS ON SECRET"
-      link="/tokens-on-secret"
-      type="dark"
-      alt="Explore Secret Network"
-    />
-  </div>
-);
-const infoBoxes = (
-  <div className="flex flex-wrap gap-4 w-full">
-    <InfoBox
-      title="Grants"
-      description="Would you like to build a new protocol for Adamant or implement our liquidity?"
-      buttonText="APPLY FOR A GRANT"
-      link="https://adamantfi.gitbook.io/documentation/"
-    />
-    <InfoBox
-      title="Infra and SDKs"
-      description="Adamant tech stack offers many solutions that can provide your application the necessary infrastructure."
-      buttonText="LEARN MORE"
-      link="https://github.com/dredshep/AdamantFiSite"
-    />
-  </div>
-);
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700', '900'],
+});
 
-export default function Home() {
+// Then render infoBoxes where you need it in your component tree.
+
+export default function Swap() {
+  // const { tokenInputs } = useStore();
+  // const { tokens } = useTokenStore();
+  // const receiveTokenAddress = tokenInputs["swap.receive"].tokenAddress;
+  // const payTokenAddress = tokenInputs["swap.pay"].tokenAddress;
+  // const receiveToken = tokens?.[receiveTokenAddress];
+  // const payToken = tokens?.[payTokenAddress];
   return (
-    <div className={'bg-tubeshapes-dark bg-cover min-h-screen text-white'}>
-      {/* <JiriBgAbsolute> */}
-      <Head>
-        <title>Adamant Finance - Secure & Private DeFi Solutions</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-      <div className="px-6 py-8 flex w-full justify-between">
-        <Link className="flex items-center " href="/">
-          <Logo className="h-10 w-10" />
-          <div className="text-white text-2xl font-bold tracking-wider ml-2">
-            ADAMANT<span className="text-adamant-dark">.FI</span>
-          </div>
-        </Link>
-        <div className="flex items-center space-x-11 uppercase text-base font-medium">
-          <Link
-            href="#"
-            className="hidden lg:block text-white border-b-2 border-[#8A754A] pb-2 px-2"
-          >
-            Products
-          </Link>
-          <Link
-            href="https://github.com/dredshep/AdamantFiSite"
-            className="hidden lg:block text-white brightness-50 pb-2 px-2"
-          >
-            Developers
-          </Link>
-          <Link
-            href="https://forum.scrt.network/"
-            className="hidden lg:block text-white brightness-50 pb-2 px-2"
-          >
-            Governance
-          </Link>
-          <Link
-            href="/app"
-            className="text-black uppercase bg-white px-4 py-2 rounded-lg text-base font-bold"
-          >
-            Launch <span className="hidden sm:inline-block">App</span>
-          </Link>
-        </div>
-      </div>
-      <div className="max-w-[1176px] mx-auto px-10">
-        <div className="mt-32">
-          <div className="flex flex-col items-center gap-6">
-            <div className="text-4xl font-bold tracking-wider">
-              ADAMANT<span className="text-adamant-dark">.FI</span>
+    <div className={roboto.className + ' bg-adamant-background bg-cover min-h-screen text-white'}>
+      <AppLayout>
+        <div className="max-w-xl mx-auto mt-28">
+          {/* <div className="flex gap-4 justify-between leading-6 px-5">
+            <div className="flex gap-4">
+              <div className="font-bold flex flex-col relative">
+                SWAP
+                <div className="relative">
+                  <div
+                    className="w-0 h-0 absolute left-3
+  border-l-[8px] border-l-transparent
+  border-b-[8px] border-b-[#30364E]
+  border-r-[8px] border-r-transparent"
+                  ></div>
+                </div>
+              </div>
+              <div className="brightness-50 font-medium">SEND</div>
             </div>
-            <div className="leading-10 text-2xl max-w-[585px] brightness-50 text-center">
-              Permissionless, opensource and community owned liquidity protocol on Secret Network
-            </div>
-            <div className="uppercase px-9 py-3 leading-6 text-lg bg-gradient-to-br from-adamant-gradientBright to-adamant-gradientDark text-adamant-contrastDark rounded-lg font-bold">
-              Swap Tokens
-            </div>
+            {payToken && receiveToken ? (
+              <div key={payToken.address + receiveToken.address}>
+                + Add liquidity for {payToken.symbol} and {receiveToken.symbol}
+              </div>
+            ) : (
+              <div>Loading tokens...</div>
+            )}
+          </div> */}
+          <div className="bg-adamant-app-box bg-opacity-55 leading-none rounded-xl text-xl mt-2">
+            <SwapForm />
           </div>
         </div>
-        <div className="mt-32">{coolBoxes}</div>
-        <div className="mt-32">{infoBoxes}</div>
-        <Footer />
-      </div>
-      {/* </JiriBgAbsolute> */}
+      </AppLayout>
     </div>
   );
 }
