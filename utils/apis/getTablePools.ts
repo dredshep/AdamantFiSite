@@ -1,7 +1,8 @@
-import { TablePool } from "@/types/api/TablePool";
+import { TablePoolResponse } from '@/pages/api/getTablePools';
 
-export const getTablePools = async (): Promise<TablePool[]> => {
-  const response = await fetch("/api/getTablePools");
-  const data = (await response.json()) as TablePool[];
+export const getTablePools = async (): Promise<TablePoolResponse> => {
+  const response = await fetch('/api/getTablePools');
+  const rawData = (await response.json()) as unknown;
+  const data = rawData as TablePoolResponse;
   return data;
 };

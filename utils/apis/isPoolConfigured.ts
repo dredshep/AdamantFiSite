@@ -69,6 +69,10 @@ export async function validatePools(pools: TablePool[]): Promise<PoolValidationR
     // Validate all pools using the same data
     return pools.map((pool) => validateSinglePool(pool, context));
   } catch (error) {
+    // console.log('pools.map is not a function', {
+    //   pools,
+    //   map: pools.map,
+    // });
     // If there's an error fetching data, mark all pools as invalid
     return pools.map(() => ({
       isValid: false,

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
-import { Window as KeplrWindow, Window } from "@keplr-wallet/types";
-import { queryPoolDetails as addresses } from "../../../components/app/Testing/queryPoolDetails";
-import isNotNullish from "@/utils/isNotNullish";
+import isNotNullish from '@/utils/isNotNullish';
+import { Window as KeplrWindow, Window } from '@keplr-wallet/types';
+import { useEffect, useState } from 'react';
+import { SecretNetworkClient } from 'secretjs';
+import { queryPoolDetails as addresses } from '../../components/app/Testing/queryPoolDetails';
 
 // const addresses = [
 //   {
@@ -13,10 +13,7 @@ import isNotNullish from "@/utils/isNotNullish";
 //   // Add other pairs here...
 // ];
 
-const queryPools = async (
-  secretjs: SecretNetworkClient,
-  contractAddress: string
-) => {
+const queryPools = async (secretjs: SecretNetworkClient, contractAddress: string) => {
   const queryMsg = { pool: {} };
 
   try {
@@ -31,15 +28,11 @@ const queryPools = async (
   }
 };
 
-const getCodeHash = async (
-  secretjs: SecretNetworkClient,
-  contractAddress: string
-) => {
+const getCodeHash = async (secretjs: SecretNetworkClient, contractAddress: string) => {
   try {
-    const codeHashResponse =
-      await secretjs.query.compute.codeHashByContractAddress({
-        contract_address: contractAddress,
-      });
+    const codeHashResponse = await secretjs.query.compute.codeHashByContractAddress({
+      contract_address: contractAddress,
+    });
     return codeHashResponse.code_hash;
   } catch (error) {
     console.error(`Error fetching code hash for ${contractAddress}:`, error);
@@ -82,38 +75,34 @@ export interface PoolsData {
 
 const QueryPools = () => {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [address, setAddress] = useState<string | undefined>("");
-  const [poolsData, setPoolsData] = useState<PoolsData[] | undefined>(
-    undefined
-  );
+  const [address, setAddress] = useState<string | undefined>('');
+  const [poolsData, setPoolsData] = useState<PoolsData[] | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const connectKeplr = async () => {
       if (!isNotNullish((window as unknown as Window).keplr)) {
-        alert("Please install Keplr extension");
+        alert('Please install Keplr extension');
         return;
       }
 
-      await (window as unknown as Window).keplr?.enable("secret-4");
+      await (window as unknown as Window).keplr?.enable('secret-4');
 
-      const offlineSigner = (
-        window as unknown as KeplrWindow
-      ).getOfflineSigner?.("secret-4");
+      const offlineSigner = (window as unknown as KeplrWindow).getOfflineSigner?.('secret-4');
       const accounts = await offlineSigner?.getAccounts();
 
       if (
         !offlineSigner ||
         !accounts ||
         accounts.length === 0 ||
-        typeof accounts[0]?.address !== "string"
+        typeof accounts[0]?.address !== 'string'
       ) {
-        alert("No offline signer or accounts found");
+        alert('No offline signer or accounts found');
         return;
       }
       const client = new SecretNetworkClient({
-        chainId: "secret-4",
-        url: "https://rpc.ankr.com/http/scrt_cosmos",
+        chainId: 'secret-4',
+        url: 'https://rpc.ankr.com/http/scrt_cosmos',
         wallet: offlineSigner,
         walletAddress: accounts?.[0].address,
       });
@@ -159,7 +148,7 @@ const QueryPools = () => {
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="p-20">
         <h1 className="text-4xl font-bold">Query Pools</h1>
-        {typeof address === "string" ? (
+        {typeof address === 'string' ? (
           <div>
             <p className="text-lg">Connected as: {address}</p>
             <button
@@ -168,9 +157,7 @@ const QueryPools = () => {
             >
               Query Pools
             </button>
-            {typeof poolsData !== "undefined" &&
-            poolsData?.length &&
-            poolsData.length > 0 ? (
+            {typeof poolsData !== 'undefined' && poolsData?.length && poolsData.length > 0 ? (
               <div>
                 <h2 className="text-2xl font-bold mt-4">Pools Data</h2>
                 <pre className="text-lg bg-gray-800 p-4 mt-4">
@@ -180,9 +167,7 @@ const QueryPools = () => {
             ) : (
               <pre className="text-lg bg-gray-800 p-4 mt-4">No data</pre>
             )}
-            {typeof error === "string" && (
-              <p className="text-lg text-red-500 mt-4">{error}</p>
-            )}
+            {typeof error === 'string' && <p className="text-lg text-red-500 mt-4">{error}</p>}
           </div>
         ) : (
           <p className="text-lg">Connecting to Keplr...</p>

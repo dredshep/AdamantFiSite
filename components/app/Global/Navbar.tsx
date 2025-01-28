@@ -1,8 +1,8 @@
-import React from "react";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import Logo from "@/components/SVG/logo";
-import UserWallet from "@/components/app/Global/UserWallet";
+import Logo from '@/components/SVG/logo';
+import UserWallet from '@/components/app/Global/UserWallet';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import React from 'react';
 
 const Navbar: React.FC = () => {
   const router = useRouter();
@@ -22,34 +22,34 @@ const Navbar: React.FC = () => {
         </div>
       </Link>
       <div className="flex items-center space-x-11 uppercase text-base font-medium leading-6">
-        <Link href="/app" passHref>
+        <Link href="/" passHref>
           <div
             className={`cursor-pointer text-white pb-1 px-2 ${
-              isActive("/app")
-                ? "border-b-2 border-[#8A754A]"
-                : "border-b-2 border-transparent brightness-50"
+              isActive('/')
+                ? 'border-b-2 border-[#8A754A]'
+                : 'border-b-2 border-transparent brightness-50'
             }`}
           >
             Swap
           </div>
         </Link>
-        <Link href="/app/tokens" passHref>
+        <Link href="/tokens" passHref>
           <div
             className={`cursor-pointer text-white pb-1 px-2 ${
-              isActive("/app/tokens")
-                ? "border-b-2 border-[#8A754A]"
-                : "border-b-2 border-transparent brightness-50"
+              isActive('/tokens')
+                ? 'border-b-2 border-[#8A754A]'
+                : 'border-b-2 border-transparent brightness-50'
             }`}
           >
             Tokens
           </div>
         </Link>
-        <Link href="/app/pools" passHref>
+        <Link href="/pools" passHref>
           <div
             className={`cursor-pointer text-white pb-1 px-2 ${
-              isActive("/app/pools")
-                ? "border-b-2 border-[#8A754A]"
-                : "border-b-2 border-transparent brightness-50"
+              isActive('/pools')
+                ? 'border-b-2 border-[#8A754A]'
+                : 'border-b-2 border-transparent brightness-50'
             }`}
           >
             Pools

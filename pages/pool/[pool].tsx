@@ -31,7 +31,7 @@ function NotFoundState() {
               Go Back
             </button>
             <Link
-              href="/app/pools"
+              href="/pools"
               className="mt-2 bg-white text-black px-6 py-2 rounded-xl font-semibold 
                        hover:bg-gray-100 transition-colors"
             >
@@ -114,10 +114,7 @@ export default function PoolPage() {
       <AppLayout>
         <div className="flex flex-col gap-2 w-full items-center pt-10">
           <div className="text-lg font-semibold">No pools found</div>
-          <Link
-            href="/app/pools"
-            className="text-black bg-white p-4 py-2 rounded-xl text-xl font-bold"
-          >
+          <Link href="/pools" className="text-black bg-white p-4 py-2 rounded-xl text-xl font-bold">
             Back to Pools
           </Link>
         </div>
@@ -146,7 +143,7 @@ export default function PoolPage() {
               {error.message || 'An error occurred'}
             </div>
             <Link
-              href="/app/pools"
+              href="/pools"
               className="mt-2 bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
             >
               Back to Pools
@@ -166,11 +163,7 @@ export default function PoolPage() {
       <div className="max-w-7xl mx-auto mt-12 flex flex-col gap-4">
         <div className="px-2.5">
           <div className="max-w-full md:max-w-xl mx-auto">
-            <Breadcrumb
-              linkPath="/app/pools"
-              linkText="Pools"
-              currentText={`${symbolA}-${symbolB}`}
-            />
+            <Breadcrumb linkPath="/pools" linkText="Pools" currentText={`${symbolA}-${symbolB}`} />
           </div>
 
           <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto">

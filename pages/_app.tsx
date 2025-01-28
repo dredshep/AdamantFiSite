@@ -10,6 +10,10 @@ import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+// import inter font
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export default function App({ Component, pageProps }: AppProps) {
   const setSwappableTokens = useSwapStore((state) => state.setSwappableTokens);
@@ -55,7 +59,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <SecretNetworkProvider>
       <QueryClientProvider client={queryClient}>
-        <div className="bg-[#151321] min-h-screen text-white">
+        <div className={`${inter.className} bg-[#151321] min-h-screen text-white font-sans`}>
           <Component {...pageProps} />
           <ToastContainer
             position="top-right"
