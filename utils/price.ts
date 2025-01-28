@@ -16,6 +16,9 @@ export const usePriceStore = create<PriceState>(() => ({
   prices: {},
 }));
 
+// Add type for CoinGecko response
+type CoinGeckoResponse = Record<string, { usd: number }>;
+
 // Global price updater
 class GlobalPriceUpdater {
   private static instance: GlobalPriceUpdater;
@@ -26,7 +29,7 @@ class GlobalPriceUpdater {
   }
 
   static getInstance() {
-    if (!GlobalPriceUpdater.instance) {
+    if (GlobalPriceUpdater.instance === undefined) {
       GlobalPriceUpdater.instance = new GlobalPriceUpdater();
     }
     return GlobalPriceUpdater.instance;
@@ -38,10 +41,10 @@ class GlobalPriceUpdater {
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
       );
-      const data = await response.json();
+      const data = (await response.json()) as CoinGeckoResponse;
 
       const prices = Object.entries(COINGECKO_IDS).reduce((acc, [address, geckoId]) => {
-        acc[address] = data[geckoId]?.usd || 0;
+        acc[address] = data[geckoId]?.usd ?? 0;
         return acc;
       }, {} as Record<string, number>);
 
@@ -72,6 +75,6 @@ export const initializePrices = () => GlobalPriceUpdater.getInstance();
 
 // Helper to get USD value
 export const getUsdValue = (tokenAddress: string, amount: string): number => {
-  const price = usePriceStore.getState().prices[tokenAddress] || 0;
+  const price = usePriceStore.getState().prices[tokenAddress] ?? 0;
   return price * parseFloat(amount || '0');
 };
