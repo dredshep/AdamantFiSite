@@ -3,6 +3,7 @@ import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
 import '@/styles/globals.css';
 import { ApiToken, getApiToken, getApiTokenAddress } from '@/utils/apis/getSwappableTokens';
+import { initializePrices } from '@/utils/price';
 import '@radix-ui/themes/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
@@ -50,6 +51,10 @@ export default function App({ Component, pageProps }: AppProps) {
 
     void fetchTokens();
   }, [setSwappableTokens, initializeTokens]);
+
+  useEffect(() => {
+    initializePrices();
+  }, []);
 
   return (
     <SecretNetworkProvider>
