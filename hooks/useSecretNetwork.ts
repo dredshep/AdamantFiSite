@@ -1,7 +1,7 @@
 import { useSecretNetworkStore } from '@/store/secretNetworkStore';
 import isNotNullish from '@/utils/isNotNullish';
 import { Window } from '@keplr-wallet/types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
@@ -25,6 +25,7 @@ export function useSecretNetwork() {
   } = useSecretNetworkStore();
 
   const [error, setError] = useState<SecretNetworkError | null>(null);
+  const hasShownSuccessToast = useRef(false);
 
   const connectKeplr = useCallback(async () => {
     if (isConnecting || secretjs !== null) {
@@ -43,6 +44,7 @@ export function useSecretNetwork() {
         setError(SecretNetworkError.NO_KEPLR);
         toast.error('Please install Keplr extension', {
           onClick: () => window.open('https://www.keplr.app/download', '_blank'),
+          position: 'bottom-right',
         });
         return;
       }
@@ -57,7 +59,9 @@ export function useSecretNetwork() {
       if (typeof offlineSigner === 'undefined' || offlineSigner === null) {
         console.error('No offline signer found');
         setError(SecretNetworkError.NO_SIGNER);
-        toast.error('Failed to get Keplr signer');
+        toast.error('Failed to get Keplr signer', {
+          position: 'bottom-right',
+        });
         return;
       }
 
@@ -68,7 +72,9 @@ export function useSecretNetwork() {
       if (typeof firstAccount === 'undefined' || accounts.length === 0) {
         console.error('No accounts found');
         setError(SecretNetworkError.NO_ACCOUNTS);
-        toast.error('No Keplr accounts found');
+        toast.error('No Keplr accounts found', {
+          position: 'bottom-right',
+        });
         return;
       }
 
@@ -90,7 +96,9 @@ export function useSecretNetwork() {
       } catch (e) {
         console.error('Failed to verify connection:', e);
         setError(SecretNetworkError.CONNECTION_FAILED);
-        toast.error('Failed to connect to Secret Network');
+        toast.error('Failed to connect to Secret Network', {
+          position: 'bottom-right',
+        });
         return;
       }
 
@@ -98,11 +106,18 @@ export function useSecretNetwork() {
       setWalletAddress(firstAccount.address);
       setSecretjs(client);
 
-      toast.success('Connected to Secret Network');
+      if (!hasShownSuccessToast.current) {
+        toast.success('Connected to Secret Network', {
+          position: 'bottom-right',
+        });
+        hasShownSuccessToast.current = true;
+      }
     } catch (error) {
       console.error('Error connecting to Secret Network:', error);
       setError(SecretNetworkError.CONNECTION_FAILED);
-      toast.error('Failed to connect to Secret Network');
+      toast.error('Failed to connect to Secret Network', {
+        position: 'bottom-right',
+      });
     } finally {
       setIsConnecting(false);
     }

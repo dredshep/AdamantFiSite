@@ -33,7 +33,7 @@ const Navbar: React.FC = () => {
             Swap
           </div>
         </Link>
-        <Link href="/tokens" passHref>
+        {/* <Link href="/tokens" passHref>
           <div
             className={`cursor-pointer text-white pb-1 px-2 ${
               isActive('/tokens')
@@ -43,7 +43,7 @@ const Navbar: React.FC = () => {
           >
             Tokens
           </div>
-        </Link>
+        </Link> */}
         <Link href="/pools" passHref>
           <div
             className={`cursor-pointer text-white pb-1 px-2 ${

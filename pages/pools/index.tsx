@@ -1,4 +1,6 @@
 import AppLayout from '@/components/app/Global/AppLayout';
+import FilterButton from '@/components/app/Pages/Pools/FilterButton';
+import SparklyButton from '@/components/app/Pages/Pools/SparklyButton';
 import {
   FinancialDataRow,
   FinancialTableSearchBar,
@@ -90,35 +92,26 @@ export default function PoolsPage() {
             </Tabs.Root>
 
             <div className="flex flex-col md:flex-row items-center gap-4 select-none">
-              <label className="flex items-center">
-                <div
-                  className={`w-6 h-6 rounded bg-${
-                    stablecoins ? 'blue-500' : 'gray-700'
-                  } cursor-pointer`}
-                  onClick={() => setStablecoins(!stablecoins)}
-                />
-                <span className="ml-2 text-white">Stablecoins</span>
-              </label>
-              <label className="flex items-center">
-                <div
-                  className={`w-6 h-6 rounded bg-${
-                    native ? 'blue-500' : 'gray-700'
-                  } cursor-pointer`}
-                  onClick={() => setNative(!native)}
-                />
-                <span className="ml-2 text-white">Native</span>
-              </label>
-              <label className="flex items-center">
-                <div
-                  className={`w-6 h-6 rounded bg-${
-                    incentivized ? 'blue-500' : 'gray-700'
-                  } cursor-pointer`}
-                  onClick={() => setIncentivized(!incentivized)}
-                />
-                <span className="ml-2 text-white">Incentivized</span>
-              </label>
+              <FilterButton
+                icon="dollar"
+                label="Stablecoins"
+                isActive={stablecoins}
+                onClick={() => setStablecoins(!stablecoins)}
+              />
+              <FilterButton
+                icon="native"
+                label="Native"
+                isActive={native}
+                onClick={() => setNative(!native)}
+              />
+              <SparklyButton
+                isActive={incentivized}
+                onClick={() => setIncentivized(!incentivized)}
+              />
 
-              <FinancialTableSearchBar placeholder="Search" onSearch={setSearchTerm} />
+              <div>
+                <FinancialTableSearchBar placeholder="Search" onSearch={setSearchTerm} />
+              </div>
             </div>
           </div>
           {/* {showAllPools === true && (*/}

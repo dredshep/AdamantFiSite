@@ -1,3 +1,59 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Glittery overlay */
+.sparkle-overlay {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 25%,
+    rgba(234, 179, 8, 0.05) 45%,
+    /* Dimmed yellow (500/50) */ rgba(234, 179, 8, 0.1) 50%,
+    /* Dimmed yellow (500/50) */ rgba(234, 179, 8, 0.05) 55%,
+    /* Dimmed yellow (500/50) */ transparent 75%
+  );
+  animation: glitter 6s infinite linear; /* Slower animation */
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.3; /* Very dim overlay */
+  transition: opacity 0.3s, animation-duration 0.3s;
+}
+
+/* Hover effect for glitter overlay */
+.sparkle-overlay-hover {
+  animation-duration: 2s; /* Faster but not too fast */
+  opacity: 0.8; /* Brighter overlay */
+  background: linear-gradient(
+    45deg,
+    transparent 25%,
+    rgba(253, 224, 71, 0.1) 45%,
+    /* Brighter yellow (300) */ rgba(253, 224, 71, 0.3) 50%,
+    /* Brighter yellow (300) */ rgba(253, 224, 71, 0.1) 55%,
+    /* Brighter yellow (300) */ transparent 75%
+  );
+}
+
+/* Star particle animation */
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0);
+  }
+}
+
+.animate-sparkle {
+  animation: sparkle 2.5s infinite; /* Slower star animation */
+}
