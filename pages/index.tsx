@@ -1,6 +1,9 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
+import { useSecretNetwork } from '@/hooks/useSecretNetwork';
+import { validateIncentives } from '@/lib/keplr/incentives/__tests__/validateIncentives';
 import { Roboto } from 'next/font/google';
+import { useEffect } from 'react';
 // import { useStore } from "@/store/swapStore";
 // import { useTokenStore } from "@/store/tokenStore";
 
@@ -12,6 +15,20 @@ const roboto = Roboto({
 // Then render infoBoxes where you need it in your component tree.
 
 export default function Swap() {
+  const { secretjs } = useSecretNetwork();
+
+  // Only run in development and with a specific flag
+  useEffect(() => {
+    if (
+      secretjs &&
+      process.env.NODE_ENV === 'development' &&
+      process.env['NEXT_PUBLIC_RUN_INCENTIVES_VALIDATION'] === 'true'
+    ) {
+      console.log('Running incentives validation...');
+      validateIncentives(secretjs).catch(console.error);
+    }
+  }, [secretjs]);
+
   // const { tokenInputs } = useStore();
   // const { tokens } = useTokenStore();
   // const receiveTokenAddress = tokenInputs["swap.receive"].tokenAddress;

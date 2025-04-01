@@ -1,46 +1,43 @@
-import { useState, useEffect } from "react";
-import { SecretNetworkClient } from "secretjs";
-import { Window as KeplrWindow } from "@keplr-wallet/types";
-import { queryPools } from "@/utils/secretjs/queryPools";
-import { ContractPool } from "@/types/ContractPool";
-import isNotNullish from "@/utils/isNotNullish";
-import { Window } from "@keplr-wallet/types";
+import { ContractPool } from '@/types/ContractPool';
+import isNotNullish from '@/utils/isNotNullish';
+import { queryPools } from '@/utils/secretjs/pools/queryPools';
+import { Window as KeplrWindow, Window } from '@keplr-wallet/types';
+import { useEffect, useState } from 'react';
+import { SecretNetworkClient } from 'secretjs';
 
 const QueryPools = () => {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [address, setAddress] = useState<string | undefined>("");
+  const [address, setAddress] = useState<string | undefined>('');
   const [pools, setPools] = useState<ContractPool[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const connectKeplr = async () => {
       if (!isNotNullish((window as unknown as Window).keplr)) {
-        alert("Please install Keplr extension");
+        alert('Please install Keplr extension');
         return;
       }
 
-      await (window as unknown as Window).keplr?.enable("secret-4");
+      await (window as unknown as Window).keplr?.enable('secret-4');
 
-      const offlineSigner = (
-        window as unknown as KeplrWindow
-      ).getOfflineSigner?.("secret-4");
+      const offlineSigner = (window as unknown as KeplrWindow).getOfflineSigner?.('secret-4');
       const accounts = await offlineSigner?.getAccounts();
-      if (typeof offlineSigner === "undefined") {
-        setError("No offline signer found");
+      if (typeof offlineSigner === 'undefined') {
+        setError('No offline signer found');
         return;
       }
       if (
-        typeof accounts === "undefined" ||
+        typeof accounts === 'undefined' ||
         accounts.length === 0 ||
-        typeof accounts[0] === "undefined"
+        typeof accounts[0] === 'undefined'
       ) {
-        setError("No accounts found");
+        setError('No accounts found');
         return;
       }
 
       const client = new SecretNetworkClient({
-        chainId: "secret-4",
-        url: "https://rpc.ankr.com/http/scrt_cosmos",
+        chainId: 'secret-4',
+        url: 'https://rpc.ankr.com/http/scrt_cosmos',
         wallet: offlineSigner,
         walletAddress: accounts[0].address,
       });
@@ -55,16 +52,11 @@ const QueryPools = () => {
   const handleQueryPools = async () => {
     if (!secretjs) return;
 
-    const contractAddress = "secret1fz6k6sxlnqwga9q67y9wly6q9hcknddn8alrtg"; // sCRT-sAAVE https://docs.secretswap.net/resources/contract-addresses
-    const contractCodeHash =
-      "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490";
+    const contractAddress = 'secret1fz6k6sxlnqwga9q67y9wly6q9hcknddn8alrtg'; // sCRT-sAAVE https://docs.secretswap.net/resources/contract-addresses
+    const contractCodeHash = '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490';
 
     try {
-      const pools = await queryPools(
-        secretjs,
-        contractAddress,
-        contractCodeHash
-      );
+      const pools = await queryPools(secretjs, contractAddress, contractCodeHash);
       setPools(pools);
     } catch (error) {
       const err = error as Error;
@@ -80,7 +72,7 @@ const QueryPools = () => {
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="p-20">
         <h1 className="text-4xl font-bold">Query Pools</h1>
-        {typeof address !== "undefined" && address.length > 0 ? (
+        {typeof address !== 'undefined' && address.length > 0 ? (
           <div>
             <p className="text-lg">Connected as: {address}</p>
             <button
@@ -95,15 +87,13 @@ const QueryPools = () => {
                 <ul className="mt-2">
                   {pools.map((pool, index) => (
                     <li key={index} className="text-lg">
-                      {"native_token" in pool.info ? (
+                      {'native_token' in pool.info ? (
                         <span>
-                          Native token {pool.info.native_token.denom}:{" "}
-                          {pool.amount}
+                          Native token {pool.info.native_token.denom}: {pool.amount}
                         </span>
                       ) : (
                         <span>
-                          Token contract {pool.info.token.contract_addr}:{" "}
-                          {pool.amount}
+                          Token contract {pool.info.token.contract_addr}: {pool.amount}
                         </span>
                       )}
                     </li>

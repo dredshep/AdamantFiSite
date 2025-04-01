@@ -1,7 +1,7 @@
-import { Window } from "@keplr-wallet/types";
-import { useState, useEffect } from "react";
-import { CreateClientOptions, SecretNetworkClient } from "secretjs";
-import isNotNullish from "../isNotNullish";
+import { Window } from '@keplr-wallet/types';
+import { useEffect, useState } from 'react';
+import { CreateClientOptions, SecretNetworkClient } from 'secretjs';
+import isNotNullish from '../../isNotNullish';
 
 export default function useAllowance() {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
@@ -11,16 +11,16 @@ export default function useAllowance() {
     const main = async () => {
       const keplr = (window as unknown as Window).keplr;
       if (!isNotNullish(keplr)) {
-        setError("Keplr extension not detected.");
+        setError('Keplr extension not detected.');
         return;
       }
-      const chainId = "secret-4"; // Use the correct chain ID for your network
+      const chainId = 'secret-4'; // Use the correct chain ID for your network
       await keplr.enable(chainId);
       const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
       const accounts = await offlineSigner.getAccounts();
       const opts = {
         // mainnet secret network rpc url
-        url: "https://scrt.public-rpc.com",
+        url: 'https://scrt.public-rpc.com',
         chainId,
         wallet: offlineSigner,
       } as CreateClientOptions;

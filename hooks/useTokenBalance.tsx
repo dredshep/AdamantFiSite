@@ -4,7 +4,7 @@ import { TokenService } from '@/services/secret/TokenService';
 import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
 import { SecretString } from '@/types';
 import { getTokenDecimals } from '@/utils/apis/tokenInfo';
-import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
+import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
 import { Keplr, Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -73,7 +73,10 @@ const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
   },
 };
 
-export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetch: boolean = false): TokenBalanceHookReturn {
+export function useTokenBalance(
+  tokenAddress: SecretString | undefined,
+  autoFetch: boolean = false
+): TokenBalanceHookReturn {
   const { secretjs } = useSecretNetworkContext();
   const { setBalance, getBalance, setLoading, setError } = useTokenBalanceStore();
   const [toastShown, setToastShown] = useState<string | null>(null);
@@ -97,12 +100,17 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
   }, [isRejected]);
 
   const fetchBalance = useCallback(async () => {
-    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0 || !secretjs || !tokenService) {
+    if (
+      typeof tokenAddress !== 'string' ||
+      tokenAddress.length === 0 ||
+      !secretjs ||
+      !tokenService
+    ) {
       return;
     }
 
     if (isRejected) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
     setIsRejected(false);
@@ -110,7 +118,7 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
 
     try {
       tokenService.clearRejectedViewingKey(tokenAddress);
-      
+
       const tokenCodeHash = getCodeHashByAddress(tokenAddress);
       const rawAmount = await tokenService.getBalance(tokenAddress, tokenCodeHash);
       const decimals = getTokenDecimals(tokenAddress);
@@ -127,7 +135,7 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
     } catch (err) {
       if (err instanceof Error) {
         console.log('Error caught in useTokenBalance:', err.message);
-        
+
         if (err.message.includes('Viewing key request rejected')) {
           const toastKey = 'viewing-key-rejected';
           if (toastShown !== toastKey) {
@@ -168,11 +176,11 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
       if (toastShown === errorKey) return;
 
       const errorConfig = { ...ERROR_MESSAGES[errorType] };
-      
+
       if (
-        errorType === TokenBalanceError.VIEWING_KEY_REJECTED && 
-        tokenService && 
-        typeof tokenAddress === 'string' && 
+        errorType === TokenBalanceError.VIEWING_KEY_REJECTED &&
+        tokenService &&
+        typeof tokenAddress === 'string' &&
         tokenAddress.length > 0
       ) {
         errorConfig.onAction = () => {
@@ -201,7 +209,12 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
   );
 
   const checkViewingKey = useCallback(async () => {
-    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0 || !secretjs || !tokenService) {
+    if (
+      typeof tokenAddress !== 'string' ||
+      tokenAddress.length === 0 ||
+      !secretjs ||
+      !tokenService
+    ) {
       return;
     }
 
@@ -219,27 +232,27 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
         const viewingKey = await keplr
           .getSecret20ViewingKey('secret-4', tokenAddress)
           .catch(() => null);
-        
+
         if (typeof viewingKey === 'string' && viewingKey.length > 0) {
           // Try to fetch balance with the viewing key
           const tokenCodeHash = getCodeHashByAddress(tokenAddress);
-          const response = await tokenService.getBalance(tokenAddress, tokenCodeHash).catch((err: unknown) => {
-            // Type guard for Error objects
-            if (err instanceof Error) {
-              const errorMessage = err.message;
-              // Explicit string comparison
-              if (
-                typeof errorMessage === 'string' && (
-                  errorMessage.includes('unauthorized') || 
-                  errorMessage.includes('viewing key')
-                )
-              ) {
-                return null;
+          const response = await tokenService
+            .getBalance(tokenAddress, tokenCodeHash)
+            .catch((err: unknown) => {
+              // Type guard for Error objects
+              if (err instanceof Error) {
+                const errorMessage = err.message;
+                // Explicit string comparison
+                if (
+                  typeof errorMessage === 'string' &&
+                  (errorMessage.includes('unauthorized') || errorMessage.includes('viewing key'))
+                ) {
+                  return null;
+                }
               }
-            }
-            throw err; // Re-throw other errors
-          });
-          
+              throw err; // Re-throw other errors
+            });
+
           if (response !== null) {
             void fetchBalance();
           }
@@ -272,12 +285,21 @@ export function useTokenBalance(tokenAddress: SecretString | undefined, autoFetc
         void fetchBalance();
       }
     }, REFRESH_INTERVAL);
-    
+
     return () => clearInterval(interval);
-  }, [tokenService, tokenAddress, secretjs, fetchBalance, isRejected, setError, showErrorToast, autoFetch]);
+  }, [
+    tokenService,
+    tokenAddress,
+    secretjs,
+    fetchBalance,
+    isRejected,
+    setError,
+    showErrorToast,
+    autoFetch,
+  ]);
 
   const currentBalance = getBalance(tokenAddress ?? '');
-  
+
   return {
     amount: currentBalance?.amount ?? null,
     loading: currentBalance?.loading ?? false,

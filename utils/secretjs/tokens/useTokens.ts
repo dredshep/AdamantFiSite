@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { getTableTokens } from "@/utils/apis/getTableTokens";
-import { TableToken } from "@/types";
-import isNotNullish from "../isNotNullish";
-import { Window } from "@keplr-wallet/types";
+import { TableToken } from '@/types';
+import { getTableTokens } from '@/utils/apis/getTableTokens';
+import { Window } from '@keplr-wallet/types';
+import { useEffect, useState } from 'react';
+import isNotNullish from '../../isNotNullish';
 
 export function useTokens(chainId: string) {
   const [tokens, setTokens] = useState<TableToken[]>([]);
@@ -13,7 +13,7 @@ export function useTokens(chainId: string) {
         const tokensData = await getTableTokens();
         setTokens(tokensData);
       } catch (error) {
-        console.error("Failed to fetch tokens:", error);
+        console.error('Failed to fetch tokens:', error);
       }
     }
 
@@ -24,7 +24,7 @@ export function useTokens(chainId: string) {
     async function enableKeplr() {
       const keplr = (window as unknown as Window).keplr;
       if (!isNotNullish(keplr)) {
-        alert("Keplr extension not installed");
+        alert('Keplr extension not installed');
         return;
       }
       await keplr.enable(chainId);

@@ -1,8 +1,7 @@
 import { ExecuteMsg } from '@/types/secretswap/pair';
-import { Asset, ContractInfo, AssetInfo, Token } from '@/types/secretswap/shared';
-import { SecretNetworkClient } from 'secretjs';
-import isNotNullish from '../isNotNullish';
-import { MsgExecuteContract } from 'secretjs';
+import { Asset, AssetInfo, ContractInfo, Token } from '@/types/secretswap/shared';
+import { MsgExecuteContract, SecretNetworkClient } from 'secretjs';
+import isNotNullish from '../../isNotNullish';
 
 // NOTE: Sample inputs
 

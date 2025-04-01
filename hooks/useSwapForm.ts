@@ -7,7 +7,7 @@ import { Hop } from '@/types';
 import { ApiToken, getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import { getTokenDecimals } from '@/utils/apis/tokenInfo';
 import isNotNullish from '@/utils/isNotNullish';
-import { getCodeHashByAddress } from '@/utils/secretjs/getCodeHashByAddress';
+import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
 import { fetchSwappableTokens } from '@/utils/swap';
 import {
   PathEstimation,

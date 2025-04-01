@@ -1,6 +1,6 @@
-import { SecretNetworkClient } from "secretjs";
-import { PoolResponse, QueryMsg } from "@/types/secretswap/pair";
-import isNotNullish from "../isNotNullish";
+import { PoolResponse, QueryMsg } from '@/types/secretswap/pair';
+import { SecretNetworkClient } from 'secretjs';
+import isNotNullish from '../../isNotNullish';
 
 export async function queryPool(
   secretjs: SecretNetworkClient,

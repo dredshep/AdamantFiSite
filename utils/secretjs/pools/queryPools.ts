@@ -1,6 +1,6 @@
-import { SecretNetworkClient } from "secretjs";
-import { ContractPool } from "@/types/ContractPool";
-import isNotNullish from "../isNotNullish";
+import { ContractPool } from '@/types/ContractPool';
+import { SecretNetworkClient } from 'secretjs';
+import isNotNullish from '../../isNotNullish';
 
 export const queryPools = async (
   secretjs: SecretNetworkClient,
@@ -16,10 +16,9 @@ export const queryPools = async (
     if (isNotNullish(contractCodeHash)) {
       code_hash = contractCodeHash;
     } else {
-      const { code_hash: hash } =
-        await secretjs.query.compute.codeHashByContractAddress({
-          contract_address: contractAddress,
-        });
+      const { code_hash: hash } = await secretjs.query.compute.codeHashByContractAddress({
+        contract_address: contractAddress,
+      });
       code_hash = hash;
     }
     const queryResult = await secretjs.query.compute.queryContract<
@@ -40,24 +39,19 @@ export const queryPools = async (
           }
     ); // Update the expected result type accordingly
 
-    console.log(
-      "Query result:",
-      JSON.stringify({ queryResult, code_hash }, null, 2)
-    );
+    console.log('Query result:', JSON.stringify({ queryResult, code_hash }, null, 2));
 
     // If the structure is not known, log the entire result for inspection
-    if (!isNotNullish(queryResult) || typeof queryResult !== "object") {
-      console.error("Unexpected query result format:", queryResult);
+    if (!isNotNullish(queryResult) || typeof queryResult !== 'object') {
+      console.error('Unexpected query result format:', queryResult);
       return [];
     }
 
     // Extract the pools from the query result
-    const pools: ContractPool[] = isNotNullish(queryResult.assets)
-      ? queryResult.assets
-      : [];
+    const pools: ContractPool[] = isNotNullish(queryResult.assets) ? queryResult.assets : [];
     return pools;
   } catch (error) {
-    console.error("Error querying contract:", error);
+    console.error('Error querying contract:', error);
     return [];
   }
 };
