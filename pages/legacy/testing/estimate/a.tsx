@@ -1,4 +1,5 @@
 import AllowanceBox from '@/components/app/Testing/AllowanceBox';
+import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
 import SelectComponent2 from '@/components/app/Testing/SelectComponent2';
 import SwapResult from '@/components/app/Testing/SwapResult';
 import ViewingKeyModal from '@/components/app/Testing/ViewingKeyModal';
@@ -10,7 +11,6 @@ import { Window as KeplrWindow, Window } from '@keplr-wallet/types';
 import Decimal from 'decimal.js';
 import { useEffect, useState } from 'react';
 import { SecretNetworkClient, TxOptions, TxResultCode } from 'secretjs';
-import { fullPoolsData } from '../../../components/app/Testing/fullPoolsData';
 
 interface PoolQueryResponse {
   assets: {

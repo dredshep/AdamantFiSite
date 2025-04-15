@@ -112,19 +112,19 @@ export function useKeplrDiagnostics(autoConnect = true, pollingInterval = 5000) 
     try {
       const result = await connectKeplr();
 
-      if (result.success && result.client && result.address) {
+      if (result.success === true && result.client != null && result.address != null) {
         setState((prevState) => ({
           ...prevState,
-          client: result.client,
-          walletAddress: result.address,
+          client: result.client as SecretNetworkClient,
+          walletAddress: result.address as string,
           isLoading: false,
         }));
 
         // Re-check status after successful connection
         void checkKeplrStatus();
         return { success: true, client: result.client, address: result.address };
-      } else if (result.error) {
-        const error = new Error(result.error.message);
+      } else if (result.error != null) {
+        const error = new Error(result.error.message || 'Unknown error');
         handleError(error);
         setState((prevState) => ({ ...prevState, isLoading: false }));
         return { success: false, error: result.error };

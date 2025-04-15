@@ -1,8 +1,8 @@
+import { queryPoolDetails as addresses } from '@/components/app/Testing/queryPoolDetails';
 import isNotNullish from '@/utils/isNotNullish';
 import { Window as KeplrWindow, Window } from '@keplr-wallet/types';
 import { useEffect, useState } from 'react';
 import { SecretNetworkClient } from 'secretjs';
-import { queryPoolDetails as addresses } from '../../components/app/Testing/queryPoolDetails';
 
 // const addresses = [
 //   {

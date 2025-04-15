@@ -32,11 +32,12 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     // 2. Try to get staked balance (should fail with proper error)
     console.log('\n2. Testing getStakedBalance...');
     try {
-      const balance = await getStakedBalance(
+      const balance = await getStakedBalance({
         secretjs,
-        TESTNET_CONTRACTS.lp_staking,
-        secretjs.address
-      );
+        lpToken: TESTNET_CONTRACTS.lp_staking.address,
+        address: secretjs.address,
+        viewingKey: 'dummy',
+      });
       console.log('Staked balance:', balance);
     } catch (error: unknown) {
       console.log('Expected error (no tokens):', getMessageFromError(error));
@@ -45,7 +46,12 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     // 3. Try to get rewards (should fail with proper error)
     console.log('\n3. Testing getRewards...');
     try {
-      const rewards = await getRewards(secretjs, TESTNET_CONTRACTS.lp_staking, secretjs.address);
+      const rewards = await getRewards({
+        secretjs,
+        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
+        address: secretjs.address,
+        viewingKey: 'dummy',
+      });
       console.log('Rewards:', rewards);
     } catch (error: unknown) {
       console.log('Expected error (no staked tokens):', getMessageFromError(error));
@@ -54,7 +60,12 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     // 4. Try to stake (should fail with proper error)
     console.log('\n4. Testing stakeLP...');
     try {
-      await stakeLP(secretjs, TESTNET_CONTRACTS.lp_staking, TESTNET_CONTRACTS.lp_token, '1000000');
+      await stakeLP({
+        secretjs,
+        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
+        lpTokenContract: TESTNET_CONTRACTS.lp_token,
+        amount: '1000000',
+      });
     } catch (error: unknown) {
       console.log('Expected error (no LP tokens):', getMessageFromError(error));
     }
@@ -62,7 +73,11 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     // 5. Try to unstake (should fail with proper error)
     console.log('\n5. Testing unstakeLP...');
     try {
-      await unstakeLP(secretjs, TESTNET_CONTRACTS.lp_staking, '1000000');
+      await unstakeLP({
+        secretjs,
+        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
+        amount: '1000000',
+      });
     } catch (error: unknown) {
       console.log('Expected error (no staked tokens):', getMessageFromError(error));
     }
@@ -70,7 +85,10 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     // 6. Try to claim rewards (should fail with proper error)
     console.log('\n6. Testing claimRewards...');
     try {
-      await claimRewards(secretjs, TESTNET_CONTRACTS.lp_staking);
+      await claimRewards({
+        secretjs,
+        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
+      });
     } catch (error: unknown) {
       console.log('Expected error (no rewards):', getMessageFromError(error));
     }

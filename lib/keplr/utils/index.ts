@@ -44,8 +44,8 @@ export type KeplrDebugInfo = {
       column?: number | undefined;
       originalLine: string;
     }>;
-    context?: Record<string, any>;
-    [key: string]: any;
+    context?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 };
 
@@ -182,7 +182,8 @@ export async function isKeplrUnlocked(): Promise<boolean> {
   try {
     // Attempt to get key to check if unlocked
     // This will throw an error if locked
-    await window.keplr?.getKey(getSecretNetworkEnvVars().CHAIN_ID);
+    if (!window.keplr) return false;
+    await window.keplr.getKey(getSecretNetworkEnvVars().CHAIN_ID);
     return true;
   } catch (error) {
     const errorMessage = String(error);
@@ -237,7 +238,19 @@ export async function getKeplrStatus(): Promise<{
 
     // Try to get the key for the chain to check if connected
     try {
-      await window.keplr?.getKey(env.CHAIN_ID);
+      if (!window.keplr) {
+        return {
+          installed: true,
+          unlocked: true,
+          connectedToChain: false,
+          chainId: env.CHAIN_ID,
+          error: {
+            type: KeplrErrorType.NOT_INSTALLED,
+            message: 'Keplr extension not found in window object',
+          },
+        };
+      }
+      await window.keplr.getKey(env.CHAIN_ID);
       return {
         installed: true,
         unlocked: true,
@@ -319,19 +332,31 @@ export async function connectKeplr(): Promise<{
       };
     }
 
+    // Safely get the first account address
+    const address = accounts[0]?.address;
+    if (address == null) {
+      return {
+        success: false,
+        error: {
+          type: KeplrErrorType.ACCOUNT_NOT_FOUND,
+          message: 'Invalid account data from Keplr',
+        },
+      };
+    }
+
     // Create SecretJS client
     const client = new SecretNetworkClient({
       chainId: env.CHAIN_ID,
       url: env.LCD_URL,
       wallet: offlineSigner,
-      walletAddress: accounts[0].address,
+      walletAddress: address,
       encryptionUtils: enigmaUtils,
     });
 
     // Test the connection with a simple query
     try {
       await client.query.bank.balance({
-        address: accounts[0].address,
+        address,
         denom: 'uscrt',
       });
     } catch (error) {
@@ -344,7 +369,7 @@ export async function connectKeplr(): Promise<{
     return {
       success: true,
       client,
-      address: accounts[0].address,
+      address,
     };
   } catch (error) {
     // Process any errors that occur during the connection process
@@ -486,7 +511,7 @@ export async function validateKeplrEnvironment(): Promise<{
     let actualChainId: string | undefined;
     const errorString = String(error);
     const chainIdMatch = errorString.match(/chain\s?id[:\s]+([a-zA-Z0-9-]+)/i);
-    if (chainIdMatch && chainIdMatch[1]) {
+    if (chainIdMatch && chainIdMatch[1] != null) {
       actualChainId = chainIdMatch[1];
     }
 
@@ -515,12 +540,14 @@ export function formatKeplrErrorDetails(error: Error): string {
     details += `\nTimestamp: ${debugInfo.timestamp}\n`;
     details += `Browser: ${debugInfo.browserInfo}\n`;
 
-    if (debugInfo.extendedInfo) {
+    if (debugInfo.extendedInfo != null) {
       details += '\nExtended Information:\n';
 
       for (const [key, value] of Object.entries(debugInfo.extendedInfo)) {
         if (key !== 'stackTrace' && key !== 'context' && typeof value !== 'object') {
-          details += `  ${key}: ${value !== undefined ? String(value) : '(not available)'}\n`;
+          details += `  ${key}: ${
+            value !== undefined ? JSON.stringify(value) : '(not available)'
+          }\n`;
         }
       }
 
@@ -533,7 +560,7 @@ export function formatKeplrErrorDetails(error: Error): string {
   }
 
   // Add stack trace at the end
-  if (error.stack) {
+  if (error.stack != null) {
     details += '\nStack Trace:\n';
     details += error.stack;
   }
@@ -545,7 +572,10 @@ export function formatKeplrErrorDetails(error: Error): string {
  * Enhanced error logging for Keplr-related errors
  * Captures detailed error information and attaches it to the error object
  */
-export function enhancedKeplrErrorLogging(error: Error, context: Record<string, any> = {}): Error {
+export function enhancedKeplrErrorLogging(
+  error: Error,
+  context: Record<string, unknown> = {}
+): Error {
   // Skip if already enhanced
   const enhancedError = error as EnhancedKeplrError;
   if (enhancedError.__keplrDebugInfo) {
@@ -570,7 +600,7 @@ export function enhancedKeplrErrorLogging(error: Error, context: Record<string, 
     if (keplrExists && window.keplr) {
       debugInfo.extendedInfo.keplrVersion = window.keplr.version;
     }
-  } catch (e) {
+  } catch (_e) {
     debugInfo.extendedInfo.keplrAvailable = false;
   }
 
@@ -588,17 +618,17 @@ export function enhancedKeplrErrorLogging(error: Error, context: Record<string, 
         if (response.status !== undefined) {
           debugInfo.extendedInfo.responseStatus = response.status;
         }
-        if (response.statusText) {
+        if (response.statusText != null) {
           debugInfo.extendedInfo.responseStatusText = response.statusText;
         }
-      } catch (e) {
+      } catch (_e) {
         // Ignore errors in error extraction
       }
     }
   }
 
   // Parse stack trace for more readable information
-  if (error.stack) {
+  if (error.stack != null) {
     const stackLines = error.stack.split('\n');
     debugInfo.extendedInfo.stackTrace = stackLines.map((line) => {
       // Try to extract function, file and line number
@@ -607,10 +637,10 @@ export function enhancedKeplrErrorLogging(error: Error, context: Record<string, 
       if (parts) {
         const [, functionName, file, lineNum, column] = parts;
         return {
-          function: functionName || undefined,
-          file: file || undefined,
-          line: lineNum ? parseInt(lineNum, 10) : undefined,
-          column: column ? parseInt(column, 10) : undefined,
+          function: functionName != null ? functionName : undefined,
+          file: file != null ? file : undefined,
+          line: lineNum != null ? parseInt(lineNum, 10) : undefined,
+          column: column != null ? parseInt(column, 10) : undefined,
           originalLine: line.trim(),
         };
       }
@@ -643,14 +673,14 @@ export function enhancedKeplrErrorLogging(error: Error, context: Record<string, 
  */
 export function debugKeplrQuery<T>(
   fn: () => Promise<T>,
-  context: Record<string, any> = {}
+  context: Record<string, unknown> = {}
 ): Promise<T> {
   try {
     const promise = fn();
 
     // On success, log in development
     if (process.env.NODE_ENV === 'development') {
-      promise.then(() => {
+      void promise.then(() => {
         console.log('Keplr query completed successfully:', { context });
       });
     }
@@ -675,7 +705,7 @@ export function debugKeplrQuery<T>(
  * Helper function to safely check if a Keplr-related error is of a specific type
  */
 export function isKeplrErrorOfType(error: Error, type: KeplrErrorType): boolean {
-  if (!error || typeof error.message !== 'string') return false;
+  if (error == null || typeof error.message !== 'string' || error.message === '') return false;
 
   const message = error.message.toLowerCase();
 

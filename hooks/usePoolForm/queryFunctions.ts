@@ -1,10 +1,10 @@
-import { SecretString } from "@/types";
-import { queryFactoryPairs } from "@/utils/apis/getFactoryPairs";
-import { queryPool } from "@/utils/apis/getPairPool";
-import { getApiToken } from "@/utils/apis/getSwappableTokens";
-import { getTablePools } from "@/utils/apis/getTablePools";
-import { setupPoolTokens } from "./poolTokens";
-import { PairInfo, PairPoolData, PoolDetails, PoolQueryResult, SelectedPoolType } from "./types";
+import { SecretString } from '@/types';
+import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
+import { queryPool } from '@/utils/apis/getPairPool';
+import { getApiToken } from '@/utils/apis/getSwappableTokens';
+import { getTablePools } from '@/utils/apis/getTablePools';
+import { setupPoolTokens } from './poolTokens';
+import { PairInfo, PairPoolData, PoolDetails, PoolQueryResult, SelectedPoolType } from './types';
 
 export async function fetchPoolData(
   poolAddress: string,
@@ -17,13 +17,13 @@ export async function fetchPoolData(
     getApiToken(),
   ]);
 
-  if (pairData === undefined || typeof pairData !== "object") {
-    throw new Error("Invalid pair data received");
+  if (pairData === undefined || typeof pairData !== 'object') {
+    throw new Error('Invalid pair data received');
   }
 
   const pair = factoryPairs.find((p) => p.contract_addr === poolAddress);
   if (pair) {
-    const isValidPair = pair.asset_infos.every(info => 
+    const isValidPair = pair.asset_infos.every((info) =>
       info.token?.contract_addr?.startsWith('secret1')
     );
 
@@ -34,20 +34,24 @@ export async function fetchPoolData(
 
     const pairInfo = {
       ...pair,
-      asset_infos: pair.asset_infos.map(info => ({
+      asset_infos: pair.asset_infos.map((info) => ({
         token: {
           ...info.token,
-          contract_addr: info.token.contract_addr as SecretString
-        }
-      }))
+          contract_addr: info.token.contract_addr as SecretString,
+        },
+      })),
     } satisfies PairInfo;
 
     setupPoolTokens(pairInfo, tokens, poolAddress, setSelectedPool);
   }
 
-  const poolDetails: PoolDetails[] = poolsData.map(pool => ({
+  if ('error' in poolsData) {
+    throw new Error(poolsData.error);
+  }
+
+  const poolDetails: PoolDetails[] = poolsData.map((pool) => ({
     ...pool,
-    contract_address: pool.contract_address as SecretString
+    contract_address: pool.contract_address as SecretString,
   }));
 
   return {
@@ -57,11 +61,9 @@ export async function fetchPoolData(
   };
 }
 
-export function validatePoolAddress(
-  poolAddress: string | string[] | undefined
-): string {
-  if (typeof poolAddress !== "string") {
-    throw new Error("Invalid pool address");
+export function validatePoolAddress(poolAddress: string | string[] | undefined): string {
+  if (typeof poolAddress !== 'string') {
+    throw new Error('Invalid pool address');
   }
   return poolAddress;
 }

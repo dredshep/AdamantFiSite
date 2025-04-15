@@ -22,7 +22,7 @@ type CoinGeckoResponse = Record<string, { usd: number }>;
 // Global price updater
 class GlobalPriceUpdater {
   private static instance: GlobalPriceUpdater;
-  private intervalId: NodeJS.Timeout | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {
     this.startUpdating();

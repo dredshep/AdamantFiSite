@@ -37,11 +37,11 @@ function DetailedErrorDisplay({ error }: { error: Error | null }): JSX.Element |
 }
 
 // Create a simplified type for the transaction result
-interface TransactionResult {
-  code: number;
-  transactionHash: string;
-  rawLog?: string;
-}
+// interface TransactionResult {
+//   code: number;
+//   transactionHash: string;
+//   rawLog?: string;
+// }
 
 // Try to get Keplr's viewing key with advanced error handling
 const getKeplrViewingKey = async (chainId: string, contractAddress: string): Promise<string> => {
@@ -63,30 +63,30 @@ const getKeplrViewingKey = async (chainId: string, contractAddress: string): Pro
 };
 
 // A function to refresh Keplr connection (to be used after timeout)
-const refreshKeplrConnection = async (chainId: string): Promise<void> => {
-  try {
-    // Attempt to reconnect to Keplr to refresh the viewing key
-    if (window.keplr) {
-      // Disconnect (simulate closing extension)
-      try {
-        await window.keplr.disable(chainId);
-        console.log('Disabled Keplr connection to refresh viewing key');
-      } catch (error) {
-        console.log('Error disabling Keplr:', error);
-      }
+// const refreshKeplrConnection = async (chainId: string): Promise<void> => {
+//   try {
+//     // Attempt to reconnect to Keplr to refresh the viewing key
+//     if (window.keplr) {
+//       // Disconnect (simulate closing extension)
+//       try {
+//         await window.keplr.disable(chainId);
+//         console.log('Disabled Keplr connection to refresh viewing key');
+//       } catch (error) {
+//         console.log('Error disabling Keplr:', error);
+//       }
 
-      // Re-enable to force a refresh of cached data
-      try {
-        await window.keplr.enable(chainId);
-        console.log('Re-enabled Keplr connection to refresh viewing key cache');
-      } catch (error) {
-        console.log('Error re-enabling Keplr:', error);
-      }
-    }
-  } catch (error) {
-    console.log("Error refreshing Keplr's viewing key cache:", error);
-  }
-};
+//       // Re-enable to force a refresh of cached data
+//       try {
+//         await window.keplr.enable(chainId);
+//         console.log('Re-enabled Keplr connection to refresh viewing key cache');
+//       } catch (error) {
+//         console.log('Error re-enabling Keplr:', error);
+//       }
+//     }
+//   } catch (error) {
+//     console.log("Error refreshing Keplr's viewing key cache:", error);
+//   }
+// };
 
 /**
  * Main Incentives Test Component
