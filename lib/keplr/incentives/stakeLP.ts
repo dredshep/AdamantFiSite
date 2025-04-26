@@ -22,46 +22,26 @@ export const stakeLP = async ({
   try {
     console.log(`Staking ${amount} LP tokens to ${lpStakingContract.address}`);
 
-    // Step 1: Increase allowance for the LP token contract
-    const increaseAllowanceMsg = {
-      increase_allowance: {
-        spender: lpStakingContract.address,
+    const sendMsg = {
+      send: {
+        recipient: lpStakingContract.address,
         amount: amount,
+        msg: btoa(
+          JSON.stringify({
+            deposit: {},
+          })
+        ),
       },
     };
 
-    console.log('Increasing allowance for LP token contract', increaseAllowanceMsg);
-
-    const increaseAllowanceTx = await secretjs.tx.compute.executeContract(
-      {
-        sender: secretjs.address,
-        contract_address: lpTokenContract.address,
-        code_hash: lpTokenContract.code_hash,
-        msg: increaseAllowanceMsg,
-        sent_funds: [],
-      },
-      {
-        gasLimit: 100_000,
-      }
-    );
-
-    console.log('Allowance increased successfully', increaseAllowanceTx);
-
-    // Step 2: Stake the LP tokens
-    const stakeMsg = {
-      deposit: {
-        amount: amount,
-      },
-    };
-
-    console.log('Staking LP tokens', stakeMsg);
+    console.log('Staking LP tokens', sendMsg);
 
     const stakeTx = await secretjs.tx.compute.executeContract(
       {
         sender: secretjs.address,
-        contract_address: lpStakingContract.address,
-        code_hash: lpStakingContract.code_hash,
-        msg: stakeMsg,
+        contract_address: lpTokenContract.address,
+        code_hash: lpTokenContract.code_hash,
+        msg: sendMsg,
         sent_funds: [],
       },
       {
