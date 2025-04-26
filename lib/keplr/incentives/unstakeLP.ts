@@ -40,12 +40,7 @@ export const unstakeLP = async ({ secretjs, lpStakingContract, amount }: Unstake
 
     console.log('Unstaking successful', unstakeTx);
 
-    return {
-      transactionHash: unstakeTx.transactionHash,
-      height: unstakeTx.height,
-      gasUsed: unstakeTx.gasUsed,
-      gasWanted: unstakeTx.gasWanted,
-    };
+    return unstakeTx;
   } catch (error) {
     console.error('Error unstaking LP tokens:', error);
     throw error;

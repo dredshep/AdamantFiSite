@@ -71,12 +71,7 @@ export const stakeLP = async ({
 
     console.log('Staking successful', stakeTx);
 
-    return {
-      transactionHash: stakeTx.transactionHash,
-      height: stakeTx.height,
-      gasUsed: stakeTx.gasUsed,
-      gasWanted: stakeTx.gasWanted,
-    };
+    return stakeTx;
   } catch (error) {
     console.error('Error staking LP tokens:', error);
     throw error;

@@ -37,12 +37,7 @@ export const claimRewards = async ({ secretjs, lpStakingContract }: ClaimRewards
 
     console.log('Rewards claimed successfully', claimTx);
 
-    return {
-      transactionHash: claimTx.transactionHash,
-      height: claimTx.height,
-      gasUsed: claimTx.gasUsed,
-      gasWanted: claimTx.gasWanted,
-    };
+    return claimTx;
   } catch (error) {
     console.error('Error claiming rewards:', error);
     throw error;
