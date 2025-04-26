@@ -1,5 +1,7 @@
 import { SecretString } from '@/types';
 import { ApiToken } from '@/utils/apis/getSwappableTokens';
+import { StakingContractInfo } from '@/utils/staking/stakingRegistry';
+import { useStaking } from '../useStaking';
 
 export interface PairPoolData {
   assets: PoolAsset[];
@@ -69,4 +71,11 @@ export interface UsePoolDepositFormResult {
   poolDetails: PoolDetails | undefined;
   pairPoolData: PairPoolData | undefined;
   withdrawEstimate: WithdrawEstimate | null;
+
+  // Staking properties
+  hasStakingRewards: boolean;
+  stakingInfo: StakingContractInfo | null;
+  staking: ReturnType<typeof useStaking> | null;
+  autoStake: boolean;
+  setAutoStake: (autoStake: boolean) => void;
 }

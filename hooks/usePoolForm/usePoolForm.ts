@@ -21,6 +21,8 @@ import type {
   UsePoolDepositFormResult,
   WithdrawEstimate,
 } from './types';
+import { useStaking } from '@/hooks/useStaking';
+import { hasStakingContract, getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
@@ -246,6 +248,33 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     return convertedAmount.toString();
   }
 
+  // ------
+
+  // Check if the pool has a staking contract
+  const validPoolAddress = typeof poolAddress === 'string' ? (poolAddress as SecretString) : null;
+  const hasStaking = isNotNullish(validPoolAddress) ? hasStakingContract(validPoolAddress) : false;
+  const stakingInfo =
+    isNotNullish(validPoolAddress) && hasStaking ? getStakingContractInfo(validPoolAddress) : null;
+
+  // Use the staking hook
+  const staking = useStaking({
+    secretjs,
+    walletAddress,
+    stakingInfo,
+  });
+
+  // Initialize staking when component loads
+  useEffect(() => {
+    if (hasStaking && isNotNullish(staking)) {
+      void staking.initialize();
+    }
+  }, [hasStaking, staking]);
+
+  // Add auto-stake option
+  const [autoStake, setAutoStake] = useState(false);
+
+  // ------
+
   const handleDepositClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
     if (!secretjs) return;
@@ -330,6 +359,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     try {
       setPending(true);
 
+      // TODO: if hasStaking is true, do a combined provideLiquidity + stakeLP transaction
       const result = await provideLiquidity(secretjs, pairContract, asset0, asset1);
 
       setPending(false);
@@ -541,5 +571,12 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     pairPoolData: data?.pairPoolData,
     handleClick,
     withdrawEstimate,
+
+    // Staking properties
+    hasStakingRewards: hasStaking,
+    stakingInfo,
+    staking,
+    autoStake,
+    setAutoStake,
   };
 }
