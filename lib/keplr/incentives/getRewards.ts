@@ -1,16 +1,12 @@
 import { debugKeplrQuery } from '@/lib/keplr/utils';
-import { ContractInfo } from '@/types/secretswap/shared';
+import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { SecretNetworkClient } from 'secretjs';
-
-interface RewardsResponse {
-  pending_rewards: string;
-}
-
-interface QueryErrorResponse {
-  query_error?: {
-    msg: string;
-  };
-}
+import {
+  LPStakingQueryMsg,
+  LPStakingQueryAnswer,
+  isRewardsResponse,
+  isQueryErrorResponse,
+} from '@/types/secretswap/lp-staking';
 
 /**
  * Parameters for getRewards function
@@ -18,8 +14,8 @@ interface QueryErrorResponse {
 export interface GetRewardsParams {
   /** SecretNetworkClient instance */
   secretjs: SecretNetworkClient;
-  /** Staking contract info */
-  lpStakingContract: ContractInfo;
+  /** LP token address */
+  lpToken: string;
   /** Wallet address to check rewards for */
   address: string;
   /** Viewing key for authenticated queries */
@@ -32,7 +28,8 @@ export interface GetRewardsParams {
  * Get the pending rewards for a wallet address using a viewing key
  */
 export async function getRewards(params: GetRewardsParams): Promise<string> {
-  const { secretjs, lpStakingContract, address, viewingKey, height = 1 } = params;
+  // FIXME: height
+  const { secretjs, lpToken, address, viewingKey, height = 1 } = params;
 
   if (secretjs === null) {
     throw new Error('SecretJS client is not available');
@@ -42,55 +39,56 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
     throw new Error('A valid viewing key is required');
   }
 
+  const lpStakingContract = getStakingContractInfo(lpToken);
+  const lpStakingContractAddress = lpStakingContract?.stakingAddress;
+  const lpStakingContractHash = lpStakingContract?.stakingCodeHash;
+
+  if (typeof lpStakingContractAddress !== 'string' || lpStakingContractAddress.trim() === '') {
+    throw new Error('lpStaking contract address is not configured');
+  }
+
+  if (typeof lpStakingContractHash !== 'string' || lpStakingContractHash.trim() === '') {
+    throw new Error('lpStaking contract hash is not configured');
+  }
+
   return debugKeplrQuery(
     async () => {
-      console.log('Querying rewards with viewing key:', {
-        contract_address: lpStakingContract.address,
-        code_hash: lpStakingContract.code_hash,
-        query: {
-          rewards: {
-            address: address,
-            key: viewingKey,
-            height: height,
-          },
+      const rewardsQuery: LPStakingQueryMsg = {
+        rewards: {
+          address: address,
+          key: viewingKey,
+          height: height,
         },
+      };
+
+      console.log('Querying rewards with viewing key:', {
+        contract_address: lpStakingContractAddress,
+        code_hash: lpStakingContractHash,
+        query: rewardsQuery,
       });
 
       try {
-        // Execute authenticated query with viewing key
-        const result = await secretjs.query.compute.queryContract({
-          contract_address: lpStakingContract.address,
-          code_hash: lpStakingContract.code_hash,
-          query: {
-            rewards: {
-              address: address,
-              key: viewingKey,
-              height: height,
-            },
-          },
+        const queryResult = await secretjs.query.compute.queryContract({
+          contract_address: lpStakingContractAddress,
+          code_hash: lpStakingContractHash,
+          query: rewardsQuery,
         });
 
-        console.log('Rewards query result:', result);
+        console.log('Rewards query result:', queryResult);
+
+        const parsedResult = queryResult as LPStakingQueryAnswer;
 
         // Handle different possible response formats
-        if (result !== null && typeof result === 'object') {
-          if ('pending_rewards' in result) {
-            return (result as RewardsResponse).pending_rewards;
-          }
-
-          // Try to find the rewards amount in the response
-          const rewards = Object.values(result).find(
-            (val): val is string => typeof val === 'string'
+        if (isRewardsResponse(parsedResult)) {
+          return parsedResult.rewards.rewards;
+        } else if (isQueryErrorResponse(parsedResult)) {
+          throw new Error(`Query error: ${parsedResult.query_error.msg}`);
+        } else {
+          throw new Error(
+            `Invalid or unexpected response from contract: ${JSON.stringify(queryResult)}`
           );
-          if (rewards !== undefined) {
-            return rewards;
-          }
         }
-
-        // Throw error for unexpected response format
-        throw new Error(`Invalid or unexpected response from contract: ${JSON.stringify(result)}`);
       } catch (error) {
-        // Check if the error is a viewing key error
         if (error instanceof Error) {
           const errorMessage = error.message;
 
@@ -104,18 +102,14 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
           // For other errors, try to parse the response
           if (errorMessage.includes('query_error')) {
             try {
-              const errorData = JSON.parse(
+              const parsedError = JSON.parse(
                 errorMessage.substring(errorMessage.indexOf('{'), errorMessage.lastIndexOf('}') + 1)
-              ) as QueryErrorResponse;
+              ) as LPStakingQueryAnswer;
 
-              if (
-                errorData.query_error &&
-                errorData.query_error.msg &&
-                errorData.query_error.msg.trim() !== ''
-              ) {
-                throw new Error(`Contract query error: ${errorData.query_error.msg}`);
+              if (isQueryErrorResponse(parsedError)) {
+                throw new Error(`Contract query error: ${parsedError.query_error.msg}`);
               }
-            } catch (_) {
+            } catch (_parseError) {
               // If we can't parse it, just throw the original error
               throw error;
             }
@@ -124,7 +118,7 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
           // If we got a 500 error, the contract might not be deployed or accessible
           if (errorMessage.includes('500')) {
             throw new Error(
-              `Contract not accessible at ${lpStakingContract.address}. ` +
+              `Contract not accessible at ${lpStakingContractAddress}. ` +
                 `The contract might not be deployed on this network or the code hash might be incorrect.`
             );
           }
@@ -137,7 +131,7 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
     },
     {
       operation: 'getRewards',
-      contractAddress: lpStakingContract.address,
+      contractAddress: lpStakingContractAddress,
       userAddress: address,
       viewingKey: '[REDACTED]', // Don't log the actual viewing key
     }
