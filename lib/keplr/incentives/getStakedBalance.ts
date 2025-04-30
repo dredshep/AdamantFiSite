@@ -1,15 +1,12 @@
 import { debugKeplrQuery } from '@/lib/keplr/utils';
+import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { SecretNetworkClient } from 'secretjs';
-
-interface GetStakedBalanceResult {
-  staked_amount: string;
-}
-
-interface QueryErrorResponse {
-  query_error?: {
-    msg: string;
-  };
-}
+import {
+  LPStakingQueryMsg,
+  LPStakingQueryAnswer,
+  isBalanceResponse,
+  isQueryErrorResponse,
+} from '@/types/secretswap/lp-staking';
 
 /**
  * Parameters for getStakedBalance function
@@ -39,8 +36,9 @@ export const getStakedBalance = async (params: StakedBalanceParams): Promise<str
     throw new Error('A valid viewing key is required');
   }
 
-  const incentivesContractAddress = process.env['NEXT_PUBLIC_INCENTIVES_CONTRACT_ADDRESS'];
-  const incentivesContractHash = process.env['NEXT_PUBLIC_INCENTIVES_CONTRACT_HASH'];
+  const incentivesContract = getStakingContractInfo(lpToken);
+  const incentivesContractAddress = incentivesContract?.stakingAddress;
+  const incentivesContractHash = incentivesContract?.stakingCodeHash;
 
   if (typeof incentivesContractAddress !== 'string' || incentivesContractAddress.trim() === '') {
     throw new Error('Incentives contract address is not configured');
@@ -53,51 +51,39 @@ export const getStakedBalance = async (params: StakedBalanceParams): Promise<str
   // Use enhanced error handling with debugKeplrQuery
   return debugKeplrQuery(
     async () => {
+      const balanceQuery: LPStakingQueryMsg = {
+        balance: {
+          address: address,
+          key: viewingKey,
+        },
+      };
       console.log('Querying staked balance with viewing key:', {
         contract_address: incentivesContractAddress,
         code_hash: incentivesContractHash,
-        query: {
-          balance: {
-            address: address,
-            key: viewingKey, // Using the provided viewing key
-          },
-        },
+        query: balanceQuery,
       });
 
       try {
-        // Execute authenticated query with viewing key
         const queryResult = await secretjs.query.compute.queryContract({
           contract_address: incentivesContractAddress,
           code_hash: incentivesContractHash,
-          query: {
-            balance: {
-              address: address,
-              key: viewingKey,
-            },
-          },
+          query: balanceQuery,
         });
 
         console.log('Staked balance result:', queryResult);
 
-        // Handle different possible response formats
-        if (queryResult !== null && typeof queryResult === 'object') {
-          if ('staked_amount' in queryResult) {
-            return (queryResult as GetStakedBalanceResult).staked_amount;
-          }
+        const parsedResult = queryResult as LPStakingQueryAnswer;
 
-          // Try to find the staked amount in the response
-          const amount = Object.values(queryResult).find(
-            (val): val is string => typeof val === 'string'
+        if (isBalanceResponse(parsedResult)) {
+          return parsedResult.balance.amount;
+        } else if (isQueryErrorResponse(parsedResult)) {
+          throw new Error(`Query error: ${parsedResult.query_error.msg}`);
+        } else {
+          throw new Error(
+            `Invalid or unexpected response from contract: ${JSON.stringify(queryResult)}`
           );
-          if (amount !== undefined) return amount;
         }
-
-        // Throw error for unexpected response format
-        throw new Error(
-          `Invalid or unexpected response from contract: ${JSON.stringify(queryResult)}`
-        );
       } catch (error) {
-        // Check if the error is a viewing key error
         if (error instanceof Error) {
           const errorMessage = error.message;
 
@@ -111,16 +97,12 @@ export const getStakedBalance = async (params: StakedBalanceParams): Promise<str
           // For other errors, try to parse the response
           if (errorMessage.includes('query_error')) {
             try {
-              const errorData = JSON.parse(
+              const parsedError = JSON.parse(
                 errorMessage.substring(errorMessage.indexOf('{'), errorMessage.lastIndexOf('}') + 1)
-              ) as QueryErrorResponse;
+              ) as LPStakingQueryAnswer;
 
-              if (
-                errorData.query_error &&
-                errorData.query_error.msg &&
-                errorData.query_error.msg.trim() !== ''
-              ) {
-                throw new Error(`Contract query error: ${errorData.query_error.msg}`);
+              if (isQueryErrorResponse(parsedError)) {
+                throw new Error(`Contract query error: ${parsedError.query_error.msg}`);
               }
             } catch (_parseError) {
               // If we can't parse it, just throw the original error

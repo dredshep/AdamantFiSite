@@ -1,4 +1,5 @@
-import { SecretString } from '@/types';
+// I don't think it's worth using this type
+// import { SecretString } from '@/types';
 
 export interface StakingContractInfo {
   lpTokenAddress: string;
@@ -25,7 +26,7 @@ const STAKING_CONTRACTS: Record<string, StakingContractInfo> = {
 /**
  * Checks if a pool has an associated staking contract
  */
-export function hasStakingContract(poolAddress: SecretString): boolean {
+export function hasStakingContract(poolAddress: string): boolean {
   return poolAddress in STAKING_CONTRACTS;
 }
 
@@ -33,6 +34,6 @@ export function hasStakingContract(poolAddress: SecretString): boolean {
  * Gets staking contract information for a pool
  * @returns Staking contract info or null if no staking contract exists
  */
-export function getStakingContractInfo(poolAddress: SecretString): StakingContractInfo | null {
+export function getStakingContractInfo(poolAddress: string): StakingContractInfo | null {
   return STAKING_CONTRACTS[poolAddress] || null;
 }
