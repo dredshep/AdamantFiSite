@@ -45,7 +45,7 @@ export const stakeLP = async ({
         sent_funds: [],
       },
       {
-        gasLimit: 200_000,
+        gasLimit: 500_000,
       }
     );
 
