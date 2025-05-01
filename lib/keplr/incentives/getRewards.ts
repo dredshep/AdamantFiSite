@@ -20,6 +20,8 @@ export interface GetRewardsParams {
   address: string;
   /** Viewing key for authenticated queries */
   viewingKey: string;
+  /** Optional block height for the query (will fetch latest if not provided) */
+  height?: number | string;
 }
 
 /**
@@ -48,16 +50,25 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
     throw new Error('lpStaking contract hash is not configured');
   }
 
-  // Get the latest block height
-  const blockResponse = await secretjs.query.tendermint.getLatestBlock({});
-  const rawHeight = blockResponse.block?.header?.height;
+  // Use provided height or get the latest block height
+  let height: number;
 
-  // Check if height is undefined and return early with an error
-  if (rawHeight === undefined) {
-    throw new Error('Failed to get latest block height');
+  if (params.height !== undefined) {
+    // Use the provided height, ensuring it's a number
+    height = typeof params.height === 'string' ? parseInt(params.height, 10) : params.height;
+  } else {
+    // Get the latest block height
+    const blockResponse = await secretjs.query.tendermint.getLatestBlock({});
+    const rawHeight = blockResponse.block?.header?.height;
+
+    // Return early with an error if height is undefined
+    if (rawHeight === undefined) {
+      throw new Error('Failed to get latest block height');
+    }
+
+    // Parse the height to ensure it's a number
+    height = typeof rawHeight === 'string' ? parseInt(rawHeight, 10) : rawHeight;
   }
-
-  const height = parseInt(rawHeight, 10);
 
   return debugKeplrQuery(
     async () => {
