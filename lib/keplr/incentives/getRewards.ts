@@ -20,15 +20,13 @@ export interface GetRewardsParams {
   address: string;
   /** Viewing key for authenticated queries */
   viewingKey: string;
-  /** The block height used to calculate rewards */
-  height: number;
 }
 
 /**
  * Get the pending rewards for a wallet address using a viewing key
  */
 export async function getRewards(params: GetRewardsParams): Promise<string> {
-  const { secretjs, lpToken, address, viewingKey, height } = params;
+  const { secretjs, lpToken, address, viewingKey } = params;
 
   if (secretjs === null) {
     throw new Error('SecretJS client is not available');
@@ -49,6 +47,17 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
   if (typeof lpStakingContractHash !== 'string' || lpStakingContractHash.trim() === '') {
     throw new Error('lpStaking contract hash is not configured');
   }
+
+  // Get the latest block height
+  const blockResponse = await secretjs.query.tendermint.getLatestBlock({});
+  const rawHeight = blockResponse.block?.header?.height;
+
+  // Check if height is undefined and return early with an error
+  if (rawHeight === undefined) {
+    throw new Error('Failed to get latest block height');
+  }
+
+  const height = parseInt(rawHeight, 10);
 
   return debugKeplrQuery(
     async () => {
