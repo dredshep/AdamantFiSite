@@ -1,9 +1,9 @@
 import { SecretNetworkClient } from 'secretjs';
-import { ContractInfo } from '../common/types';
+import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 
 export interface UnstakeLPParams {
   secretjs: SecretNetworkClient;
-  lpStakingContract: ContractInfo;
+  lpToken: string;
   amount: string;
 }
 
@@ -12,9 +12,31 @@ export interface UnstakeLPParams {
  * @param params Object containing secretjs client, staking contract info, and amount
  * @returns Transaction result
  */
-export const unstakeLP = async ({ secretjs, lpStakingContract, amount }: UnstakeLPParams) => {
+export const unstakeLP = async ({ secretjs, lpToken, amount }: UnstakeLPParams) => {
   try {
-    console.log(`Unstaking ${amount} LP tokens from ${lpStakingContract.address}`);
+    const lpStakingContract = getStakingContractInfo(lpToken);
+    const lpStakingContractAddress = lpStakingContract?.stakingAddress;
+    const lpStakingContractHash = lpStakingContract?.stakingCodeHash;
+    const lpTokenContractAddress = lpStakingContract?.lpTokenAddress;
+    const lpTokenContractHash = lpStakingContract?.lpTokenCodeHash;
+
+    if (typeof lpStakingContractAddress !== 'string' || lpStakingContractAddress.trim() === '') {
+      throw new Error('lpStaking contract address is not configured');
+    }
+
+    if (typeof lpStakingContractHash !== 'string' || lpStakingContractHash.trim() === '') {
+      throw new Error('lpStaking contract hash is not configured');
+    }
+
+    if (typeof lpTokenContractAddress !== 'string' || lpTokenContractAddress.trim() === '') {
+      throw new Error('lpStaking contract hash is not configured');
+    }
+
+    if (typeof lpTokenContractHash !== 'string' || lpTokenContractHash.trim() === '') {
+      throw new Error('lpStaking contract hash is not configured');
+    }
+
+    console.log(`Unstaking ${amount} LP tokens from ${lpStakingContractAddress}`);
 
     // Create the unstake message
     const unstakeMsg = {
@@ -28,13 +50,13 @@ export const unstakeLP = async ({ secretjs, lpStakingContract, amount }: Unstake
     const unstakeTx = await secretjs.tx.compute.executeContract(
       {
         sender: secretjs.address,
-        contract_address: lpStakingContract.address,
-        code_hash: lpStakingContract.code_hash,
+        contract_address: lpStakingContractAddress,
+        code_hash: lpStakingContractHash,
         msg: unstakeMsg,
         sent_funds: [],
       },
       {
-        gasLimit: 200_000,
+        gasLimit: 500_000,
       }
     );
 
