@@ -1,10 +1,9 @@
+import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { SecretNetworkClient } from 'secretjs';
-import { ContractInfo } from '../common/types';
 
 export interface StakeLPParams {
   secretjs: SecretNetworkClient;
-  lpStakingContract: ContractInfo;
-  lpTokenContract: ContractInfo;
+  lpToken: string;
   amount: string;
 }
 
@@ -13,18 +12,35 @@ export interface StakeLPParams {
  * @param params Object containing secretjs client, contracts info, and amount
  * @returns Transaction result
  */
-export const stakeLP = async ({
-  secretjs,
-  lpStakingContract,
-  lpTokenContract,
-  amount,
-}: StakeLPParams) => {
+export const stakeLP = async ({ secretjs, lpToken, amount }: StakeLPParams) => {
   try {
-    console.log(`Staking ${amount} LP tokens to ${lpStakingContract.address}`);
+    const lpStakingContract = getStakingContractInfo(lpToken);
+    const lpStakingContractAddress = lpStakingContract?.stakingAddress;
+    const lpStakingContractHash = lpStakingContract?.stakingCodeHash;
+    const lpTokenContractAddress = lpStakingContract?.lpTokenAddress;
+    const lpTokenContractHash = lpStakingContract?.lpTokenCodeHash;
+
+    if (typeof lpStakingContractAddress !== 'string' || lpStakingContractAddress.trim() === '') {
+      throw new Error('lpStaking contract address is not configured');
+    }
+
+    if (typeof lpStakingContractHash !== 'string' || lpStakingContractHash.trim() === '') {
+      throw new Error('lpStaking contract hash is not configured');
+    }
+
+    if (typeof lpTokenContractAddress !== 'string' || lpTokenContractAddress.trim() === '') {
+      throw new Error('lpStaking contract hash is not configured');
+    }
+
+    if (typeof lpTokenContractHash !== 'string' || lpTokenContractHash.trim() === '') {
+      throw new Error('lpStaking contract hash is not configured');
+    }
+
+    console.log(`Staking ${amount} LP tokens to ${lpStakingContractAddress}`);
 
     const sendMsg = {
       send: {
-        recipient: lpStakingContract.address,
+        recipient: lpStakingContractAddress,
         amount: amount,
         msg: btoa(
           JSON.stringify({
@@ -39,8 +55,8 @@ export const stakeLP = async ({
     const stakeTx = await secretjs.tx.compute.executeContract(
       {
         sender: secretjs.address,
-        contract_address: lpTokenContract.address,
-        code_hash: lpTokenContract.code_hash,
+        contract_address: lpTokenContractAddress,
+        code_hash: lpTokenContractHash,
         msg: sendMsg,
         sent_funds: [],
       },
