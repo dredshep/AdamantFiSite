@@ -20,16 +20,15 @@ export interface GetRewardsParams {
   address: string;
   /** Viewing key for authenticated queries */
   viewingKey: string;
-  /** Current block height (optional, defaults to latest) */
-  height?: number;
+  /** The block height used to calculate rewards */
+  height: number;
 }
 
 /**
  * Get the pending rewards for a wallet address using a viewing key
  */
 export async function getRewards(params: GetRewardsParams): Promise<string> {
-  // FIXME: height
-  const { secretjs, lpToken, address, viewingKey, height = 1 } = params;
+  const { secretjs, lpToken, address, viewingKey, height } = params;
 
   if (secretjs === null) {
     throw new Error('SecretJS client is not available');
