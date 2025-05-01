@@ -4,7 +4,6 @@ import { ContractInfo } from '../common/types';
 export interface ClaimRewardsParams {
   secretjs: SecretNetworkClient;
   lpStakingContract: ContractInfo;
-  amount: string;
 }
 
 /**
@@ -12,13 +11,12 @@ export interface ClaimRewardsParams {
  * @param params Object containing secretjs client and staking contract info
  * @returns Transaction result
  */
-export const claimRewards = async ({ secretjs, lpStakingContract, amount }: ClaimRewardsParams) => {
+export const claimRewards = async ({ secretjs, lpStakingContract }: ClaimRewardsParams) => {
   try {
     console.log(`Claiming rewards from ${lpStakingContract.address}`);
 
-    // Create the claim rewards message
     const claimMsg = {
-      redeem: { amount },
+      redeem: {},
     };
 
     console.log('Claiming rewards', claimMsg);
