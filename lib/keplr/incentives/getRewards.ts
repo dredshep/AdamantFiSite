@@ -30,11 +30,7 @@ export interface GetRewardsParams {
 export async function getRewards(params: GetRewardsParams): Promise<string> {
   const { secretjs, lpToken, address, viewingKey } = params;
 
-  if (secretjs === null) {
-    throw new Error('SecretJS client is not available');
-  }
-
-  if (typeof viewingKey !== 'string' || viewingKey.trim() === '') {
+  if (viewingKey.trim() === '') {
     throw new Error('A valid viewing key is required');
   }
 
