@@ -25,7 +25,7 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
   },
   sharedSettings: {
     slippage: 0.5,
-    gas: 0,
+    gas: 0.25,
   },
   wallet: {
     address: null,
