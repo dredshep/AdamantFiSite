@@ -1,8 +1,10 @@
 import { Breadcrumb } from '@/components/app/Breadcrumb';
 import AppLayout from '@/components/app/Global/AppLayout';
 import DepositForm from '@/components/app/Pages/Pool/DepositForm';
+import StakingForm from '@/components/app/Pages/Pool/StakingForm';
 import WithdrawForm from '@/components/app/Pages/Pool/WithdrawForm';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { SecretString } from '@/types';
@@ -49,6 +51,14 @@ export default function PoolPage() {
   const { pools, loading, error } = usePoolsAndTokens();
   const { setSelectedPool } = usePoolStore();
   const { pool: poolAddress } = router.query;
+
+  // Check if the pool has staking rewards
+  const poolStaking = usePoolStaking(
+    typeof poolAddress === 'string' && poolAddress.startsWith('secret1')
+      ? (poolAddress as SecretString)
+      : null
+  );
+  const { hasStakingRewards } = poolStaking;
 
   // All hooks must be at the top level
   useEffect(() => {
@@ -157,6 +167,17 @@ export default function PoolPage() {
   const symbolA = getApiTokenSymbol(currentPool.token0);
   const symbolB = getApiTokenSymbol(currentPool.token1);
 
+  // Define the tabs to display, conditionally including the staking tab
+  const tabs = [
+    { value: 'deposit', label: 'Deposit' },
+    { value: 'withdraw', label: 'Withdraw' },
+  ];
+
+  // Add staking tab if staking is available for this pool
+  if (hasStakingRewards) {
+    tabs.push({ value: 'staking', label: 'Staking' });
+  }
+
   // Render main content
   return (
     <AppLayout>
@@ -169,10 +190,7 @@ export default function PoolPage() {
           <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto">
             <Tabs.Root className="flex flex-col" defaultValue="deposit">
               <Tabs.List className="flex mb-4 p-2.5 gap-2.5" aria-label="Manage your liquidity">
-                {[
-                  { value: 'deposit', label: 'Deposit' },
-                  { value: 'withdraw', label: 'Withdraw' },
-                ].map(({ value, label }) => (
+                {tabs.map(({ value, label }) => (
                   <Tabs.Trigger
                     key={value}
                     className="flex-1 bg-adamant-app-box-lighter px-4 py-4 rounded-xl text-white/75
@@ -192,6 +210,12 @@ export default function PoolPage() {
               <Tabs.Content value="withdraw" className="outline-none">
                 <WithdrawForm />
               </Tabs.Content>
+
+              {hasStakingRewards && (
+                <Tabs.Content value="staking" className="outline-none">
+                  <StakingForm />
+                </Tabs.Content>
+              )}
             </Tabs.Root>
           </div>
         </div>
