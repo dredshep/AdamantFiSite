@@ -2,7 +2,6 @@
 
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
-import { getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import { sendTokens } from '@/utils/wallet/sendTokens';
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
@@ -89,8 +88,8 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
             >
               <option value="uscrt">SCRT</option>
               {tokens.map((token, index) => (
-                <option key={index} value={getApiTokenAddress(token)}>
-                  {getApiTokenSymbol(token)}
+                <option key={index} value={token.address}>
+                  {token.symbol}
                 </option>
               ))}
             </select>

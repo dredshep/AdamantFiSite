@@ -1,6 +1,5 @@
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
-import { getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import { sendTokens } from '@/utils/wallet/sendTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useState } from 'react';
@@ -84,8 +83,8 @@ export const SendTokensDialog = ({ open, onOpenChange, walletAddress }: SendToke
                 >
                   <option value="uscrt">SCRT</option>
                   {tokens.map((token, index) => (
-                    <option key={index} value={getApiTokenAddress(token)}>
-                      {getApiTokenSymbol(token)}
+                    <option key={index} value={token.address}>
+                      {token.symbol}
                     </option>
                   ))}
                 </select>
