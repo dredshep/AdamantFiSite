@@ -1,4 +1,4 @@
-import { LIQUIDITY_PAIRS, TOKENS, Token } from '@/config/tokens';
+import { ConfigToken, LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { useSwapStore } from '@/store/swapStore';
 import { useTxStore } from '@/store/txStore';
@@ -36,7 +36,7 @@ export const useSwapFormLean = () => {
   const [isEstimating, setIsEstimating] = useState(false);
 
   // Find token details from config
-  function findToken(address: SecretString | undefined): Token | undefined {
+  function findToken(address: SecretString | undefined): ConfigToken | undefined {
     if (address == null) return undefined;
     return TOKENS.find((t) => t.address === address);
   }

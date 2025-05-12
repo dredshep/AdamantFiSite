@@ -1,9 +1,11 @@
 import { SecretString } from '@/types';
 
-export type Token = {
+export type ConfigToken = {
+  name: string;
   symbol: string;
   address: SecretString;
   codeHash: string;
+  decimals: number;
 };
 
 export type LiquidityPair = {
@@ -24,41 +26,55 @@ export type StakingContract = {
   codeHash: string;
 };
 
-export const TOKENS: Token[] = [
+export const TOKENS: ConfigToken[] = [
   {
+    name: 'Secret Secret',
     symbol: 'sSCRT',
     address: 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek',
     codeHash: 'af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e',
+    decimals: 6,
   },
   {
+    name: 'idk',
     symbol: 'sATOM',
     address: 'secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4',
     codeHash: 'ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807',
+    decimals: 6,
   },
   {
+    name: 'Silk Stablecoin',
     symbol: 'SILK',
     address: 'secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
+    decimals: 6,
   },
   {
+    name: 'Secret Axelar WETH',
     symbol: 'ETH.axl',
     address: 'secret139qfh3nmuzfgwsx2npnmnjl4hrvj3xq5rmq8a0',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
+    decimals: 18,
   },
   {
+    name: 'Secret Noble USDC',
     symbol: 'USDC.nbl',
     address: 'secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2',
     codeHash: '5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042',
+    decimals: 6,
   },
   {
+    name: 'Secret Jackal',
     symbol: 'JKL',
     address: 'secret1sgaz455pmtgld6dequqayrdseq8vy2fc48n8y3',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
+    decimals: 6,
   },
   {
+    name: 'bADMT',
     symbol: 'bADMT',
     address: 'secret1cu5gvrvu24hm36fzyq46vca7u25llrymj6ntek',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
+    decimals: 6,
   },
 ];
 
