@@ -8,12 +8,12 @@ import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { SecretString } from '@/types';
-import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+import { getTokenSymbol } from '../../utils/token/tokenInfo';
 
 function NotFoundState() {
   const router = useRouter();
@@ -164,8 +164,8 @@ export default function PoolPage() {
     );
   }
 
-  const symbolA = getApiTokenSymbol(currentPool.token0);
-  const symbolB = getApiTokenSymbol(currentPool.token1);
+  const symbolA = getTokenSymbol(currentPool.token0.address);
+  const symbolB = getTokenSymbol(currentPool.token1.address);
 
   // Define the tabs to display, conditionally including the staking tab
   const tabs = [

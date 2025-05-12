@@ -8,11 +8,11 @@ import {
 } from '@/components/app/Shared/Tables/FinancialTable';
 import TokenDisplay from '@/components/app/Shared/Tables/TokenDisplay';
 import { SecretString, TablePool } from '@/types';
-import { getTablePools } from '@/utils/apis/getTablePools';
-import { validatePools } from '@/utils/apis/isPoolConfigured';
 import * as Tabs from '@radix-ui/react-tabs';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { getTablePools } from '../../utils/apis/getTablePools';
+import { validatePools } from '../../utils/apis/isPoolConfigured';
 
 interface ValidatedPool extends TablePool {
   isValid: boolean;
@@ -29,13 +29,13 @@ export default function PoolsPage() {
   const [incentivized, setIncentivized] = useState(false);
 
   useEffect(() => {
-    const fetchAndValidatePools = async () => {
+    const fetchAndValidatePools = () => {
       try {
-        const poolsData = await getTablePools();
-        if ('error' in poolsData) {
-          throw new Error(poolsData.error);
-        }
-        const validationResults = await validatePools(poolsData);
+        // Get pools from configuration
+        const poolsData = getTablePools();
+
+        // Validate pools
+        const validationResults = validatePools(poolsData);
 
         const validatedPools: ValidatedPool[] = poolsData.map((pool, index) => ({
           ...pool,
@@ -51,7 +51,7 @@ export default function PoolsPage() {
       }
     };
 
-    void fetchAndValidatePools();
+    fetchAndValidatePools();
   }, []);
 
   const filteredPools = pools.filter((pool) => {
