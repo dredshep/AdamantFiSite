@@ -1,12 +1,12 @@
-import { PoolTokenInputs, SecretString, TokenInputState } from "@/types";
-import { Pair } from "@/types/api/Factory";
-import { ApiToken } from "@/utils/apis/getSwappableTokens";
-import { create } from "zustand";
+import { ConfigToken } from '@/config/tokens';
+import { PoolTokenInputs, SecretString, TokenInputState } from '@/types';
+import { Pair } from '@/types/api/Factory';
+import { create } from 'zustand';
 
 interface SelectedPool {
   address: SecretString;
-  token0?: ApiToken;
-  token1?: ApiToken;
+  token0?: ConfigToken;
+  token1?: ConfigToken;
   pairInfo: Pair;
 }
 
@@ -14,25 +14,22 @@ interface PoolStore {
   selectedPool?: SelectedPool;
   tokenInputs: PoolTokenInputs;
   setSelectedPool: (pool: SelectedPool) => void;
-  setTokenInputAmount: (
-    identifier: keyof PoolTokenInputs,
-    amount: string
-  ) => void;
+  setTokenInputAmount: (identifier: keyof PoolTokenInputs, amount: string) => void;
 }
 
 const defaultTokenInputState: TokenInputState = {
-  tokenAddress: "secret1empty",
-  amount: "",
-  balance: "",
+  tokenAddress: 'secret1empty',
+  amount: '',
+  balance: '',
 };
 
 export const usePoolStore = create<PoolStore>((set) => ({
   tokenInputs: {
-    "pool.deposit.tokenA": defaultTokenInputState,
-    "pool.deposit.tokenB": defaultTokenInputState,
-    "pool.withdraw.tokenA": defaultTokenInputState,
-    "pool.withdraw.tokenB": defaultTokenInputState,
-    "pool.withdraw.lpToken": defaultTokenInputState,
+    'pool.deposit.tokenA': defaultTokenInputState,
+    'pool.deposit.tokenB': defaultTokenInputState,
+    'pool.withdraw.tokenA': defaultTokenInputState,
+    'pool.withdraw.tokenB': defaultTokenInputState,
+    'pool.withdraw.lpToken': defaultTokenInputState,
   },
   setSelectedPool: (pool) => set({ selectedPool: pool }),
   setTokenInputAmount: (identifier, amount) =>

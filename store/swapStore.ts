@@ -1,3 +1,4 @@
+import { ConfigToken } from '@/config/tokens';
 import updateState from '@/store/utils/updateState';
 import {
   SecretString,
@@ -7,7 +8,6 @@ import {
   TokenInputState,
   WalletState,
 } from '@/types';
-import { ApiToken } from '@/utils/apis/getSwappableTokens';
 import { create } from 'zustand';
 
 export const useSwapStore = create<SwapStoreState>((set) => ({
@@ -32,7 +32,7 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
     SCRTBalance: '0',
     ADMTBalance: '0',
   } as WalletState,
-  swappableTokens: [] as ApiToken[],
+  swappableTokens: [] as ConfigToken[],
   chainId: 'secret-4',
   connectionRefused: false,
 

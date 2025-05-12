@@ -1,6 +1,5 @@
-import { Token } from "@/types";
-import { getApiTokenSymbol } from "@/utils/apis/getSwappableTokens";
-import { create } from "zustand";
+import { Token } from '@/types';
+import { create } from 'zustand';
 
 interface TokenStoreState {
   tokens: Record<string, Token>;
@@ -17,7 +16,7 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
   setToken: (address, token) => {
     if (address !== token.address) {
       throw new Error(
-        "Token address inconsistency between address used as key and address in token object"
+        'Token address inconsistency between address used as key and address in token object'
       );
     }
     set((state) => ({
@@ -46,10 +45,6 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
 
   getTokenBySymbol: (symbol) => {
     const { tokens } = get();
-    return (
-      Object.values(tokens).find(
-        (token) => getApiTokenSymbol(token) === symbol
-      ) || null
-    );
+    return Object.values(tokens).find((token) => token.symbol === symbol) || null;
   },
 }));
