@@ -1,10 +1,10 @@
 // import { Token } from "@/types/Token";
 // import { WalletState } from "@/types/store/WalletState";
-import { SharedSettings } from "@/types/store/SharedSettings";
-import { SwapTokenInputs } from "@/types/store/TokenInputs";
-import { TokenInputState } from "@/types/store/TokenInputState";
-import { ApiToken } from "@/utils/apis/getSwappableTokens";
-import { SecretString } from "../SecretString";
+import { ConfigToken } from '@/config/tokens';
+import { SharedSettings } from '@/types/store/SharedSettings';
+import { SwapTokenInputs } from '@/types/store/TokenInputs';
+import { TokenInputState } from '@/types/store/TokenInputState';
+import { SecretString } from '../SecretString';
 
 export interface SwapStoreState {
   [key: string]: unknown;
@@ -18,22 +18,19 @@ export interface SwapStoreState {
     // other properties
   };
   chainId: string;
-  swappableTokens: ApiToken[] | null;
+  swappableTokens: ConfigToken[] | null;
   connectionRefused: boolean;
   setTokenInputProperty: <T extends keyof TokenInputState>(
     inputIdentifier: keyof SwapTokenInputs,
     property: T,
     value: TokenInputState[T]
   ) => void;
-  setSharedSetting: <T extends keyof SharedSettings>(
-    setting: T,
-    value: SharedSettings[T]
-  ) => void;
+  setSharedSetting: <T extends keyof SharedSettings>(setting: T, value: SharedSettings[T]) => void;
   connectWallet: (address: SecretString) => void;
   disconnectWallet: () => void;
-  updateBalance: (tokenSymbol: "SCRT" | "ADMT", balance: string) => void;
+  updateBalance: (tokenSymbol: 'SCRT' | 'ADMT', balance: string) => void;
   setChainId: (chainId: string) => void;
-  setSwappableTokens: (tokens: ApiToken[]) => void;
+  setSwappableTokens: (tokens: ConfigToken[]) => void;
   setConnectionRefused: (refused: boolean) => void;
   setSlippage: (slippage: number) => void;
 }

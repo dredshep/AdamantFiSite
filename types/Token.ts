@@ -1,5 +1,5 @@
-import { ApiToken } from "@/utils/apis/getSwappableTokens";
-import { SecretString } from "./SecretString";
+import { ConfigToken } from '@/config/tokens';
+import { SecretString } from './SecretString';
 
 export interface NativeToken {
   symbol: string;
@@ -32,4 +32,4 @@ export interface SwappableToken {
 }
 
 // export type Token = NativeToken | SwappableToken;
-export type Token = ApiToken;
+export type Token = ConfigToken;

@@ -1,9 +1,13 @@
-import { SecretString } from "../SecretString";
+import { ConfigToken } from '@/config/tokens';
+import { SecretString } from '../SecretString';
 
 export interface TokenInfo {
-  contract_addr: string;
+  contract_addr: SecretString;
   token_code_hash: string;
   viewing_key: string;
+  name?: string;
+  symbol?: string;
+  decimals?: number;
 }
 
 interface AssetInfo {
@@ -24,6 +28,8 @@ export interface Pair {
     code_hash: string;
   };
   _id?: string;
+  token0?: ConfigToken;
+  token1?: ConfigToken;
 }
 
 export interface PairsResponse {
