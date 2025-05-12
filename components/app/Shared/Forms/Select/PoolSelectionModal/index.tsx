@@ -1,8 +1,6 @@
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { SecretString } from '@/types';
-import { ApiToken, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import React, { useState } from 'react';
 import TokenSelectionSearchBar from '../TokenSelectionModal/TokenSelectionSearchBar';
@@ -12,21 +10,9 @@ const PoolSelectionModal: React.FC = () => {
   const { pools, loading, error } = usePoolsAndTokens();
   const { setSelectedPool } = usePoolStore();
 
-  const getDisplaySymbol = (token?: ApiToken, address?: string) => {
-    if (token) return getApiTokenSymbol(token);
-    if (address !== undefined) return `${address.slice(-6)}`;
-    return 'Unknown';
-  };
-
   const filteredPools = pools.filter((pool) => {
-    const token0Symbol = getDisplaySymbol(
-      pool.token0,
-      pool.pair.asset_infos[0]!.token?.contract_addr
-    );
-    const token1Symbol = getDisplaySymbol(
-      pool.token1,
-      pool.pair.asset_infos[1]!.token?.contract_addr
-    );
+    const token0Symbol = pool.token0.symbol;
+    const token1Symbol = pool.token1.symbol;
     const searchLower = searchTerm.toLowerCase();
 
     return (
@@ -34,9 +20,6 @@ const PoolSelectionModal: React.FC = () => {
       token1Symbol.toLowerCase().includes(searchLower)
     );
   });
-
-  const isSecret1Address = (addr: string): addr is SecretString => 
-    addr.startsWith('secret1');
 
   return (
     <Dialog.Portal>
@@ -66,18 +49,13 @@ const PoolSelectionModal: React.FC = () => {
                 key={index}
                 className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors"
                 onClick={() => {
-                  if (!isSecret1Address(pool.pair.liquidity_token)) {
-                    console.error('Invalid liquidity token format');
-                    return;
-                  }
-
                   setSelectedPool({
                     address: pool.pair.contract_addr,
                     token0: pool.token0,
                     token1: pool.token1,
                     pairInfo: {
                       ...pool.pair,
-                      liquidity_token: pool.pair.liquidity_token
+                      liquidity_token: pool.pair.liquidity_token,
                     },
                   });
                   const close = document.querySelector(
@@ -89,15 +67,7 @@ const PoolSelectionModal: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">
-                      {getDisplaySymbol(
-                        pool.token0,
-                        pool.pair.asset_infos[0]!.token?.contract_addr
-                      )}{' '}
-                      /{' '}
-                      {getDisplaySymbol(
-                        pool.token1,
-                        pool.pair.asset_infos[1]!.token?.contract_addr
-                      )}
+                      {pool.token0.symbol} / {pool.token1.symbol}
                     </span>
                     <span className="text-sm text-gray-400">
                       {pool.pair.contract_addr.slice(0, 8)}...
