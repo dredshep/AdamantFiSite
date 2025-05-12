@@ -1,7 +1,7 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
-import { validateIncentives } from '@/lib/keplr/incentives/__tests__/validateIncentives';
+// import { validateIncentives } from '@/lib/keplr/incentives/__tests__/validateIncentives';
 import { Roboto } from 'next/font/google';
 import { useEffect } from 'react';
 // import { useStore } from "@/store/swapStore";
@@ -25,7 +25,8 @@ export default function Swap() {
       process.env['NEXT_PUBLIC_RUN_INCENTIVES_VALIDATION'] === 'true'
     ) {
       console.log('Running incentives validation...');
-      validateIncentives(secretjs).catch(console.error);
+      // validateIncentives(secretjs).catch(console.error);
+      console.log('Incentives validation disabled - module not found');
     }
   }, [secretjs]);
 
