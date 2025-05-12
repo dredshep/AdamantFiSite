@@ -1,39 +1,19 @@
+import { ConfigToken, TOKENS } from '@/config/tokens';
 import { SecretString } from '@/types';
 import { Pair } from '@/types/api/Factory';
 import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
-import { ApiToken, getApiToken, getTokenFromAddress } from '@/utils/apis/getSwappableTokens';
 import { useEffect, useState } from 'react';
 
 interface PoolInfo {
   pair: Pair;
-  token0: Token0Class;
-  token1: Token0Class;
+  token0: ConfigToken;
+  token1: ConfigToken;
 }
 
-interface Token0Class {
-  dst_network: DstNetwork;
-  decimals: number;
-  name: string;
-  display_props: DisplayProps;
-  price: string;
-  _id: string;
-  address: SecretString;
-  usage: Usage[];
-}
-
-interface DisplayProps {
-  symbol: string;
-  image: string;
-  label: string;
-}
-
-enum DstNetwork {
-  Secret = 'Secret',
-}
-
-enum Usage {
-  Swap = 'SWAP',
-}
+// Helper function to get token from address using our TOKENS config
+const getConfigTokenFromAddress = (address: SecretString): ConfigToken | undefined => {
+  return TOKENS.find((token) => token.address === address);
+};
 
 export function usePoolsAndTokens() {
   const [pools, setPools] = useState<PoolInfo[]>([]);
@@ -44,10 +24,8 @@ export function usePoolsAndTokens() {
     const fetchPoolsAndTokens = async () => {
       try {
         setLoading(true);
-        const [pairs]: [Pair[], ApiToken[]] = await Promise.all([
-          queryFactoryPairs(),
-          getApiToken(),
-        ]);
+        // Only fetch pairs, we already have tokens from config
+        const pairs = await queryFactoryPairs();
 
         const poolsWithTokenInfo = pairs
           .map((pair) => {
@@ -61,10 +39,23 @@ export function usePoolsAndTokens() {
                 return null;
               }
 
+              const token0 = getConfigTokenFromAddress(token0Address);
+              const token1 = getConfigTokenFromAddress(token1Address);
+
+              if (!token0 || !token1) {
+                console.warn('Token not found in config:', {
+                  token0Address,
+                  token1Address,
+                  token0Found: token0 !== undefined,
+                  token1Found: token1 !== undefined,
+                });
+                return null;
+              }
+
               return {
                 pair,
-                token0: getTokenFromAddress(token0Address as SecretString),
-                token1: getTokenFromAddress(token1Address as SecretString),
+                token0,
+                token1,
               };
             }
             return null;
