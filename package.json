@@ -15,7 +15,8 @@
     "lint-full": "pnpm run lint && pnpm run type-check",
     "lint-and-open": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
     "lint-and-open:cursor": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js cursor",
-    "lint-and-open:code": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js code"
+    "lint-and-open:code": "pnpm run type-check > type-errors.txt 2>&1 && node scripts/openErrors.js code",
+    "unused": "bun x ts-unused-exports tsconfig.json --excludePathsFromReport=\".next;node_modules;pages;tailwind.config.ts\""
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.3",
@@ -48,6 +49,7 @@
     "cmdk": "^1.0.0",
     "decimal.js": "^10.4.3",
     "eslint": "8",
+    "framer-motion": "^12.9.4",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.362.0",
     "marked": "^12.0.2",
@@ -84,5 +86,15 @@
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.4"
   },
-  "packageManager": "pnpm@9.14.2"
+  "packageManager": "pnpm@9.14.2",
+  "unusedExports": {
+    "include": [
+      "**/*.ts",
+      "**/*.tsx"
+    ],
+    "exclude": [
+      "./node_modules",
+      "./pages"
+    ]
+  }
 }
