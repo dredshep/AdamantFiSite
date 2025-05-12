@@ -48,7 +48,7 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     try {
       const rewards = await getRewards({
         secretjs,
-        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
+        lpToken: TESTNET_CONTRACTS.lp_token.address,
         address: secretjs.address,
         viewingKey: 'dummy',
       });
@@ -62,8 +62,7 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     try {
       await stakeLP({
         secretjs,
-        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
-        lpTokenContract: TESTNET_CONTRACTS.lp_token,
+        lpToken: TESTNET_CONTRACTS.lp_token.address,
         amount: '1000000',
       });
     } catch (error: unknown) {
@@ -75,7 +74,7 @@ export async function validateIncentives(secretjs: SecretNetworkClient) {
     try {
       await unstakeLP({
         secretjs,
-        lpStakingContract: TESTNET_CONTRACTS.lp_staking,
+        lpToken: TESTNET_CONTRACTS.lp_token.address,
         amount: '1000000',
       });
     } catch (error: unknown) {

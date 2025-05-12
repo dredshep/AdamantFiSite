@@ -1,18 +1,18 @@
-import { useState, useCallback } from 'react';
-import { SecretNetworkClient } from 'secretjs';
-import { toast } from 'react-toastify';
+import { ContractInfo } from '@/lib/keplr/common/types';
 import {
-  getStakedBalance,
+  claimRewards,
   getRewards,
+  getStakedBalance,
   stakeLP,
   unstakeLP,
-  claimRewards,
 } from '@/lib/keplr/incentives';
-import { ContractInfo } from '@/lib/keplr/common/types';
 import { useTxStore } from '@/store/txStore';
 import isNotNullish from '@/utils/isNotNullish';
+import { useCallback, useState } from 'react';
+import { toast } from 'react-toastify';
+import { SecretNetworkClient } from 'secretjs';
 
-export interface StakingContractInfo {
+interface StakingContractInfo {
   lpTokenAddress: string;
   lpTokenCodeHash: string;
   stakingAddress: string;
@@ -20,7 +20,7 @@ export interface StakingContractInfo {
   rewardTokenSymbol: string;
 }
 
-export interface UseStakingParams {
+interface UseStakingParams {
   secretjs: SecretNetworkClient | null;
   walletAddress: string | null;
   stakingInfo: StakingContractInfo | null;
@@ -82,10 +82,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
     try {
       const rewards = await getRewards({
         secretjs,
-        lpStakingContract: {
-          address: stakingInfo.stakingAddress,
-          code_hash: stakingInfo.stakingCodeHash,
-        },
+        lpToken: stakingInfo.lpTokenAddress,
         address: walletAddress,
         viewingKey,
       });
@@ -115,15 +112,14 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
           code_hash: stakingInfo.lpTokenCodeHash,
         };
 
-        const stakingContract: ContractInfo = {
-          address: stakingInfo.stakingAddress,
-          code_hash: stakingInfo.stakingCodeHash,
-        };
+        // const stakingContract: ContractInfo = {
+        //   address: stakingInfo.stakingAddress,
+        //   code_hash: stakingInfo.stakingCodeHash,
+        // };
 
         const result = await stakeLP({
           secretjs,
-          lpStakingContract: stakingContract,
-          lpTokenContract: lpTokenContract,
+          lpToken: lpTokenContract.address,
           amount,
         });
 
@@ -162,14 +158,14 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
       setPending(true);
 
       try {
-        const stakingContract: ContractInfo = {
-          address: stakingInfo.stakingAddress,
-          code_hash: stakingInfo.stakingCodeHash,
-        };
+        // const stakingContract: ContractInfo = {
+        //   address: stakingInfo.stakingAddress,
+        //   code_hash: stakingInfo.stakingCodeHash,
+        // };
 
         const result = await unstakeLP({
           secretjs,
-          lpStakingContract: stakingContract,
+          lpToken: stakingInfo.lpTokenAddress,
           amount,
         });
 
@@ -216,7 +212,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         secretjs,
         lpStakingContract: stakingContract,
         // FIXME: use an actual amount here, but from where?
-        amount: '0',
+        // amount: '0',
       });
 
       setResult(result);
