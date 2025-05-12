@@ -1,5 +1,6 @@
+import { FACTORY, TOKENS } from '@/config/tokens';
 import { Pair, PairsResponse } from '@/types/api/Factory';
-import { SecretNetworkClient } from 'secretjs';
+import { secretClient } from '../secretClient';
 
 let cachedPairs: Pair[] | null = null;
 let cacheTimestamp: number | null = null;
@@ -8,12 +9,6 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Request debouncing - holds the in-flight promise if there is one
 let currentRequest: Promise<Pair[]> | null = null;
 
-// TODO: have a single client somewhere to import instead.
-const secretjs = new SecretNetworkClient({
-  url: 'https://rpc.ankr.com/http/scrt_cosmos',
-  chainId: 'secret-4',
-});
-
 // Original implementation kept intact
 async function _queryFactoryPairs() {
   if (cachedPairs && cacheTimestamp !== null && Date.now() - cacheTimestamp < CACHE_DURATION) {
@@ -21,19 +16,42 @@ async function _queryFactoryPairs() {
     return cachedPairs;
   }
 
-  // FIXME: hardcoded address
-  const { pairs }: PairsResponse = await secretjs.query.compute.queryContract({
-    contract_address: 'secret1tvzu9v3jvh4yvprxntatp9hg06kmdev40g5fna',
-    code_hash: '16ea6dca596d2e5e6eef41df6dc26a1368adaa238aa93f07959841e7968c51bd',
+  const { pairs }: PairsResponse = await secretClient.query.compute.queryContract({
+    contract_address: FACTORY.contract_address,
+    code_hash: FACTORY.code_hash,
     query: { pairs: { limit: 100 } },
   });
 
   console.log(`Got ${pairs.length} pairs.`);
 
-  cachedPairs = pairs;
+  // Enrich pairs with token information from our config
+  const enrichedPairs = pairs.map((pair) => {
+    const token0Address = pair.asset_infos[0]?.token?.contract_addr;
+    const token1Address = pair.asset_infos[1]?.token?.contract_addr;
+
+    let token0;
+    let token1;
+
+    if (token0Address !== undefined && token0Address.length > 0) {
+      token0 = TOKENS.find((token) => token.address === token0Address);
+    }
+
+    if (token1Address !== undefined && token1Address.length > 0) {
+      token1 = TOKENS.find((token) => token.address === token1Address);
+    }
+
+    // Add token information to the pair
+    return {
+      ...pair,
+      token0,
+      token1,
+    } as Pair; // Cast to Pair to ensure type compatibility
+  });
+
+  cachedPairs = enrichedPairs;
   cacheTimestamp = Date.now();
 
-  return pairs;
+  return enrichedPairs;
 }
 
 // Resilient wrapper for handling RPC connection issues
