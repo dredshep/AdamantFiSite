@@ -1,5 +1,5 @@
 import TokenInputBase from '@/components/app/Shared/Forms/Input/TokenInputBase';
-import { usePoolForm } from '@/hooks/usePoolForm';
+import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';

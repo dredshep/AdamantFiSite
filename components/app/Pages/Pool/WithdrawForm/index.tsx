@@ -1,7 +1,7 @@
 import FormButton from '@/components/app/Shared/Forms/FormButton';
 import PoolTokenInput from '@/components/app/Shared/Forms/Input/PoolTokenInput';
 import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
-import { usePoolForm } from '@/hooks/usePoolForm';
+import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -65,7 +65,9 @@ const WithdrawForm: React.FC = () => {
         <PoolTokenInput
           poolInputIdentifier="pool.withdraw.lpToken"
           token={{
-            symbol: `${getApiTokenSymbol(selectedPool.token0!)} / ${getApiTokenSymbol(selectedPool.token1!)} LP`,
+            symbol: `${getApiTokenSymbol(selectedPool.token0!)} / ${getApiTokenSymbol(
+              selectedPool.token1!
+            )} LP`,
             address: selectedPool.pairInfo.liquidity_token,
           }}
           label="Withdraw LP Tokens"
