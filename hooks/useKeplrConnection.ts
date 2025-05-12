@@ -1,6 +1,6 @@
 import isNotNullish from '@/utils/isNotNullish';
 import { Window } from '@keplr-wallet/types';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
@@ -10,50 +10,54 @@ export function useKeplrConnection(
 ) {
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [currentChainId, setCurrentChainId] = useState<string>(chainId);
 
-  useEffect(() => {
-    async function connect() {
-      const keplr = (window as unknown as Window).keplr;
-      if (!isNotNullish(keplr)) {
-        toast.error('Please install Keplr extension');
-        return;
-      }
-
-      try {
-        await keplr.enable(chainId);
-
-        const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
-        const enigmaUtils = keplr.getEnigmaUtils(chainId);
-        const accounts = await offlineSigner?.getAccounts();
-
-        if (!accounts?.length || !accounts[0]) {
-          toast.error('No accounts found');
-          return;
-        }
-
-        if (offlineSigner === undefined) {
-          toast.error('No offline signer found');
-          return;
-        }
-
-        const client = new SecretNetworkClient({
-          chainId,
-          url: rpcUrl,
-          wallet: offlineSigner,
-          walletAddress: accounts[0].address,
-          encryptionUtils: enigmaUtils,
-        });
-
-        setWalletAddress(accounts[0].address);
-        setSecretjs(client);
-      } catch (error) {
-        console.error('Error connecting to Keplr:', error);
-        toast.error('Failed to connect to Keplr');
-      }
+  const connect = useCallback(async () => {
+    const keplr = (window as unknown as Window).keplr;
+    if (!isNotNullish(keplr)) {
+      toast.error('Please install Keplr extension');
+      return null;
     }
 
-    void connect();
+    try {
+      await keplr.enable(chainId);
+
+      const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
+      const enigmaUtils = keplr.getEnigmaUtils(chainId);
+      const accounts = await offlineSigner?.getAccounts();
+
+      if (!accounts?.length || !accounts[0]) {
+        toast.error('No accounts found');
+        return null;
+      }
+
+      if (offlineSigner === undefined) {
+        toast.error('No offline signer found');
+        return null;
+      }
+
+      const client = new SecretNetworkClient({
+        chainId,
+        url: rpcUrl,
+        wallet: offlineSigner,
+        walletAddress: accounts[0].address,
+        encryptionUtils: enigmaUtils,
+      });
+
+      setWalletAddress(accounts[0].address);
+      setSecretjs(client);
+      setCurrentChainId(chainId);
+      return client;
+    } catch (error) {
+      console.error('Error connecting to Keplr:', error);
+      toast.error('Failed to connect to Keplr');
+      return null;
+    }
   }, [chainId, rpcUrl]);
 
-  return { secretjs, walletAddress };
+  useEffect(() => {
+    void connect();
+  }, [connect]);
+
+  return { secretjs, walletAddress, chainId: currentChainId, connect };
 }
