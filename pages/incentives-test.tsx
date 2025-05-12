@@ -103,6 +103,7 @@ export default function IncentivesTest(): JSX.Element {
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
   const [network, setNetwork] = useState<string>('');
   const [viewingKeyMessage, setViewingKeyMessage] = useState<string | null>(null);
+  const [contractExistsResult, setContractExistsResult] = useState<string | null>(null);
 
   const setLoadingState = (operation: string, loading: boolean): void => {
     setIsLoading((prev) => ({ ...prev, [operation]: loading }));
@@ -301,7 +302,7 @@ export default function IncentivesTest(): JSX.Element {
 
       const rewards = await getRewards({
         secretjs,
-        lpStakingContract: stakeContract,
+        lpToken: stakeContract.address,
         address: wallet,
         viewingKey,
         height: 1, // Current block height, could be fetched from chain
@@ -340,10 +341,10 @@ export default function IncentivesTest(): JSX.Element {
       const amount = '1000'; // Small amount for testing
 
       // Create contract info objects that match the expected types
-      const stakeContract = {
-        address: contractInfo.address,
-        code_hash: contractInfo.code_hash,
-      };
+      // const stakeContract = {
+      //   address: contractInfo.address,
+      //   code_hash: contractInfo.code_hash,
+      // };
 
       // For testing, use the actual LP token from our documentation
       // This should be replaced with an actual LP token in production
@@ -354,8 +355,7 @@ export default function IncentivesTest(): JSX.Element {
 
       const result = await stakeLP({
         secretjs,
-        lpStakingContract: stakeContract,
-        lpTokenContract,
+        lpToken: lpTokenContract.address,
         amount,
       });
 
@@ -397,7 +397,7 @@ export default function IncentivesTest(): JSX.Element {
 
       const result = await unstakeLP({
         secretjs,
-        lpStakingContract: stakeContract,
+        lpToken: stakeContract.address,
         amount,
       });
 
@@ -499,6 +499,52 @@ export default function IncentivesTest(): JSX.Element {
     void registerToken();
   };
 
+  // Test if the incentives contract exists without token registration
+  const testContractExists = async (): Promise<void> => {
+    if (secretjs === null || wallet === null || wallet === '') {
+      setLastError(new Error('Please connect to Keplr first'));
+      return;
+    }
+
+    try {
+      setLoadingState('testContract', true);
+      setLastError(null);
+
+      const contractInfo = getIncentivesContractInfo();
+
+      // Use the secretjs client to query contract info
+      // This doesn't require token registration or viewing keys
+      try {
+        const queryResult = await secretjs.query.compute.codeHashByContractAddress({
+          contract_address: contractInfo.address,
+        });
+
+        // Check if code_hash exists and is not empty
+        const codeHash = queryResult?.code_hash;
+        if (codeHash != null && typeof codeHash === 'string' && codeHash.length > 0) {
+          console.log('Contract exists!', queryResult);
+          setContractExistsResult(`Contract exists! Code hash: ${codeHash}`);
+        } else {
+          setContractExistsResult('Contract exists but no code hash returned');
+        }
+      } catch (queryErr) {
+        console.error('Error querying contract:', queryErr);
+        setContractExistsResult('Contract not found or error querying contract');
+      }
+    } catch (err) {
+      const error = handleError(err, 'Test Contract');
+      setLastError(error);
+      setContractExistsResult('Contract query failed');
+    } finally {
+      setLoadingState('testContract', false);
+    }
+  };
+
+  // Handler for onClick that doesn't return a Promise
+  const handleTestContract = (): void => {
+    void testContractExists();
+  };
+
   // Handle viewing key creation success
   const handleViewingKeySuccess = (txHash: string): void => {
     setViewingKeyMessage(`Viewing key created successfully! Transaction hash: ${txHash}`);
@@ -551,6 +597,14 @@ export default function IncentivesTest(): JSX.Element {
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors disabled:bg-gray-700 disabled:text-gray-500"
             >
               {isOperationLoading('connect') ? 'Connecting...' : 'Connect to Keplr'}
+            </button>
+
+            <button
+              onClick={handleTestContract}
+              disabled={isOperationLoading('testContract') || walletDisplay === null}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors disabled:bg-gray-700 disabled:text-gray-500"
+            >
+              {isOperationLoading('testContract') ? 'Testing...' : 'Test Contract Exists'}
             </button>
 
             <button
@@ -773,6 +827,20 @@ Rewards Query: { "rewards": { "address": "<wallet>", "key": "<viewing_key>", "he
             </ul>
           </div>
         </div>
+
+        {/* Display contract exists result only when it has a value */}
+        {contractExistsResult !== null && contractExistsResult.length > 0 && (
+          <div className="mt-4 p-3 bg-gray-900 rounded border border-gray-700">
+            <span className="font-medium">Contract Check Result: </span>
+            <span
+              className={
+                contractExistsResult.indexOf('exists') >= 0 ? 'text-green-400' : 'text-amber-400'
+              }
+            >
+              {contractExistsResult}
+            </span>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
