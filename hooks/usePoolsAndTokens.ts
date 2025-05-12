@@ -4,13 +4,13 @@ import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
 import { ApiToken, getApiToken, getTokenFromAddress } from '@/utils/apis/getSwappableTokens';
 import { useEffect, useState } from 'react';
 
-export interface PoolInfo {
+interface PoolInfo {
   pair: Pair;
   token0: Token0Class;
   token1: Token0Class;
 }
 
-export interface Token0Class {
+interface Token0Class {
   dst_network: DstNetwork;
   decimals: number;
   name: string;
@@ -21,17 +21,17 @@ export interface Token0Class {
   usage: Usage[];
 }
 
-export interface DisplayProps {
+interface DisplayProps {
   symbol: string;
   image: string;
   label: string;
 }
 
-export enum DstNetwork {
+enum DstNetwork {
   Secret = 'Secret',
 }
 
-export enum Usage {
+enum Usage {
   Swap = 'SWAP',
 }
 
