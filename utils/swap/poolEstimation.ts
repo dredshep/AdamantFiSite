@@ -1,5 +1,5 @@
+import { ConfigToken } from '@/config/tokens';
 import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
-import { ApiToken } from '@/utils/apis/getSwappableTokens';
 import Decimal from 'decimal.js';
 import { SecretNetworkClient } from 'secretjs';
 
@@ -85,8 +85,8 @@ interface SwapEstimation {
 export async function estimateSwapOutput(
   secretjs: SecretNetworkClient,
   _poolAddress: string,
-  payToken: ApiToken,
-  receiveToken: ApiToken,
+  payToken: ConfigToken,
+  receiveToken: ConfigToken,
   amountIn: string
 ): Promise<SwapEstimation> {
   try {
@@ -95,11 +95,23 @@ export async function estimateSwapOutput(
 
     if (
       typeof payTokenAddress !== 'string' ||
-      payTokenAddress === '' ||
+      !payTokenAddress ||
       typeof receiveTokenAddress !== 'string' ||
-      receiveTokenAddress === ''
+      !receiveTokenAddress
     ) {
       throw new Error('Token addresses not properly initialized');
+    }
+
+    // Get token code hashes directly from the ConfigToken objects
+    const payTokenCodeHash = payToken.codeHash;
+    const receiveTokenCodeHash = receiveToken.codeHash;
+
+    if (!payTokenCodeHash) {
+      throw new Error(`Code hash not found for pay token: ${payTokenAddress}`);
+    }
+
+    if (!receiveTokenCodeHash) {
+      throw new Error(`Code hash not found for receive token: ${receiveTokenAddress}`);
     }
 
     // Get all pairs from factory
@@ -152,7 +164,7 @@ export async function estimateSwapOutput(
     poolResponse.assets.forEach((asset, index) => {
       const assetInfo = response.asset_infos[index];
       const contractAddr = assetInfo?.token?.contract_addr;
-      if (typeof contractAddr !== 'string' || contractAddr === '') {
+      if (typeof contractAddr !== 'string' || !contractAddr) {
         throw new Error(`Invalid asset info at index ${index}`);
       }
       const tokenAddr = contractAddr;
