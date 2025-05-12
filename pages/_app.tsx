@@ -1,9 +1,8 @@
+import { ConfigToken, TOKENS } from '@/config/tokens';
 import { SecretNetworkProvider } from '@/contexts/SecretNetworkContext';
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
 import '@/styles/globals.css';
-import { ApiToken, getApiToken, getApiTokenAddress } from '@/utils/apis/getSwappableTokens';
-import { initializePrices } from '@/utils/price';
 import '@radix-ui/themes/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
@@ -33,27 +32,20 @@ export default function App({ Component, pageProps }: AppProps) {
   );
 
   useEffect(() => {
-    const fetchTokens = async () => {
-      const apiTokens = await getApiToken();
-      console.log('Fetched API tokens:', apiTokens);
+    // Initialize tokens from the config file
+    setSwappableTokens(TOKENS);
 
-      setSwappableTokens(apiTokens);
+    // Create an indexed version of tokens for the token store
+    const indexedTokens = TOKENS.reduce((acc: Record<string, ConfigToken>, token: ConfigToken) => {
+      acc[token.address] = token;
+      return acc;
+    }, {});
 
-      const indexedTokens = apiTokens.reduce((acc: Record<string, ApiToken>, token) => {
-        const address = getApiTokenAddress(token);
-        acc[address] = token;
-        return acc;
-      }, {});
-      console.log('Indexed tokens for store:', indexedTokens);
-
-      initializeTokens(indexedTokens);
-    };
-
-    void fetchTokens();
+    initializeTokens(indexedTokens);
   }, [setSwappableTokens, initializeTokens]);
 
   useEffect(() => {
-    initializePrices();
+    // Removed initializePrices call since it's not available
   }, []);
 
   return (
