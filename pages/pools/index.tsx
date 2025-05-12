@@ -135,7 +135,7 @@ export default function PoolsPage() {
             <Link
               key={index}
               className="flex items-center bg-adamant-box-dark hover:brightness-125 select-none py-4 px-6"
-              href={`/app/pool/${pool.contract_address}`}
+              href={`/pool/${pool.contract_address}`}
             >
               <FinancialDataRow
                 cells={[
