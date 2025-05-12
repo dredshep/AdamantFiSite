@@ -1,5 +1,6 @@
+import { ConfigToken } from '@/config/tokens';
+// import { ApiToken } from '@/utils/apis/getSwappableTokens';
 import { SecretString } from '@/types';
-import { ApiToken } from '@/utils/apis/getSwappableTokens';
 import { StakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { useStaking } from '../useStaking';
 
@@ -22,7 +23,6 @@ interface PoolAsset {
 export interface PoolDetails {
   contract_address: SecretString;
   name: string;
-  about: string;
 }
 
 export interface PoolQueryResult {
@@ -51,8 +51,8 @@ export interface PairInfo {
 
 export interface SelectedPoolType {
   address: SecretString;
-  token0: ApiToken;
-  token1: ApiToken;
+  token0: ConfigToken;
+  token1: ConfigToken;
   pairInfo: PairInfo;
 }
 

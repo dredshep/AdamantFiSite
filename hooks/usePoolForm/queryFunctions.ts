@@ -1,20 +1,17 @@
+import { TOKENS } from '@/config/tokens';
 import { SecretString } from '@/types';
 import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
 import { queryPool } from '@/utils/apis/getPairPool';
-import { getApiToken } from '@/utils/apis/getSwappableTokens';
-import { getTablePools } from '@/utils/apis/getTablePools';
-import { setupPoolTokens } from './poolTokens';
-import { PairInfo, PairPoolData, PoolDetails, PoolQueryResult, SelectedPoolType } from './types';
+import { PairPoolData, PoolDetails, PoolQueryResult, SelectedPoolType } from './types';
 
 export async function fetchPoolData(
-  poolAddress: string,
+  poolAddress: SecretString,
+  codeHash: string | undefined,
   setSelectedPool: (pool: SelectedPoolType) => void
 ): Promise<PoolQueryResult> {
-  const [poolsData, pairData, factoryPairs, tokens] = await Promise.all([
-    getTablePools(),
-    queryPool(poolAddress),
+  const [pairData, factoryPairs] = await Promise.all([
+    queryPool(poolAddress, codeHash),
     queryFactoryPairs(),
-    getApiToken(),
   ]);
 
   if (pairData === undefined || typeof pairData !== 'object') {
@@ -32,36 +29,47 @@ export async function fetchPoolData(
       throw new Error('Invalid token addresses in pair');
     }
 
-    const pairInfo = {
-      ...pair,
-      asset_infos: pair.asset_infos.map((info) => ({
-        token: {
-          ...info.token,
-          contract_addr: info.token.contract_addr as SecretString,
-        },
-      })),
-    } satisfies PairInfo;
+    // Find ConfigTokens for the tokens in the pair
+    const token0Address = pair.asset_infos[0]?.token?.contract_addr;
+    const token1Address = pair.asset_infos[1]?.token?.contract_addr;
 
-    setupPoolTokens(pairInfo, tokens, poolAddress, setSelectedPool);
+    // Find the tokens in our config
+    const token0 = TOKENS.find((token) => token.address === token0Address) || null;
+    const token1 = TOKENS.find((token) => token.address === token1Address) || null;
+
+    if (!token0 || !token1) {
+      console.error('Token not found in configuration:', { token0Address, token1Address });
+      throw new Error('Token not found in configuration');
+    }
+
+    setSelectedPool({
+      address: poolAddress,
+      token0,
+      token1,
+      pairInfo: pair,
+    });
   }
 
-  if ('error' in poolsData) {
-    throw new Error(poolsData.error);
-  }
-
-  const poolDetails: PoolDetails[] = poolsData.map((pool) => ({
-    ...pool,
-    contract_address: pool.contract_address as SecretString,
-  }));
+  // Create a minimal poolDetails array with just the current pool
+  const poolDetails: PoolDetails[] = [
+    {
+      contract_address: poolAddress,
+      name: pair
+        ? pair.liquidity_token || `Pool-${poolAddress.slice(0, 8)}`
+        : `Pool-${poolAddress.slice(0, 8)}`,
+    },
+  ];
 
   return {
     pools: poolDetails,
     pairPoolData: pairData as PairPoolData,
-    poolDetails: poolDetails.find((p) => p.contract_address === poolAddress),
+    poolDetails: poolDetails[0],
   };
 }
 
-export function validatePoolAddress(poolAddress: string | string[] | undefined): string {
+export function validatePoolAddress(
+  poolAddress: SecretString | SecretString[] | undefined
+): SecretString {
   if (typeof poolAddress !== 'string') {
     throw new Error('Invalid pool address');
   }
