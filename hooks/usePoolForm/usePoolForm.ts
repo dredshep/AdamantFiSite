@@ -1,14 +1,13 @@
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useTxStore } from '@/store/txStore';
 import { PoolTokenInputs, SecretString } from '@/types';
 import { Asset, ContractInfo } from '@/types/secretswap/shared';
-import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import isNotNullish from '@/utils/isNotNullish';
 import { provideLiquidity } from '@/utils/secretjs/pools/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/pools/withdrawLiquidity';
-import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
@@ -42,7 +41,7 @@ const SCRT_TX_FEE = '0.0001';
 interface TxLogEntry {
   type: string;
   key: string;
-  value: string | { [key: string]: any } | any;
+  value: string | { [key: string]: unknown } | Record<string, unknown>;
   msg?: number;
 }
 
@@ -88,15 +87,15 @@ function debounce<T extends (...args: unknown[]) => unknown>(
   };
 }
 
-export function usePoolForm(poolAddress: string | string[] | undefined): UsePoolDepositFormResult {
+export function usePoolForm(
+  poolAddress: SecretString | SecretString[] | undefined
+): UsePoolDepositFormResult {
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } = usePoolStore();
   const { secretjs, walletAddress } = useKeplrConnection();
   const { setPending, setResult } = useTxStore.getState();
 
   // Use the poolStaking hook instead of directly integrating staking logic
-  const poolStaking = usePoolStaking(
-    typeof poolAddress === 'string' ? (poolAddress as SecretString) : null
-  );
+  const poolStaking = usePoolStaking(typeof poolAddress === 'string' ? poolAddress : null);
   const { hasStakingRewards, stakingInfo, staking, autoStake, setAutoStake, autoStakeLpTokens } =
     poolStaking;
 
@@ -105,7 +104,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
 
   async function getTokenBalance(
     secretjs: SecretNetworkClient,
-    tokenAddress: string,
+    tokenAddress: SecretString,
     tokenCodeHash: string
   ): Promise<{ balance: { amount: string } } | null> {
     const keplr = (window as unknown as Window).keplr;
@@ -190,9 +189,18 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
             return;
           }
 
+          // Get code hashes from the tokens, ensuring they are not null
+          const token0CodeHash = selectedPool?.token0?.codeHash;
+          const token1CodeHash = selectedPool?.token1?.codeHash;
+
+          if (token0CodeHash === null || token1CodeHash === null) {
+            console.error('Token code hash is undefined');
+            return;
+          }
+
           const [balance0, balance1] = await Promise.all([
-            getTokenBalance(secretjs, token0Address, getCodeHashByAddress(token0Address)),
-            getTokenBalance(secretjs, token1Address, getCodeHashByAddress(token1Address)),
+            getTokenBalance(secretjs, token0Address, token0CodeHash!),
+            getTokenBalance(secretjs, token1Address, token1CodeHash!),
           ]);
 
           console.log('Balance of token0:', balance0);
@@ -210,7 +218,18 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     queryKey: ['pool-data', poolAddress],
     queryFn: async () => {
       const validPoolAddress = validatePoolAddress(poolAddress);
-      return await fetchPoolData(validPoolAddress, (pool: SelectedPoolType) => {
+
+      // Find the pair contract code hash from the LIQUIDITY_PAIRS configuration
+      const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === validPoolAddress);
+
+      // Use the pair contract code hash from config or a fallback if not found
+      // We know LIQUIDITY_PAIRS[0] exists and has a pairContractCodeHash
+      const pairCodeHash =
+        pairInfo?.pairContractCodeHash != null
+          ? pairInfo?.pairContractCodeHash
+          : LIQUIDITY_PAIRS[0]?.pairContractCodeHash;
+
+      return await fetchPoolData(validPoolAddress, pairCodeHash, (pool: SelectedPoolType) => {
         setSelectedPool({
           address: pool.address,
           token0: pool.token0,
@@ -304,17 +323,26 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       assets[1]?.amount ?? '0'
     );
 
-    // TODO: Map pair address to code_hash. They will all be the same for now.
+    // Get the pair contract code hash from the LIQUIDITY_PAIRS configuration
+    const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
+
+    // Use the pair contract code hash from config or a fallback if not found
+    // We know LIQUIDITY_PAIRS[0] exists and has a pairContractCodeHash
+    const pairCodeHash =
+      pairInfo?.pairContractCodeHash != null
+        ? pairInfo?.pairContractCodeHash
+        : LIQUIDITY_PAIRS[0]!.pairContractCodeHash;
+
     const pairContract: ContractInfo = {
       address: selectedPool.address,
-      code_hash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
+      code_hash: pairCodeHash,
     };
 
     const asset0: Asset = {
       info: {
         token: {
           contract_addr: address0,
-          token_code_hash: getCodeHashByAddress(address0),
+          token_code_hash: selectedPool.token0.codeHash,
           viewing_key: 'SecretSwap',
         },
       },
@@ -325,7 +353,7 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       info: {
         token: {
           contract_addr: address1,
-          token_code_hash: getCodeHashByAddress(address1),
+          token_code_hash: selectedPool.token1.codeHash,
           viewing_key: 'SecretSwap',
         },
       },
@@ -334,9 +362,9 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
 
     console.log('Deposit clicked', {
       pool: selectedPool.address,
-      token0: getApiTokenSymbol(selectedPool.token0),
+      token0: selectedPool.token0.symbol,
       amount0,
-      token1: getApiTokenSymbol(selectedPool.token1),
+      token1: selectedPool.token1.symbol,
       amount1,
       poolShare: metrics.poolShare,
       ratioDeviation: metrics.ratioDeviation,
@@ -408,20 +436,20 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       return;
     }
 
-    // TODO: Map pair address to code_hash. They will all be the same for now.
+    // Get the pair contract code hash from the LIQUIDITY_PAIRS configuration
+    const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
+
+    // Use the pair contract code hash from config or a fallback if not found
+    // We know LIQUIDITY_PAIRS[0] exists and has a pairContractCodeHash
+    const pairCodeHash =
+      pairInfo?.pairContractCodeHash != null
+        ? pairInfo?.pairContractCodeHash
+        : LIQUIDITY_PAIRS[0]!.pairContractCodeHash;
+
     const pairContract: ContractInfo = {
       address: selectedPool.address,
-      code_hash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
+      code_hash: pairCodeHash,
     };
-
-    // FIXME: the selectedPool.pairInfo.token_code_hash is wrong.
-    // For some reason it is set to
-    // 0DFD06C7C3C482C14D36BA9826B83D164003F2B0BB302F222DB72361E0927490
-    // which is the pair contract code hash.
-    // The factory '{"pairs":{}}' query returns the wrong token_code_hash,
-    // but the pair contract '{"pair":{}}' query returns the correct one...
-    //
-    // console.debug('Selected Pool:', JSON.stringify(selectedPool, null, 4));
 
     // TODO: Map token address to code_hash. They will all be the same for now.
     const lpTokenContract: ContractInfo = {
@@ -615,19 +643,21 @@ function extractLpAmountFromTx(txResult: { arrayLog?: TxLogEntry[] }): string | 
       // Check for mint event
       if (typeof log.key === 'string' && log.key === 'mint') {
         // Handle case where value is an object
-        if (typeof log.value === 'object' && log.value !== null && 'amount' in log.value) {
-          const amount = log.value.amount;
-          if (typeof amount === 'string') return amount;
+        if (typeof log.value === 'object' && log.value !== null) {
+          const valueObj = log.value as Record<string, unknown>;
+          if ('amount' in valueObj && typeof valueObj['amount'] === 'string') {
+            return valueObj['amount'];
+          }
         }
 
         // Handle case where value is a JSON string
         if (typeof log.value === 'string') {
           try {
-            const parsed = JSON.parse(log.value);
-            if (parsed && typeof parsed.amount === 'string') {
-              return parsed.amount;
+            const parsed = JSON.parse(log.value) as Record<string, unknown>;
+            if (parsed != null && 'amount' in parsed && typeof parsed['amount'] === 'string') {
+              return parsed['amount'];
             }
-          } catch (e) {
+          } catch (_) {
             // Ignore parsing errors
           }
         }
@@ -636,19 +666,21 @@ function extractLpAmountFromTx(txResult: { arrayLog?: TxLogEntry[] }): string | 
       // Check for transfer event as fallback
       if (typeof log.key === 'string' && log.key === 'transfer') {
         // Handle case where value is an object
-        if (typeof log.value === 'object' && log.value !== null && 'amount' in log.value) {
-          const amount = log.value.amount;
-          if (typeof amount === 'string') return amount;
+        if (typeof log.value === 'object' && log.value !== null) {
+          const valueObj = log.value as Record<string, unknown>;
+          if ('amount' in valueObj && typeof valueObj['amount'] === 'string') {
+            return valueObj['amount'];
+          }
         }
 
         // Handle case where value is a JSON string
         if (typeof log.value === 'string') {
           try {
-            const parsed = JSON.parse(log.value);
-            if (parsed && typeof parsed.amount === 'string') {
-              return parsed.amount;
+            const parsed = JSON.parse(log.value) as Record<string, unknown>;
+            if (parsed != null && 'amount' in parsed && typeof parsed['amount'] === 'string') {
+              return parsed['amount'];
             }
-          } catch (e) {
+          } catch (_) {
             // Ignore parsing errors
           }
         }
