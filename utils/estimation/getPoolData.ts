@@ -1,7 +1,7 @@
 import { PoolData, PoolQueryResponse } from '@/types/estimation';
+import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import Decimal from 'decimal.js';
 import { SecretNetworkClient } from 'secretjs';
-import { getTokenDecimals } from '../apis/tokenInfo';
 
 export const getPoolData = async (
   secretjs: SecretNetworkClient,
