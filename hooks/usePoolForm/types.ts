@@ -8,7 +8,7 @@ export interface PairPoolData {
   total_share: string;
 }
 
-export interface PoolAsset {
+interface PoolAsset {
   info: {
     token: {
       contract_addr: SecretString;

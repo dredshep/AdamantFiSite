@@ -1,4 +1,5 @@
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
+import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useTxStore } from '@/store/txStore';
 import { PoolTokenInputs, SecretString } from '@/types';
@@ -21,8 +22,6 @@ import type {
   UsePoolDepositFormResult,
   WithdrawEstimate,
 } from './types';
-import { useStaking } from '@/hooks/useStaking';
-import { hasStakingContract, getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 
 // Define the store's token input type with proper index signature
 interface TokenInputs extends PoolTokenInputs {
@@ -38,6 +37,14 @@ interface PoolMetrics {
 
 // Standard network fee for Secret Network
 const SCRT_TX_FEE = '0.0001';
+
+// Add this type definition for array logs at the top of the file
+interface TxLogEntry {
+  type: string;
+  key: string;
+  value: string | { [key: string]: any } | any;
+  msg?: number;
+}
 
 function calculatePoolMetrics(
   amount0: string,
@@ -85,6 +92,13 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } = usePoolStore();
   const { secretjs, walletAddress } = useKeplrConnection();
   const { setPending, setResult } = useTxStore.getState();
+
+  // Use the poolStaking hook instead of directly integrating staking logic
+  const poolStaking = usePoolStaking(
+    typeof poolAddress === 'string' ? (poolAddress as SecretString) : null
+  );
+  const { hasStakingRewards, stakingInfo, staking, autoStake, setAutoStake, autoStakeLpTokens } =
+    poolStaking;
 
   const initialMountRef = useRef(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
@@ -248,33 +262,6 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     return convertedAmount.toString();
   }
 
-  // ------
-
-  // Check if the pool has a staking contract
-  const validPoolAddress = typeof poolAddress === 'string' ? (poolAddress as SecretString) : null;
-  const hasStaking = isNotNullish(validPoolAddress) ? hasStakingContract(validPoolAddress) : false;
-  const stakingInfo =
-    isNotNullish(validPoolAddress) && hasStaking ? getStakingContractInfo(validPoolAddress) : null;
-
-  // Use the staking hook
-  const staking = useStaking({
-    secretjs,
-    walletAddress,
-    stakingInfo,
-  });
-
-  // Initialize staking when component loads
-  useEffect(() => {
-    if (hasStaking && isNotNullish(staking)) {
-      void staking.initialize();
-    }
-  }, [hasStaking, staking]);
-
-  // Add auto-stake option
-  const [autoStake, setAutoStake] = useState(false);
-
-  // ------
-
   const handleDepositClick = async (): Promise<void> => {
     if (!selectedPool?.token0 || !selectedPool?.token1) return;
     if (!secretjs) return;
@@ -354,12 +341,13 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       poolShare: metrics.poolShare,
       ratioDeviation: metrics.ratioDeviation,
       txFee: metrics.txFee,
+      autoStake, // Log if auto-stake is enabled
     });
 
     try {
       setPending(true);
 
-      // TODO: if hasStaking is true, do a combined provideLiquidity + stakeLP transaction
+      // Execute liquidity provision transaction
       const result = await provideLiquidity(secretjs, pairContract, asset0, asset1);
 
       setPending(false);
@@ -370,9 +358,37 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       if (result.code !== TxResultCode.Success) {
         throw new Error(`Deposit failed: ${result.rawLog}`);
       }
+
+      // Auto-stake if enabled and staking is available
+      if (autoStake && hasStakingRewards) {
+        try {
+          // Extract LP token amount from transaction events
+          const lpAmount = extractLpAmountFromTx(result);
+
+          if (lpAmount !== null && lpAmount !== '') {
+            // Stake the LP tokens
+            const stakeResult = await autoStakeLpTokens(lpAmount);
+
+            if (stakeResult) {
+              toast.success('Successfully provided liquidity and staked LP tokens');
+            }
+          } else {
+            console.error('Could not extract LP token amount from transaction');
+            toast.warning(
+              'Liquidity provided but auto-staking failed: could not determine LP amount'
+            );
+          }
+        } catch (stakeError) {
+          console.error('Error auto-staking LP tokens:', stakeError);
+          toast.error('Liquidity provided but auto-staking failed');
+        }
+      } else {
+        toast.success('Liquidity provided successfully');
+      }
     } catch (error) {
       console.error('Error during tx execution:', error);
       toast.error('Transaction failed. Check the console for more details.');
+      setPending(false);
     }
   };
 
@@ -435,9 +451,12 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
       if (result.code !== TxResultCode.Success) {
         throw new Error(`Withdrawal failed: ${result.rawLog}`);
       }
+
+      toast.success('Liquidity withdrawn successfully');
     } catch (error) {
       console.error('Error during tx execution:', error);
-      alert('Transaction failed. Check the console for more details.');
+      toast.error('Transaction failed. Check the console for more details.');
+      setPending(false);
     }
   };
 
@@ -572,11 +591,73 @@ export function usePoolForm(poolAddress: string | string[] | undefined): UsePool
     handleClick,
     withdrawEstimate,
 
-    // Staking properties
-    hasStakingRewards: hasStaking,
+    // Staking properties from usePoolStaking
+    hasStakingRewards,
     stakingInfo,
     staking,
     autoStake,
     setAutoStake,
   };
+}
+
+// Add this function near other utility functions in the file
+function extractLpAmountFromTx(txResult: { arrayLog?: TxLogEntry[] }): string | null {
+  try {
+    // Look for mint or transfer event in transaction logs
+    const { arrayLog } = txResult;
+    if (!arrayLog || !Array.isArray(arrayLog)) return null;
+
+    // Find the mint event from the liquidity token contract
+    for (const log of arrayLog) {
+      // Skip non-wasm logs
+      if (typeof log.type !== 'string' || log.type !== 'wasm') continue;
+
+      // Check for mint event
+      if (typeof log.key === 'string' && log.key === 'mint') {
+        // Handle case where value is an object
+        if (typeof log.value === 'object' && log.value !== null && 'amount' in log.value) {
+          const amount = log.value.amount;
+          if (typeof amount === 'string') return amount;
+        }
+
+        // Handle case where value is a JSON string
+        if (typeof log.value === 'string') {
+          try {
+            const parsed = JSON.parse(log.value);
+            if (parsed && typeof parsed.amount === 'string') {
+              return parsed.amount;
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      }
+
+      // Check for transfer event as fallback
+      if (typeof log.key === 'string' && log.key === 'transfer') {
+        // Handle case where value is an object
+        if (typeof log.value === 'object' && log.value !== null && 'amount' in log.value) {
+          const amount = log.value.amount;
+          if (typeof amount === 'string') return amount;
+        }
+
+        // Handle case where value is a JSON string
+        if (typeof log.value === 'string') {
+          try {
+            const parsed = JSON.parse(log.value);
+            if (parsed && typeof parsed.amount === 'string') {
+              return parsed.amount;
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error extracting LP amount from transaction:', error);
+    return null;
+  }
 }
