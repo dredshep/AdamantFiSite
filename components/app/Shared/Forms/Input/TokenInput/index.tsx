@@ -4,7 +4,6 @@ import { usePoolStore } from '@/store/forms/poolStore';
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { PoolTokenInputs, SwapTokenInputs } from '@/types';
-import { getApiTokenAddress, getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import React from 'react';
 
 type FormType = 'swap' | 'pool';
@@ -109,11 +108,6 @@ const TokenInput: React.FC<TokenInputProps> = ({
     // console.log('Token not found, returning null');
     return null;
   }
-  const price = token.price;
-
-  const estimatedPrice = `$${(
-    parseFloat(tokenData.amount || '0') * parseFloat(price ?? '0')
-  ).toFixed(2)}`;
 
   const isSwap = formType === 'swap';
   const isPool = formType === 'pool';
@@ -136,10 +130,10 @@ const TokenInput: React.FC<TokenInputProps> = ({
       inputIdentifier={inputIdentifier}
       inputValue={value ?? tokenData.amount}
       onInputChange={handleInputChange}
-      tokenSymbol={getApiTokenSymbol(token)}
-      tokenAddress={getApiTokenAddress(token)}
-      showEstimatedPrice={true}
-      estimatedPrice={estimatedPrice}
+      tokenSymbol={token.symbol}
+      tokenAddress={token.address}
+      showEstimatedPrice={false}
+      estimatedPrice={''}
       label={getLabel()}
       hasMax={true}
       isLoading={isLoading}
