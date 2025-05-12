@@ -1,8 +1,8 @@
-import { getTokenDecimals } from '@/utils/apis/tokenInfo';
+// import { getTokenDecimals } from '@/utils/apis/tokenInfo';
 import Decimal from 'decimal.js';
 import { SecretNetworkClient } from 'secretjs';
 // NOTE: This is every single pool, but hardcoded. The asset amounts and total shares are stale, but that's OK for buildTokenPoolMap.
-import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
+// import { fullPoolsData } from '@/components/app/Testing/fullPoolsData';
 import { PoolQueryResponse } from '@/types/estimation/PoolQueryResponse';
 
 interface TokenPoolMap {
