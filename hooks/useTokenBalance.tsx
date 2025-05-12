@@ -1,13 +1,13 @@
-import ErrorToast from '@/components/app/Shared/Toasts/ErrorToast';
 import { useSecretNetworkContext } from '@/contexts/SecretNetworkContext';
 import { TokenService } from '@/services/secret/TokenService';
 import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
+import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
-import { getTokenDecimals } from '@/utils/apis/tokenInfo';
-import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
+import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { Keplr, Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
+import ErrorToast from '../components/app/Shared/Toasts/ErrorToast';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -119,7 +119,16 @@ export function useTokenBalance(
     try {
       tokenService.clearRejectedViewingKey(tokenAddress);
 
-      const tokenCodeHash = getCodeHashByAddress(tokenAddress);
+      // Get token from token store
+      const token = useTokenStore.getState().getTokenByAddress(tokenAddress);
+
+      if (!token || !token.codeHash) {
+        console.error(`Code hash not found for token: ${tokenAddress}`);
+        setError(tokenAddress, TokenBalanceError.UNKNOWN_ERROR);
+        return;
+      }
+
+      const tokenCodeHash = token.codeHash;
       const rawAmount = await tokenService.getBalance(tokenAddress, tokenCodeHash);
       const decimals = getTokenDecimals(tokenAddress);
       const value = Number(rawAmount) / Math.pow(10, decimals);
@@ -235,7 +244,15 @@ export function useTokenBalance(
 
         if (typeof viewingKey === 'string' && viewingKey.length > 0) {
           // Try to fetch balance with the viewing key
-          const tokenCodeHash = getCodeHashByAddress(tokenAddress);
+          // Get token from token store
+          const token = useTokenStore.getState().getTokenByAddress(tokenAddress);
+
+          if (!token || !token.codeHash) {
+            console.error(`Code hash not found for token: ${tokenAddress}`);
+            return;
+          }
+
+          const tokenCodeHash = token.codeHash;
           const response = await tokenService
             .getBalance(tokenAddress, tokenCodeHash)
             .catch((err: unknown) => {
