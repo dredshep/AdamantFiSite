@@ -1,20 +1,28 @@
-import { PoolResponse } from "@/types/api/Pair";
-import { SecretNetworkClient } from "secretjs";
+import { SecretString } from '@/types';
+import { PoolResponse } from '@/types/api/Pair';
+import { SecretNetworkClient } from 'secretjs';
 
 // TODO: have a single client somewhere to import instead.
 const secretjs = new SecretNetworkClient({
-  url: "https://rpc.ankr.com/http/scrt_cosmos",
-  chainId: "secret-4",
+  url: 'https://rpc.ankr.com/http/scrt_cosmos',
+  chainId: 'secret-4',
 });
 
 export async function queryPool(
-  contract_address: string,
-  code_hash = "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
+  contract_address: SecretString,
+  code_hash?: string
 ): Promise<PoolResponse> {
-  const data: PoolResponse = await secretjs.query.compute.queryContract({
+  const queryWithHash = {
     contract_address,
     code_hash,
     query: { pool: {} },
-  });
+  };
+  const queryWithoutHash = {
+    contract_address,
+    query: { pool: {} },
+  };
+  const data: PoolResponse = await secretjs.query.compute.queryContract(
+    code_hash != null ? queryWithHash : queryWithoutHash
+  );
   return data;
 }
