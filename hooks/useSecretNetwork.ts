@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast, ToastOptions } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
-export enum SecretNetworkError {
+enum SecretNetworkError {
   NO_KEPLR = 'NO_KEPLR',
   NO_ACCOUNTS = 'NO_ACCOUNTS',
   NO_SIGNER = 'NO_SIGNER',
