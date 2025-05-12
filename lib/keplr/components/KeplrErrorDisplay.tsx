@@ -133,7 +133,7 @@ export default function KeplrErrorDisplay({
                       {value !== null && value !== undefined
                         ? typeof value === 'boolean'
                           ? value.toString()
-                          : String(value)
+                          : JSON.stringify(value)
                         : '(not available)'}
                     </td>
                   </tr>
