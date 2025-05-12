@@ -1,7 +1,7 @@
 import FormButton from '@/components/app/Shared/Forms/FormButton';
 import TokenInput from '@/components/app/Shared/Forms/Input/TokenInput';
-import { useSwapForm } from '@/hooks/useSwapForm';
-import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
+// import { useSwapForm } from '@/hooks/useSwapForm';
+import { useSwapFormLean as useSwapForm } from '@/hooks/useSwapFormLean';
 import React, { useEffect, useState } from 'react';
 // import BestRouteEstimator from '../../BestRouteEstimator';
 
@@ -94,10 +94,10 @@ const SwapForm: React.FC = () => {
                 <>
                   {priceImpact}% ≈{' '}
                   {((parseFloat(priceImpact) / 100) * parseFloat(payDetails.amount)).toFixed(4)}{' '}
-                  {getApiTokenSymbol(payToken)}
+                  {payToken.symbol}
                 </>
               ) : (
-                <>0.00% ≈ 0.00 {getApiTokenSymbol(payToken)}</>
+                <>0.00% ≈ 0.00 {payToken.symbol}</>
               )}
             </span>
           </div>
@@ -108,11 +108,11 @@ const SwapForm: React.FC = () => {
                 <div className="h-4 w-20 bg-white/5 animate-pulse rounded" />
               ) : payDetails.amount && parseFloat(payDetails.amount) > 0 ? (
                 <>
-                  {txFee} {getApiTokenSymbol(payToken)} ≈{' '}
+                  {txFee} {payToken.symbol} ≈{' '}
                   {((parseFloat(txFee) / parseFloat(payDetails.amount)) * 100).toFixed(2)}%
                 </>
               ) : (
-                <>0.00 {getApiTokenSymbol(payToken)} ≈ 0.00%</>
+                <>0.00 {payToken.symbol} ≈ 0.00%</>
               )}
             </span>
           </div>
@@ -129,7 +129,7 @@ const SwapForm: React.FC = () => {
                 }}
                 className="w-20 bg-adamant-app-input/30 backdrop-blur-sm border border-white/5 rounded-lg px-2.5 py-1.5 text-right outline-none transition-all duration-200 hover:bg-adamant-app-input/40 focus:bg-adamant-app-input/50 focus:border-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-gray-500/50"
               />
-              <span>{getApiTokenSymbol(receiveToken)}</span>
+              <span>{receiveToken.symbol}</span>
             </div>
           </div>
           <div className="flex justify-between items-center">
