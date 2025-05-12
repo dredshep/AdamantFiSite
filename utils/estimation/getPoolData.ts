@@ -1,29 +1,27 @@
-import { PoolData, PoolQueryResponse } from "@/types/estimation";
-import Decimal from "decimal.js";
-import { SecretNetworkClient } from "secretjs";
-import { getTokenDecimals } from "../apis/tokenInfo";
+import { PoolData, PoolQueryResponse } from '@/types/estimation';
+import Decimal from 'decimal.js';
+import { SecretNetworkClient } from 'secretjs';
+import { getTokenDecimals } from '../apis/tokenInfo';
 
 export const getPoolData = async (
   secretjs: SecretNetworkClient,
-  poolAddress: string
+  poolAddress: string,
+  codeHash: string
 ): Promise<PoolData> => {
-  const response: PoolQueryResponse =
-    await secretjs.query.compute.queryContract({
-      contract_address: poolAddress,
-      code_hash:
-        "0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490",
-      query: { pool: {} },
-    });
+  const response: PoolQueryResponse = await secretjs.query.compute.queryContract({
+    contract_address: poolAddress,
+    code_hash: codeHash,
+    query: { pool: {} },
+  });
 
-  if (typeof response !== "object" || response === null) {
-    throw new Error("Invalid response from pool contract");
+  if (typeof response !== 'object' || response === null) {
+    throw new Error('Invalid response from pool contract');
   }
 
   const reserves = response.assets.reduce(
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
       const decimals =
-        asset.info.token?.contract_addr ===
-        "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek"
+        asset.info.token?.contract_addr === 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek'
           ? 6
           : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
       console.log({ decimals });

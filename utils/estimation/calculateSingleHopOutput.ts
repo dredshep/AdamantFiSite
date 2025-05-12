@@ -1,6 +1,6 @@
-import { PoolData } from "@/types/estimation/PoolData";
-import Decimal from "decimal.js";
-import { isValidReserve } from ".";
+import { PoolData } from '@/types/estimation/PoolData';
+import Decimal from 'decimal.js';
+import { isValidReserve } from '.';
 
 export const calculateSingleHopOutput = (
   amountIn: Decimal,
@@ -17,7 +17,7 @@ export const calculateSingleHopOutput = (
   const rawOutputReserve = poolData.reserves[outputToken];
 
   if (!isValidReserve(rawInputReserve) || !isValidReserve(rawOutputReserve)) {
-    throw new Error("Invalid token addresses or malformed reserve data");
+    throw new Error('Invalid token addresses or malformed reserve data');
   }
 
   console.log(`\n--- Calculation Start ---`);
@@ -39,9 +39,7 @@ export const calculateSingleHopOutput = (
   const outputReserve = rawOutputReserve.amount;
 
   // Adjust input amount by input token decimals
-  const amountInAdjusted = amountIn.mul(
-    Decimal.pow(10, rawInputReserve.decimals)
-  );
+  const amountInAdjusted = amountIn.mul(Decimal.pow(10, rawInputReserve.decimals));
   console.log(`Amount In Adjusted: ${amountInAdjusted.toString()}`);
 
   // Calculate fee and adjust input amount
@@ -64,38 +62,24 @@ export const calculateSingleHopOutput = (
 
   // Calculate ideal output assuming infinite liquidity (no price impact)
   const idealOutput = amountInAdjusted.mul(outputReserve).div(inputReserve);
-  console.log(
-    `Ideal Output Before Decimal Adjustment: ${idealOutput.toString()}`
-  );
+  console.log(`Ideal Output Before Decimal Adjustment: ${idealOutput.toString()}`);
 
   // Adjust ideal output by output token decimals
-  let idealOutputAdjusted = idealOutput.div(
-    Decimal.pow(10, rawOutputReserve.decimals)
-  );
-  console.log(
-    `Ideal Output After Decimal Adjustment: ${idealOutputAdjusted.toString()}`
-  );
+  let idealOutputAdjusted = idealOutput.div(Decimal.pow(10, rawOutputReserve.decimals));
+  console.log(`Ideal Output After Decimal Adjustment: ${idealOutputAdjusted.toString()}`);
 
   // Ensure ideal output isn't negative
   if (idealOutputAdjusted.isNegative()) {
-    console.warn(
-      "Calculated ideal output is negative after decimal adjustment."
-    );
+    console.warn('Calculated ideal output is negative after decimal adjustment.');
     idealOutputAdjusted = new Decimal(0);
   }
 
   // Calculate price impact
-  const priceImpact = idealOutputAdjusted
-    .sub(output)
-    .div(idealOutputAdjusted)
-    .mul(100)
-    .toFixed(2);
+  const priceImpact = idealOutputAdjusted.sub(output).div(idealOutputAdjusted).mul(100).toFixed(2);
   console.log(`Price Impact: ${priceImpact}%`);
 
   // Correct calculation of Liquidity Provider Fee
-  const lpFee = amountIn.sub(
-    amountInWithFee.div(Decimal.pow(10, rawInputReserve.decimals))
-  );
+  const lpFee = amountIn.sub(amountInWithFee.div(Decimal.pow(10, rawInputReserve.decimals)));
   console.log(`Liquidity Provider Fee: ${lpFee.toString()}`);
   console.log(`--- Calculation End ---\n`);
 
