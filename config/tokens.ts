@@ -26,6 +26,11 @@ export type StakingContract = {
   codeHash: string;
 };
 
+export type Factory = {
+  contract_address: SecretString;
+  code_hash: string;
+};
+
 export const TOKENS: ConfigToken[] = [
   {
     name: 'Secret Secret',
@@ -124,7 +129,7 @@ export const LIQUIDITY_PAIRS: LiquidityPair[] = [
     pairContractCodeHash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
     lpTokenCodeHash: '744c588ed4181b13a49a7c75a49f10b84b22b24a69b1e5f3cdff34b2c343e888',
   },
-];
+] as const;
 
 export const STAKING_CONTRACTS: StakingContract[] = [
   {
@@ -135,3 +140,9 @@ export const STAKING_CONTRACTS: StakingContract[] = [
     codeHash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a',
   },
 ];
+
+// {"contract_address":"secret18reusruqrq7a0ug4vn6ue2pg59lm2dtsqxu6f3","contract_info":{"code_id":"30","creator":"secret16zvp2t86hdv5na3quygc9f2rnn9f9l4vszgtue","label":"secretswap-factory-3","created":{"block_height":"19549431","tx_index":"0"},"ibc_port_id":"","admin":"secret1kh0x34l6z66zty6j0cafn0j3fgs20aytulew52","admin_proof":null}}
+export const FACTORY: Factory = {
+  contract_address: 'secret18reusruqrq7a0ug4vn6ue2pg59lm2dtsqxu6f3',
+  code_hash: '16ea6dca596d2e5e6eef41df6dc26a1368adaa238aa93f07959841e7968c51bd',
+};
