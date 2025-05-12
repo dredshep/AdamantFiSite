@@ -5,7 +5,6 @@ import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelecti
 import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import React from 'react';
@@ -45,8 +44,7 @@ const DepositForm: React.FC = () => {
                 <div className="flex flex-col items-start gap-1">
                   <span className="text-adamant-accentText text-sm">Selected Pool</span>
                   <span className="text-white font-medium flex items-center gap-2">
-                    {getApiTokenSymbol(selectedPool.token0!)} /{' '}
-                    {getApiTokenSymbol(selectedPool.token1!)}
+                    {selectedPool.token0?.symbol} / {selectedPool.token1?.symbol}
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-4 w-4 text-adamant-gradientBright group-hover:translate-x-0.5 transition-transform"

@@ -3,7 +3,6 @@ import PoolTokenInput from '@/components/app/Shared/Forms/Input/PoolTokenInput';
 import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
 import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
 import * as Dialog from '@radix-ui/react-dialog';
 import React from 'react';
 
@@ -37,8 +36,7 @@ const WithdrawForm: React.FC = () => {
                   <div className="flex flex-col items-start gap-1">
                     <span className="text-adamant-accentText text-sm">Selected Pool</span>
                     <span className="text-white font-medium flex items-center gap-2">
-                      {getApiTokenSymbol(selectedPool.token0!)} /{' '}
-                      {getApiTokenSymbol(selectedPool.token1!)}
+                      {selectedPool.token0?.symbol} / {selectedPool.token1?.symbol}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-4 w-4 text-adamant-gradientBright group-hover:translate-x-0.5 transition-transform"
@@ -65,9 +63,7 @@ const WithdrawForm: React.FC = () => {
         <PoolTokenInput
           poolInputIdentifier="pool.withdraw.lpToken"
           token={{
-            symbol: `${getApiTokenSymbol(selectedPool.token0!)} / ${getApiTokenSymbol(
-              selectedPool.token1!
-            )} LP`,
+            symbol: `${selectedPool.token0?.symbol} / ${selectedPool.token1?.symbol} LP`,
             address: selectedPool.pairInfo.liquidity_token,
           }}
           label="Withdraw LP Tokens"
@@ -77,10 +73,10 @@ const WithdrawForm: React.FC = () => {
             <span className="text-adamant-accentText text-sm">You will receive:</span>
             <div className="flex flex-col gap-1">
               <span className="text-white">
-                {withdrawEstimate.token0Amount} {getApiTokenSymbol(selectedPool.token0!)}
+                {withdrawEstimate.token0Amount} {selectedPool.token0?.symbol}
               </span>
               <span className="text-white">
-                {withdrawEstimate.token1Amount} {getApiTokenSymbol(selectedPool.token1!)}
+                {withdrawEstimate.token1Amount} {selectedPool.token1?.symbol}
               </span>
             </div>
           </div>

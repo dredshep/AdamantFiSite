@@ -1,10 +1,10 @@
 import ViewingKeyStatusComponent from '@/components/common/ViewingKeyStatus';
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { ViewingKeyStatus } from '@/types/staking';
-import { getApiTokenSymbol } from '@/utils/apis/getSwappableTokens';
-import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
+// import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
 import { Window } from '@keplr-wallet/types';
 import React, { useEffect, useState } from 'react';
 import StakingActions from './StakingActions';
@@ -78,12 +78,18 @@ const StakingForm: React.FC = () => {
             return;
           }
 
+          // Find the matching pair to get the LP token code hash
+          const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === lpTokenAddress);
+          if (!pairInfo) {
+            console.error('Could not find LP token code hash');
+            return;
+          }
+
           // Get LP token balance
-          const codeHash = getCodeHashByAddress(lpTokenAddress);
           const balance = await secretjs.query.snip20.getBalance({
             contract: {
               address: lpTokenAddress,
-              code_hash: codeHash,
+              code_hash: pairInfo.lpTokenCodeHash,
             },
             address: secretjs.address,
             auth: { key: viewingKey },
@@ -126,9 +132,10 @@ const StakingForm: React.FC = () => {
   }
 
   // Get readable token symbols
-  const token0Symbol = selectedPool.token0 ? getApiTokenSymbol(selectedPool.token0) : '';
-  const token1Symbol = selectedPool.token1 ? getApiTokenSymbol(selectedPool.token1) : '';
-  const lpPairName = `${token0Symbol}/${token1Symbol}`;
+  // const token0Symbol = selectedPool.token0 ? getApiTokenSymbol(selectedPool.token0) : '';
+  // const token1Symbol = selectedPool.token1 ? getApiTokenSymbol(selectedPool.token1) : '';
+
+  const lpPairName = `${selectedPool.token0?.symbol}/${selectedPool.token1?.symbol}`;
 
   // If we need a viewing key to proceed
   if (viewingKeyStatus !== ViewingKeyStatus.CREATED) {
