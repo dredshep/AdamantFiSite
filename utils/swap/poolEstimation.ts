@@ -1,3 +1,4 @@
+import { POOL_FEE, SCRT_TX_FEE, feeToDecimal } from '@/config/fees';
 import { ConfigToken } from '@/config/tokens';
 import { queryFactoryPairs } from '@/utils/apis/getFactoryPairs';
 import Decimal from 'decimal.js';
@@ -191,12 +192,12 @@ export async function estimateSwapOutput(
     }
 
     // Standard fee for SecretSwap pools
-    const POOL_FEE = 0.003; // 0.3%
-    const SCRT_TX_FEE = 0.0001; // Standard SCRT blockchain fee
+    const poolFeeDecimal = feeToDecimal(POOL_FEE);
+    const scrtTxFeeDecimal = SCRT_TX_FEE;
 
     const amountInDecimal = new Decimal(amountIn);
     const amountInAdjusted = amountInDecimal.mul(Decimal.pow(10, inputReserve.decimals));
-    const feeMultiplier = new Decimal(1).sub(POOL_FEE);
+    const feeMultiplier = new Decimal(1).sub(poolFeeDecimal);
     const amountInWithFee = amountInAdjusted.mul(feeMultiplier);
 
     const productOfReserves = inputReserve.amount.mul(outputReserve.amount);
@@ -214,8 +215,8 @@ export async function estimateSwapOutput(
     const priceImpact = spotPrice.sub(executionPrice).div(spotPrice).mul(100).toFixed(4);
 
     // Calculate fees
-    const poolFeeAmount = amountInDecimal.mul(POOL_FEE).toFixed(6);
-    const txFeeAmount = new Decimal(SCRT_TX_FEE).toFixed(6);
+    const poolFeeAmount = amountInDecimal.mul(poolFeeDecimal).toFixed(6);
+    const txFeeAmount = new Decimal(scrtTxFeeDecimal).toFixed(6);
 
     return {
       outputAmount: adjustedOutput.toFixed(6),

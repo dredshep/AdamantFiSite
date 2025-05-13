@@ -1,3 +1,4 @@
+import { POOL_FEE, feeToDecimal } from '@/config/fees';
 import { PoolData, PoolQueryResponse } from '@/types/estimation';
 import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import Decimal from 'decimal.js';
@@ -20,11 +21,7 @@ export const getPoolData = async (
 
   const reserves = response.assets.reduce(
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
-      const decimals =
-        asset.info.token?.contract_addr === 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek'
-          ? 6
-          : getTokenDecimals(asset.info.token.contract_addr) ?? 0;
-      console.log({ decimals });
+      const decimals = getTokenDecimals(asset.info.token.contract_addr);
       acc[asset.info.token.contract_addr] = {
         amount: new Decimal(asset.amount),
         decimals,
@@ -36,6 +33,6 @@ export const getPoolData = async (
 
   return {
     reserves,
-    fee: 0.003, // Assuming a fee of 0.3%
+    fee: feeToDecimal(POOL_FEE),
   };
 };
