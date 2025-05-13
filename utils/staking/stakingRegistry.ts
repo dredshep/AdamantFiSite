@@ -1,10 +1,11 @@
-// I don't think it's worth using this type
-// import { SecretString } from '@/types';
+// kent: I don't think it's worth using this type
+// seb: It helps me when i input the wrong string xD
+import { SecretString } from '@/types';
 
 export interface StakingContractInfo {
-  lpTokenAddress: string;
+  lpTokenAddress: SecretString;
   lpTokenCodeHash: string;
-  stakingAddress: string;
+  stakingAddress: SecretString;
   stakingCodeHash: string;
   rewardTokenSymbol: string;
 }
@@ -31,9 +32,13 @@ function buildStakingContractsFromEnv(): Record<string, StakingContractInfo> {
   // For each LP address, get the staking info
   for (const lpAddress of lpAddresses) {
     try {
-      const lpTokenAddress = process.env[`NEXT_PUBLIC_LP_STAKING_${lpAddress}_TOKEN_ADDRESS`]!;
+      const lpTokenAddress = process.env[
+        `NEXT_PUBLIC_LP_STAKING_${lpAddress}_TOKEN_ADDRESS`
+      ]! as SecretString;
       const lpTokenCodeHash = process.env[`NEXT_PUBLIC_LP_STAKING_${lpAddress}_TOKEN_CODE_HASH`]!;
-      const stakingAddress = process.env[`NEXT_PUBLIC_LP_STAKING_${lpAddress}_STAKING_ADDRESS`]!;
+      const stakingAddress = process.env[
+        `NEXT_PUBLIC_LP_STAKING_${lpAddress}_STAKING_ADDRESS`
+      ]! as SecretString;
       const stakingCodeHash = process.env[`NEXT_PUBLIC_LP_STAKING_${lpAddress}_STAKING_CODE_HASH`]!;
       const rewardTokenSymbol =
         process.env[`NEXT_PUBLIC_LP_STAKING_${lpAddress}_REWARD_TOKEN_SYMBOL`]!;
