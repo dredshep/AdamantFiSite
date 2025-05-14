@@ -1,5 +1,6 @@
 // kent: I don't think it's worth using this type
 // seb: It helps me when i input the wrong string xD
+import { STAKING_CONTRACTS as CONFIG_STAKING_CONTRACTS, LIQUIDITY_PAIRS } from '@/config/tokens';
 import { SecretString } from '@/types';
 
 export interface StakingContractInfo {
@@ -61,18 +62,33 @@ function buildStakingContractsFromEnv(): Record<string, StakingContractInfo> {
   return contracts;
 }
 
-// Default fallback configuration if environment variables are not set
-const DEFAULT_STAKING_CONTRACTS: Record<string, StakingContractInfo> = {
-  // LP token address -> staking info
-  secret13y8e73vfl40auct785zdmyygwesvxmutm7fjx: {
-    lpTokenAddress: 'secret13y8e73vfl40auct785zdmyygwesvxmutm7fjx',
-    lpTokenCodeHash: 'af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e',
-    stakingAddress: 'secret1yauz94h0ck2lh02u96yum67cswjdapes7y62k8',
-    stakingCodeHash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a',
-    rewardTokenSymbol: 'sSCRT',
-  },
-  // Add more LP contracts as needed
-};
+// Build default staking contracts from the centralized config
+function buildDefaultStakingContracts(): Record<string, StakingContractInfo> {
+  const contracts: Record<string, StakingContractInfo> = {};
+
+  // Map staking contracts from config to our format
+  for (const stakingContract of CONFIG_STAKING_CONTRACTS) {
+    // Find the matching LP pair to get the LP token address and code hash
+    const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
+
+    if (matchingPair) {
+      // Use the LP token address as the key in our contracts record
+      contracts[matchingPair.lpToken as string] = {
+        lpTokenAddress: matchingPair.lpToken,
+        lpTokenCodeHash: matchingPair.lpTokenCodeHash,
+        stakingAddress: stakingContract.stakingContract,
+        stakingCodeHash: stakingContract.codeHash,
+        rewardTokenSymbol: stakingContract.rewardTokenSymbol,
+      };
+    }
+  }
+
+  return contracts;
+}
+
+// Default fallback configuration built from the centralized config
+const DEFAULT_STAKING_CONTRACTS: Record<string, StakingContractInfo> =
+  buildDefaultStakingContracts();
 
 // Build the contracts record from environment variables or use defaults
 const STAKING_CONTRACTS: Record<string, StakingContractInfo> =
