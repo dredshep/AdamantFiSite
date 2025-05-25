@@ -124,7 +124,7 @@ const StakingInput: React.FC<StakingInputProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-2.5 bg-adamant-app-input/60 backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/70">
+    <div className="flex flex-col gap-2.5 bg-adamant-app-input/30 backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40">
       {/* Header with label and balance */}
       <div className="flex justify-between items-center">
         <label className="text-adamant-text-form-main text-sm font-medium normal-case">

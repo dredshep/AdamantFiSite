@@ -1,4 +1,4 @@
-import classNames from "classnames";
+import classNames from 'classnames';
 
 export default function TokenInputBaseInput({
   amount,
@@ -10,12 +10,12 @@ export default function TokenInputBaseInput({
   return (
     <input
       className={classNames(
-        "rounded-l-xl text-2xl font-light w-full outline-none ",
+        'w-full bg-transparent text-2xl font-light outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-gray-500/50',
         // "focus:bg-adamant-app-selectTrigger focus:bg-opacity-30",
         // "hover:bg-adamant-app-selectTrigger hover:bg-opacity-30",
-        "py-2",
+        'py-2',
         // "px-[21px]",
-        "bg-transparent"
+        'bg-transparent'
       )}
       placeholder="0.0"
       value={amount}

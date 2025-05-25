@@ -1,9 +1,6 @@
 import { LpTokenBalanceError } from '@/hooks/useLpTokenBalance';
 import React from 'react';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-import { BiErrorCircle } from 'react-icons/bi';
-import { FiRefreshCw } from 'react-icons/fi';
-import { HiOutlinePlus } from 'react-icons/hi';
+import FetchButton from './Forms/Input/TokenInput/FetchButton';
 import PoolMaxButton from './Forms/Input/TokenInput/PoolMaxButton';
 import { PoolInputIdentifier } from './Forms/Input/TokenInputBase';
 
@@ -55,88 +52,21 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
   };
 
   const handleFetchClick = () => {
-    console.log('🔄 Fetch button clicked');
     if (onFetchBalance) {
       onFetchBalance();
-    } else {
-      console.log('❌ No onFetchBalance callback provided');
     }
   };
 
   const handleSuggestClick = () => {
-    console.log('📤 Suggest token button clicked');
     if (onSuggestToken) {
       onSuggestToken();
-    } else {
-      console.log('❌ No onSuggestToken callback provided');
     }
   };
 
-  const getActionButton = () => {
-    if (loading) {
-      return (
-        <button className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors">
-          <AiOutlineLoading3Quarters className="h-3 w-3 animate-spin" />
-          Loading...
-        </button>
-      );
-    }
-
-    if (error) {
-      const errorMessage = getErrorMessage(error);
-
-      if (
-        error === LpTokenBalanceError.NO_VIEWING_KEY ||
-        error === LpTokenBalanceError.LP_TOKEN_NOT_FOUND
-      ) {
-        return (
-          <button
-            onClick={handleSuggestClick}
-            className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-            title="Add LP token to Keplr"
-          >
-            <HiOutlinePlus className="h-3 w-3" />
-            Add Token
-          </button>
-        );
-      }
-
-      return (
-        <button
-          onClick={handleFetchClick}
-          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
-          title={`${errorMessage} - Click to retry`}
-        >
-          <BiErrorCircle className="h-3 w-3" />
-          {errorMessage}
-        </button>
-      );
-    }
-
-    if (balance !== null) {
-      return (
-        <button
-          onClick={handleFetchClick}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-300 transition-colors"
-          title="Refresh balance"
-        >
-          <FiRefreshCw className="h-3 w-3" />
-          Refresh
-        </button>
-      );
-    }
-
-    return (
-      <button
-        onClick={handleFetchClick}
-        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-        title="Fetch balance"
-      >
-        <FiRefreshCw className="h-3 w-3" />
-        Fetch
-      </button>
-    );
-  };
+  const shouldShowAddToken =
+    error &&
+    (error === LpTokenBalanceError.NO_VIEWING_KEY ||
+      error === LpTokenBalanceError.LP_TOKEN_NOT_FOUND);
 
   return (
     <div className="flex items-center gap-2">
@@ -146,7 +76,15 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
             <span className="text-xs text-gray-400">
               Balance: {formatBalance(balance)} {tokenSymbol}
             </span>
-            {getActionButton()}
+            <FetchButton
+              loading={loading}
+              error={!!error}
+              hasBalance={balance !== null}
+              errorMessage={error ? getErrorMessage(error) : 'Error'}
+              showAddToken={!!shouldShowAddToken}
+              onFetch={handleFetchClick}
+              onAddToken={handleSuggestClick}
+            />
           </div>
         )}
         {hasMax && inputIdentifier && <PoolMaxButton poolInputIdentifier={inputIdentifier} />}

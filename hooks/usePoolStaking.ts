@@ -260,11 +260,9 @@ export function usePoolStaking(poolAddress: SecretString | null) {
     async (amount: string): Promise<boolean> => {
       if (staking === null || !autoStake) return false;
 
-      // Convert display amount to raw amount for the contract
-      // LP tokens typically have 6 decimals
-      const rawAmount = convertToRawAmount(amount, 6);
-
-      return await staking.stakeLpTokens(rawAmount);
+      // The amount from transaction logs is already in raw format (with decimals applied)
+      // so we don't need to convert it again
+      return await staking.stakeLpTokens(amount);
     },
     [staking, autoStake]
   );

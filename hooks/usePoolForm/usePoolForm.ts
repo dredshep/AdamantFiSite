@@ -52,28 +52,57 @@ function calculatePoolMetrics(
   reserve0: string,
   reserve1: string
 ): PoolMetrics {
-  const amt0 = new Decimal(amount0);
-  const amt1 = new Decimal(amount1);
-  const res0 = new Decimal(reserve0);
-  const res1 = new Decimal(reserve1);
-
-  // Calculate pool share
-  const totalSupply0 = res0.add(amt0);
-  const poolShare = amt0.div(totalSupply0).mul(100).toFixed(6);
-
-  // Calculate ratio deviation
-  let ratioDeviation = '0';
-  if (!res0.isZero() && !res1.isZero() && !amt0.isZero() && !amt1.isZero()) {
-    const poolRatio = res0.div(res1);
-    const providedRatio = amt0.div(amt1);
-    ratioDeviation = providedRatio.sub(poolRatio).div(poolRatio).mul(100).abs().toFixed(6);
-  }
-
-  return {
-    poolShare,
-    ratioDeviation,
-    txFee: SCRT_TX_FEE,
+  // Validate and sanitize inputs
+  const sanitizeAmount = (amount: string): string => {
+    if (!amount || amount.trim() === '' || isNaN(parseFloat(amount))) {
+      return '0';
+    }
+    return amount.trim();
   };
+
+  const sanitizedAmount0 = sanitizeAmount(amount0);
+  const sanitizedAmount1 = sanitizeAmount(amount1);
+  const sanitizedReserve0 = sanitizeAmount(reserve0);
+  const sanitizedReserve1 = sanitizeAmount(reserve1);
+
+  try {
+    const amt0 = new Decimal(sanitizedAmount0);
+    const amt1 = new Decimal(sanitizedAmount1);
+    const res0 = new Decimal(sanitizedReserve0);
+    const res1 = new Decimal(sanitizedReserve1);
+
+    // Calculate pool share
+    const totalSupply0 = res0.add(amt0);
+    const poolShare = totalSupply0.isZero() ? '0' : amt0.div(totalSupply0).mul(100).toFixed(6);
+
+    // Calculate ratio deviation
+    let ratioDeviation = '0';
+    if (!res0.isZero() && !res1.isZero() && !amt0.isZero() && !amt1.isZero()) {
+      const poolRatio = res0.div(res1);
+      const providedRatio = amt0.div(amt1);
+      ratioDeviation = providedRatio.sub(poolRatio).div(poolRatio).mul(100).abs().toFixed(6);
+    }
+
+    return {
+      poolShare,
+      ratioDeviation,
+      txFee: SCRT_TX_FEE,
+    };
+  } catch (error) {
+    console.error('Error calculating pool metrics:', error, {
+      amount0,
+      amount1,
+      reserve0,
+      reserve1,
+    });
+
+    // Return safe defaults
+    return {
+      poolShare: '0',
+      ratioDeviation: '0',
+      txFee: SCRT_TX_FEE,
+    };
+  }
 }
 
 // Add debounce utility with proper types
@@ -339,8 +368,15 @@ export function usePoolForm(
     const amount0 = safeTokenInputs[inputIdentifier1]?.amount ?? '0';
     const amount1 = safeTokenInputs[inputIdentifier2]?.amount ?? '0';
 
-    if (amount0 === '0' || amount1 === '0') {
-      toast.error('Please enter an amount for both tokens');
+    // Validate amounts are valid numbers and not zero
+    const isValidAmount = (amount: string): boolean => {
+      if (!amount || amount.trim() === '') return false;
+      const num = parseFloat(amount.trim());
+      return !isNaN(num) && num > 0;
+    };
+
+    if (!isValidAmount(amount0) || !isValidAmount(amount1)) {
+      toast.error('Please enter valid amounts for both tokens');
       return;
     }
 
@@ -443,6 +479,8 @@ export function usePoolForm(
 
             if (stakeResult) {
               toast.success('Successfully provided liquidity and staked LP tokens');
+            } else {
+              toast.error('Liquidity provided but auto-staking failed');
             }
           } else {
             console.error('Could not extract LP token amount from transaction');
@@ -674,61 +712,52 @@ export function usePoolForm(
 }
 
 // Add this function near other utility functions in the file
-function extractLpAmountFromTx(txResult: { arrayLog?: TxLogEntry[] }): string | null {
+// Returns LP token amount in raw format (with decimals already applied)
+function extractLpAmountFromTx(txResult: Record<string, unknown>): string | null {
   try {
-    // Look for mint or transfer event in transaction logs
-    const { arrayLog } = txResult;
-    if (!arrayLog || !Array.isArray(arrayLog)) return null;
+    // Check multiple possible locations for transaction logs
+    const arrayLog = Array.isArray(txResult.arrayLog)
+      ? (txResult.arrayLog as unknown as unknown[])
+      : [];
+    const logs = Array.isArray(txResult.logs) ? (txResult.logs as unknown as unknown[]) : [];
+    const events = Array.isArray(txResult.events) ? (txResult.events as unknown as unknown[]) : [];
 
-    // Find the mint event from the liquidity token contract
-    for (const log of arrayLog) {
-      // Skip non-wasm logs
-      if (typeof log.type !== 'string' || log.type !== 'wasm') continue;
+    const allLogs = [...arrayLog, ...logs, ...events];
 
-      // Check for mint event
-      if (typeof log.key === 'string' && log.key === 'mint') {
-        // Handle case where value is an object
-        if (typeof log.value === 'object' && log.value !== null) {
-          const valueObj = log.value as Record<string, unknown>;
-          if ('amount' in valueObj && typeof valueObj['amount'] === 'string') {
-            return valueObj['amount'];
-          }
-        }
+    if (allLogs.length === 0) {
+      return null;
+    }
 
-        // Handle case where value is a JSON string
-        if (typeof log.value === 'string') {
-          try {
-            const parsed = JSON.parse(log.value) as Record<string, unknown>;
-            if (parsed != null && 'amount' in parsed && typeof parsed['amount'] === 'string') {
-              return parsed['amount'];
+    // Look through all logs for LP token mint/transfer events
+    for (let i = 0; i < allLogs.length; i++) {
+      const log = allLogs[i] as Record<string, unknown>;
+
+      // Handle different log structures
+      if (Array.isArray(log.events)) {
+        // Handle events array structure
+        for (const event of log.events) {
+          const eventObj = event as Record<string, unknown>;
+          if (eventObj.type === 'wasm') {
+            const lpAmount = extractFromWasmEvent(eventObj);
+            if (lpAmount) {
+              return lpAmount;
             }
-          } catch (_) {
-            // Ignore parsing errors
           }
         }
       }
 
-      // Check for transfer event as fallback
-      if (typeof log.key === 'string' && log.key === 'transfer') {
-        // Handle case where value is an object
-        if (typeof log.value === 'object' && log.value !== null) {
-          const valueObj = log.value as Record<string, unknown>;
-          if ('amount' in valueObj && typeof valueObj['amount'] === 'string') {
-            return valueObj['amount'];
-          }
+      // Handle direct log structure
+      if (log.type === 'wasm') {
+        const lpAmount = extractFromWasmLog(log);
+        if (lpAmount) {
+          return lpAmount;
         }
+      }
 
-        // Handle case where value is a JSON string
-        if (typeof log.value === 'string') {
-          try {
-            const parsed = JSON.parse(log.value) as Record<string, unknown>;
-            if (parsed != null && 'amount' in parsed && typeof parsed['amount'] === 'string') {
-              return parsed['amount'];
-            }
-          } catch (_) {
-            // Ignore parsing errors
-          }
-        }
+      // Handle direct log structure for share key (LP tokens)
+      const logObj = log as unknown as Record<string, unknown>;
+      if (logObj.type === 'wasm' && logObj.key === 'share') {
+        return String(logObj.value);
       }
     }
 
@@ -737,4 +766,64 @@ function extractLpAmountFromTx(txResult: { arrayLog?: TxLogEntry[] }): string | 
     console.error('Error extracting LP amount from transaction:', error);
     return null;
   }
+}
+
+// Helper function to extract LP amount from wasm event
+function extractFromWasmEvent(event: unknown): string | null {
+  const eventObj = event as Record<string, unknown>;
+  if (!eventObj.attributes || !Array.isArray(eventObj.attributes)) return null;
+
+  for (const attr of eventObj.attributes as unknown as unknown[]) {
+    const attrObj = attr as Record<string, unknown>;
+    if (attrObj.key === 'mint' || attrObj.key === 'transfer') {
+      // Look for amount in the same attribute or nearby attributes
+      if (attrObj.value && typeof attrObj.value === 'string') {
+        try {
+          const parsed = JSON.parse(attrObj.value) as unknown;
+          const parsedObj = parsed as Record<string, unknown>;
+          if (parsedObj && typeof parsedObj.amount === 'string') {
+            return parsedObj.amount;
+          }
+        } catch {
+          // Not JSON, might be direct amount
+          if (/^\d+$/.test(attrObj.value)) return attrObj.value;
+        }
+      }
+    }
+
+    // Direct amount attribute
+    if (attrObj.key === 'amount' && attrObj.value && typeof attrObj.value === 'string') {
+      if (/^\d+$/.test(attrObj.value)) return attrObj.value;
+    }
+  }
+
+  return null;
+}
+
+// Helper function to extract LP amount from wasm log (legacy structure)
+function extractFromWasmLog(log: unknown): string | null {
+  const logObj = log as Record<string, unknown>;
+  // Check for mint event
+  if (logObj.key === 'mint' || logObj.key === 'transfer') {
+    if (typeof logObj.value === 'object' && logObj.value !== null) {
+      const valueObj = logObj.value as Record<string, unknown>;
+      if ('amount' in valueObj && typeof valueObj['amount'] === 'string') {
+        return valueObj['amount'];
+      }
+    }
+
+    if (typeof logObj.value === 'string') {
+      try {
+        const parsed = JSON.parse(logObj.value) as Record<string, unknown>;
+        if (parsed && 'amount' in parsed && typeof parsed['amount'] === 'string') {
+          return parsed['amount'];
+        }
+      } catch {
+        // Not JSON, might be direct amount
+        if (/^\d+$/.test(logObj.value)) return logObj.value;
+      }
+    }
+  }
+
+  return null;
 }

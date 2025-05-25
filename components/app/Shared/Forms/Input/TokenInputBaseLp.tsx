@@ -6,6 +6,7 @@ import React, { useEffect } from 'react';
 import TopRightBalanceLp from '../../TopRightBalanceLp';
 import InputLabel from './InputLabel';
 import { PoolInputIdentifier } from './TokenInputBase';
+import { INPUT_STYLES } from './inputStyles';
 
 interface TokenInputBaseLpProps {
   inputValue: string;
@@ -39,8 +40,8 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
   }, [secretjs, connect]);
 
   return (
-    <div className="flex flex-col gap-2.5 bg-adamant-app-input/30 backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40">
-      <div className="flex justify-between items-center">
+    <div className={INPUT_STYLES.container}>
+      <div className={INPUT_STYLES.header}>
         <InputLabel label={label} caseType="normal-case" />
         <TopRightBalanceLp
           balance={lpTokenData.amount}
@@ -53,23 +54,23 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
           onSuggestToken={() => void lpTokenData.suggestToken()}
         />
       </div>
-      <div className="flex items-center gap-4">
+      <div className={INPUT_STYLES.inputRow}>
         <div className="relative flex-1">
           <input
             type="text"
-            className="w-full bg-transparent text-2xl font-light outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-gray-500/50"
+            className={INPUT_STYLES.inputField}
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="0.0"
             disabled={isLoading}
           />
           {isLoading && (
-            <div className="absolute inset-0 flex items-center">
-              <div className="h-8 w-32 bg-white/5 animate-pulse rounded" />
+            <div className={INPUT_STYLES.loadingOverlay}>
+              <div className={INPUT_STYLES.loadingPlaceholder} />
             </div>
           )}
         </div>
-        <div className="flex gap-3 items-center rounded-xl text-base font-medium py-1 px-3 bg-adamant-app-selectTrigger min-w-max">
+        <div className={INPUT_STYLES.tokenSelectorStatic}>
           <PlaceholderImageFromSeed seed={tokenAddress} size={24} />
           {tokenSymbol}
         </div>
