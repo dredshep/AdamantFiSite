@@ -9,9 +9,9 @@ interface PoolLiquidityDisplayProps {
   hasLiquidity: boolean;
   token0?: ConfigToken | undefined;
   token1?: ConfigToken | undefined;
-  token0Amount?: string;
-  token1Amount?: string;
-  totalLpSupply?: string;
+  token0Amount?: string | undefined;
+  token1Amount?: string | undefined;
+  totalLpSupply?: string | undefined;
   showLpSupply?: boolean;
   emptyStateMessage?: {
     title: string;

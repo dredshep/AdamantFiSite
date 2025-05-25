@@ -15,7 +15,6 @@ import { provideLiquidity } from '@/utils/secretjs/pools/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/pools/withdrawLiquidity';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
-import Decimal from 'decimal.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
@@ -34,73 +33,74 @@ interface TokenInputs extends PoolTokenInputs {
 }
 
 // Add new interface for pool calculations
-interface PoolMetrics {
-  poolShare: string;
-  txFee: string;
-  ratioDeviation: string; // How much the provided ratio deviates from pool ratio (in %)
-}
+// interface PoolMetrics {
+//   poolShare: string;
+//   txFee: string;
+//   ratioDeviation: string; // How much the provided ratio deviates from pool ratio (in %)
+// }
 
 // Standard network fee for Secret Network
-const SCRT_TX_FEE = '0.0001';
+// const SCRT_TX_FEE = '0.0001';
 
-function calculatePoolMetrics(
-  amount0: string,
-  amount1: string,
-  reserve0: string,
-  reserve1: string
-): PoolMetrics {
-  // Validate and sanitize inputs
-  const sanitizeAmount = (amount: string): string => {
-    if (!amount || amount.trim() === '' || isNaN(parseFloat(amount))) {
-      return '0';
-    }
-    return amount.trim();
-  };
+// Currently unused but available for future features
+// function calculatePoolMetrics(
+//   amount0: string,
+//   amount1: string,
+//   reserve0: string,
+//   reserve1: string
+// ): PoolMetrics {
+//   // Validate and sanitize inputs
+//   const sanitizeAmount = (amount: string): string => {
+//     if (!amount || amount.trim() === '' || isNaN(parseFloat(amount))) {
+//       return '0';
+//     }
+//     return amount.trim();
+//   };
 
-  const sanitizedAmount0 = sanitizeAmount(amount0);
-  const sanitizedAmount1 = sanitizeAmount(amount1);
-  const sanitizedReserve0 = sanitizeAmount(reserve0);
-  const sanitizedReserve1 = sanitizeAmount(reserve1);
+//   const sanitizedAmount0 = sanitizeAmount(amount0);
+//   const sanitizedAmount1 = sanitizeAmount(amount1);
+//   const sanitizedReserve0 = sanitizeAmount(reserve0);
+//   const sanitizedReserve1 = sanitizeAmount(reserve1);
 
-  try {
-    const amt0 = new Decimal(sanitizedAmount0);
-    const amt1 = new Decimal(sanitizedAmount1);
-    const res0 = new Decimal(sanitizedReserve0);
-    const res1 = new Decimal(sanitizedReserve1);
+//   try {
+//     const amt0 = new Decimal(sanitizedAmount0);
+//     const amt1 = new Decimal(sanitizedAmount1);
+//     const res0 = new Decimal(sanitizedReserve0);
+//     const res1 = new Decimal(sanitizedReserve1);
 
-    // Calculate pool share
-    const totalSupply0 = res0.add(amt0);
-    const poolShare = totalSupply0.isZero() ? '0' : amt0.div(totalSupply0).mul(100).toFixed(6);
+//     // Calculate pool share
+//     const totalSupply0 = res0.add(amt0);
+//     const poolShare = totalSupply0.isZero() ? '0' : amt0.div(totalSupply0).mul(100).toFixed(6);
 
-    // Calculate ratio deviation
-    let ratioDeviation = '0';
-    if (!res0.isZero() && !res1.isZero() && !amt0.isZero() && !amt1.isZero()) {
-      const poolRatio = res0.div(res1);
-      const providedRatio = amt0.div(amt1);
-      ratioDeviation = providedRatio.sub(poolRatio).div(poolRatio).mul(100).abs().toFixed(6);
-    }
+//     // Calculate ratio deviation
+//     let ratioDeviation = '0';
+//     if (!res0.isZero() && !res1.isZero() && !amt0.isZero() && !amt1.isZero()) {
+//       const poolRatio = res0.div(res1);
+//       const providedRatio = amt0.div(amt1);
+//       ratioDeviation = providedRatio.sub(poolRatio).div(poolRatio).mul(100).abs().toFixed(6);
+//     }
 
-    return {
-      poolShare,
-      ratioDeviation,
-      txFee: SCRT_TX_FEE,
-    };
-  } catch (error) {
-    console.error('Error calculating pool metrics:', error, {
-      amount0,
-      amount1,
-      reserve0,
-      reserve1,
-    });
+//     return {
+//       poolShare,
+//       ratioDeviation,
+//       txFee: SCRT_TX_FEE,
+//     };
+//   } catch (error) {
+//     console.error('Error calculating pool metrics:', error, {
+//       amount0,
+//       amount1,
+//       reserve0,
+//       reserve1,
+//     });
 
-    // Return safe defaults
-    return {
-      poolShare: '0',
-      ratioDeviation: '0',
-      txFee: SCRT_TX_FEE,
-    };
-  }
-}
+//     // Return safe defaults
+//     return {
+//       poolShare: '0',
+//       ratioDeviation: '0',
+//       txFee: SCRT_TX_FEE,
+//     };
+//   }
+// }
 
 // Add debounce utility with proper types
 function debounce<T extends (...args: unknown[]) => unknown>(
@@ -435,13 +435,13 @@ export function usePoolForm(
       }
     }
 
-    // Calculate pool metrics
-    const metrics = calculatePoolMetrics(
-      amount0,
-      amount1,
-      assets[0]?.amount ?? '0',
-      assets[1]?.amount ?? '0'
-    );
+    // Calculate pool metrics (currently unused but available for future features)
+    // const metrics = calculatePoolMetrics(
+    //   amount0,
+    //   amount1,
+    //   assets[0]?.amount ?? '0',
+    //   assets[1]?.amount ?? '0'
+    // );
 
     // Get the pair contract code hash from the LIQUIDITY_PAIRS configuration
     const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
