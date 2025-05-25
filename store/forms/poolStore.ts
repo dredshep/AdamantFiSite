@@ -15,6 +15,8 @@ interface PoolStore {
   tokenInputs: PoolTokenInputs;
   setSelectedPool: (pool: SelectedPool) => void;
   setTokenInputAmount: (identifier: keyof PoolTokenInputs, amount: string) => void;
+  setTokenInputBalance: (identifier: keyof PoolTokenInputs, balance: string) => void;
+  setTokenInputAmountWithRatio: (identifier: keyof PoolTokenInputs, amount: string) => void;
 }
 
 const defaultTokenInputState: TokenInputState = {
@@ -33,6 +35,26 @@ export const usePoolStore = create<PoolStore>((set) => ({
   },
   setSelectedPool: (pool) => set({ selectedPool: pool }),
   setTokenInputAmount: (identifier, amount) =>
+    set((state) => ({
+      tokenInputs: {
+        ...state.tokenInputs,
+        [identifier]: {
+          ...state.tokenInputs[identifier],
+          amount,
+        },
+      },
+    })),
+  setTokenInputBalance: (identifier, balance) =>
+    set((state) => ({
+      tokenInputs: {
+        ...state.tokenInputs,
+        [identifier]: {
+          ...state.tokenInputs[identifier],
+          balance,
+        },
+      },
+    })),
+  setTokenInputAmountWithRatio: (identifier, amount) =>
     set((state) => ({
       tokenInputs: {
         ...state.tokenInputs,

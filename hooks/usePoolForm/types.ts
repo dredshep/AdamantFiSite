@@ -59,6 +59,16 @@ export interface SelectedPoolType {
 export interface WithdrawEstimate {
   token0Amount: string;
   token1Amount: string;
+  proportion: string; // Percentage of pool being withdrawn
+  isValid: boolean;
+  error?: string;
+}
+
+export interface ValidationWarning {
+  field: 'tokenA' | 'tokenB' | 'lpToken';
+  message: string;
+  maxAvailable: string;
+  tokenSymbol: string;
 }
 
 export interface UsePoolDepositFormResult {
@@ -71,6 +81,7 @@ export interface UsePoolDepositFormResult {
   poolDetails: PoolDetails | undefined;
   pairPoolData: PairPoolData | undefined;
   withdrawEstimate: WithdrawEstimate | null;
+  validationWarning: ValidationWarning | null;
 
   // Staking properties
   hasStakingRewards: boolean;

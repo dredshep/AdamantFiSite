@@ -1,10 +1,10 @@
-import PlaceholderImageFromSeed from '@/components/app/Shared/PlaceholderImageFromSeed';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { PoolTokenInputs, SecretString, SwapTokenInputs } from '@/types';
 import * as Dialog from '@radix-ui/react-dialog';
 import React, { useEffect } from 'react';
 import { PiApproximateEquals } from 'react-icons/pi';
+import TokenImageWithFallback from '../../TokenImageWithFallback';
 import TopRightBalance from '../../TopRightBalance';
 import PoolSelectionModal from '../Select/PoolSelectionModal';
 import TokenSelectionModal from '../Select/TokenSelectionModal';
@@ -78,6 +78,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="0.0"
             disabled={isLoading}
+            data-input-id={inputIdentifier}
           />
           {isLoading && (
             <div className={INPUT_STYLES.loadingOverlay}>
@@ -87,7 +88,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
         </div>
         <Dialog.Root>
           <Dialog.Trigger className={INPUT_STYLES.tokenSelectorClickable}>
-            <PlaceholderImageFromSeed seed={tokenAddress} size={24} />
+            <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
             {tokenSymbol}
           </Dialog.Trigger>
           {isSwapInput ? (

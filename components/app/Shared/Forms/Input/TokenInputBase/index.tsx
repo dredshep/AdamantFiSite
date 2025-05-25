@@ -1,3 +1,5 @@
+import { getTokenImagePath } from '@/config/tokenImages';
+import { SecretString } from '@/types';
 import React from 'react';
 
 interface TokenInputBaseProps {
@@ -18,7 +20,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   inputValue,
   onInputChange,
   tokenSymbol,
-  //   tokenAddress,
+  tokenAddress,
   showEstimatedPrice = false,
   estimatedPrice = '',
   label = 'Amount',
@@ -55,7 +57,26 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-adamant-app-input/50" />
+          {(() => {
+            const imagePath = getTokenImagePath(tokenAddress as SecretString);
+            return imagePath ? (
+              <img
+                src={imagePath}
+                alt={`${tokenSymbol} icon`}
+                className="h-8 w-8 rounded-full"
+                onError={(e) => {
+                  // Fallback to placeholder if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-adamant-app-input/50 flex items-center justify-center text-xs font-medium text-gray-400">
+                {tokenSymbol.slice(0, 2).toUpperCase()}
+              </div>
+            );
+          })()}
+          <div className="h-8 w-8 rounded-full bg-adamant-app-input/50 hidden" />
           <span className="text-lg">{tokenSymbol}</span>
         </div>
       </div>

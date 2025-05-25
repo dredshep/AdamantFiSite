@@ -6,13 +6,17 @@ import { useTxStore } from '@/store/txStore';
 import { PoolTokenInputs, SecretString } from '@/types';
 import { Asset, ContractInfo } from '@/types/secretswap/shared';
 import isNotNullish from '@/utils/isNotNullish';
+import {
+  calculateProportionalAmount,
+  convertPoolReservesToFormat,
+} from '@/utils/pool/ratioCalculation';
 import { calculateWithdrawalAmounts } from '@/utils/secretjs/pools/calculateWithdrawalAmounts';
 import { provideLiquidity } from '@/utils/secretjs/pools/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/pools/withdrawLiquidity';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 import { fetchPoolData, validatePoolAddress } from './queryFunctions';
@@ -20,6 +24,7 @@ import type {
   LoadingState,
   SelectedPoolType,
   UsePoolDepositFormResult,
+  ValidationWarning,
   WithdrawEstimate,
 } from './types';
 
@@ -143,14 +148,12 @@ export function usePoolForm(
     // Check cache first
     const cached = balanceCache.current.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < BALANCE_CACHE_DURATION) {
-      console.log(`Using cached balance for ${tokenAddress}`);
       return cached.balance;
     }
 
     // Check if request is already pending
     const pendingRequest = pendingRequests.current.get(cacheKey);
     if (pendingRequest) {
-      console.log(`Waiting for pending request for ${tokenAddress}`);
       return pendingRequest;
     }
 
@@ -238,8 +241,6 @@ export function usePoolForm(
 
     const fetchBalancesWithRateLimit = debounce(async () => {
       try {
-        console.log('Fetching token balances for wallet:', walletAddress);
-
         const token0Address = selectedPool.token0?.address;
         const token1Address = selectedPool.token1?.address;
         const token0CodeHash = selectedPool.token0?.codeHash;
@@ -258,15 +259,12 @@ export function usePoolForm(
 
         const balance1Promise = getTokenBalance(secretjs, token1Address, token1CodeHash);
 
-        const [balance0, balance1] = await Promise.all([balance0Promise, balance1Promise]);
-
-        console.log('Balance of token0:', balance0);
-        console.log('Balance of token1:', balance1);
+        await Promise.all([balance0Promise, balance1Promise]);
 
         // Update the store with the fetched balances if needed
         // This would require extending the store to handle balance updates
       } catch (error) {
-        console.error('Error fetching balances:', error);
+        // Silent error handling for balance fetching
       }
     }, 2000); // Increased debounce time
 
@@ -375,6 +373,20 @@ export function usePoolForm(
       return;
     }
 
+    // Check if user has sufficient balance (only if balance is available)
+    const token0Balance = safeTokenInputs[inputIdentifier1]?.balance;
+    const token1Balance = safeTokenInputs[inputIdentifier2]?.balance;
+
+    if (token0Balance && token0Balance !== '0' && parseFloat(amount0) > parseFloat(token0Balance)) {
+      toast.error(`Insufficient ${selectedPool.token0.symbol} balance`);
+      return;
+    }
+
+    if (token1Balance && token1Balance !== '0' && parseFloat(amount1) > parseFloat(token1Balance)) {
+      toast.error(`Insufficient ${selectedPool.token1.symbol} balance`);
+      return;
+    }
+
     const address0 = selectedPool.token0.address;
     const address1 = selectedPool.token1.address;
 
@@ -388,6 +400,39 @@ export function usePoolForm(
     if (!Array.isArray(assets) || assets.length !== 2) {
       toast.error('Invalid pool data');
       return;
+    }
+
+    // Check if amounts exceed pool availability (only for pools with liquidity)
+    const token0Asset = assets.find((asset) => asset.info.token.contract_addr === address0);
+    const token1Asset = assets.find((asset) => asset.info.token.contract_addr === address1);
+
+    if (token0Asset && token1Asset) {
+      const token0Decimals = selectedPool.token0.decimals || 6;
+      const token1Decimals = selectedPool.token1.decimals || 6;
+
+      const token0Reserve = parseFloat(token0Asset.amount) / Math.pow(10, token0Decimals);
+      const token1Reserve = parseFloat(token1Asset.amount) / Math.pow(10, token1Decimals);
+
+      // Only check if pool has liquidity
+      if (token0Reserve > 0 && token1Reserve > 0) {
+        if (parseFloat(amount0) > token0Reserve) {
+          toast.error(
+            `Amount exceeds pool availability. Maximum: ${token0Reserve.toFixed(6)} ${
+              selectedPool.token0.symbol
+            }`
+          );
+          return;
+        }
+
+        if (parseFloat(amount1) > token1Reserve) {
+          toast.error(
+            `Amount exceeds pool availability. Maximum: ${token1Reserve.toFixed(6)} ${
+              selectedPool.token1.symbol
+            }`
+          );
+          return;
+        }
+      }
     }
 
     // Calculate pool metrics
@@ -435,18 +480,6 @@ export function usePoolForm(
       amount: convertAmount(amount1, selectedPool.token1.decimals),
     };
 
-    console.log('Deposit clicked', {
-      pool: selectedPool.address,
-      token0: selectedPool.token0.symbol,
-      amount0,
-      token1: selectedPool.token1.symbol,
-      amount1,
-      poolShare: metrics.poolShare,
-      ratioDeviation: metrics.ratioDeviation,
-      txFee: metrics.txFee,
-      autoStake, // Log if auto-stake is enabled
-    });
-
     try {
       setPending(true);
 
@@ -455,8 +488,6 @@ export function usePoolForm(
 
       setPending(false);
       setResult(result);
-
-      console.log('Transaction Result:', JSON.stringify(result, null, 4));
 
       if (result.code !== TxResultCode.Success) {
         throw new Error(`Deposit failed: ${result.rawLog}`);
@@ -478,21 +509,18 @@ export function usePoolForm(
               toast.error('Liquidity provided but auto-staking failed');
             }
           } else {
-            console.error('Could not extract LP token amount from transaction');
             toast.warning(
               'Liquidity provided but auto-staking failed: could not determine LP amount'
             );
           }
         } catch (stakeError) {
-          console.error('Error auto-staking LP tokens:', stakeError);
           toast.error('Liquidity provided but auto-staking failed');
         }
       } else {
         toast.success('Liquidity provided successfully');
       }
     } catch (error) {
-      console.error('Error during tx execution:', error);
-      toast.error('Transaction failed. Check the console for more details.');
+      toast.error('Transaction failed. Please try again.');
       setPending(false);
     }
   };
@@ -507,9 +535,16 @@ export function usePoolForm(
 
     const inputIdentifier = `pool.withdraw.lpToken`;
     let amount = safeTokenInputs[inputIdentifier]?.amount ?? '0';
+    const lpBalance = safeTokenInputs[inputIdentifier]?.balance;
 
     if (amount === '0') {
       toast.error('Please enter an amount of LP tokens to withdraw');
+      return;
+    }
+
+    // Check if user has sufficient LP balance (only if balance is available)
+    if (lpBalance && lpBalance !== '0' && parseFloat(amount) > parseFloat(lpBalance)) {
+      toast.error(`Insufficient LP token balance. You have ${lpBalance} LP tokens.`);
       return;
     }
 
@@ -534,13 +569,6 @@ export function usePoolForm(
       code_hash: '744C588ED4181B13A49A7C75A49F10B84B22B24A69B1E5F3CDFF34B2C343E888',
     };
 
-    console.log('Withdraw clicked', {
-      pool: pairContract.address,
-      lpToken: lpTokenContract.address,
-      lpTokenCodeHash: lpTokenContract.code_hash,
-      amount,
-    });
-
     try {
       setPending(true);
 
@@ -551,16 +579,13 @@ export function usePoolForm(
       setPending(false);
       setResult(result);
 
-      console.log('Transaction Result:', JSON.stringify(result, null, 4));
-
       if (result.code !== TxResultCode.Success) {
         throw new Error(`Withdrawal failed: ${result.rawLog}`);
       }
 
       toast.success('Liquidity withdrawn successfully');
     } catch (error) {
-      console.error('Error during tx execution:', error);
-      toast.error('Transaction failed. Check the console for more details.');
+      toast.error('Transaction failed. Please try again.');
       setPending(false);
     }
   };
@@ -574,15 +599,17 @@ export function usePoolForm(
   };
 
   const [withdrawEstimate, setWithdrawEstimate] = useState<WithdrawEstimate | null>(null);
+  const [validationWarning, setValidationWarning] = useState<ValidationWarning | null>(null);
 
-  // Add calculation effect
+  // Add calculation effect for withdraw estimates and validation
   useEffect(() => {
     if (data?.pairPoolData === undefined || selectedPool === undefined || selectedPool === null)
       return;
 
     const lpAmount = safeTokenInputs['pool.withdraw.lpToken']?.amount;
+    const lpBalance = safeTokenInputs['pool.withdraw.lpToken']?.balance;
 
-    // Improved validation to handle empty strings and invalid numbers
+    // Clear estimates and warnings for empty input
     if (
       !lpAmount ||
       lpAmount.trim() === '' ||
@@ -590,6 +617,7 @@ export function usePoolForm(
       parseFloat(lpAmount) <= 0
     ) {
       setWithdrawEstimate(null);
+      setValidationWarning(null);
       return;
     }
 
@@ -603,6 +631,9 @@ export function usePoolForm(
       setWithdrawEstimate({
         token0Amount: '0',
         token1Amount: '0',
+        proportion: '0%',
+        isValid: false,
+        error: 'No liquidity in pool',
       });
       return;
     }
@@ -618,7 +649,24 @@ export function usePoolForm(
       return;
     }
 
-    // Use the new utility function
+    // Check if user has sufficient LP balance (only if balance is available)
+    const lpAmountNum = parseFloat(lpAmount);
+    const lpBalanceNum = lpBalance && lpBalance !== '0' ? parseFloat(lpBalance) : null;
+
+    // Set validation warning for insufficient balance
+    if (lpBalanceNum !== null && lpAmountNum > lpBalanceNum) {
+      setValidationWarning({
+        field: 'lpToken',
+        message: 'Insufficient LP token balance',
+        maxAvailable: lpBalance,
+        tokenSymbol: `${selectedPool.token0.symbol}/${selectedPool.token1.symbol} LP`,
+      });
+    } else {
+      setValidationWarning(null);
+    }
+
+    // Always calculate the withdrawal amounts (even if exceeding balance)
+    // This shows users what they would get proportionally
     const result = calculateWithdrawalAmounts({
       lpAmount,
       totalLpSupply: total_share,
@@ -628,18 +676,172 @@ export function usePoolForm(
       token1: selectedPool.token1,
     });
 
+    // Only show calculation errors that aren't about exceeding pool supply
+    // (since that's a technical limitation, not a user error)
     if (result.isValid) {
+      const proportionDisplay = (result.proportion * 100).toFixed(4) + '%';
       setWithdrawEstimate({
         token0Amount: result.token0Amount,
         token1Amount: result.token1Amount,
+        proportion: proportionDisplay,
+        isValid: true,
       });
-    } else {
+    } else if (result.error && !result.error.includes('Total pool supply is only')) {
+      // Only show non-pool-supply errors
       setWithdrawEstimate({
         token0Amount: '0',
         token1Amount: '0',
+        proportion: '0%',
+        isValid: false,
+        error: result.error,
+      });
+    } else {
+      // For pool supply errors, still show the calculation but mark as invalid
+      // This happens when someone tries to withdraw more than exists in the pool
+      setWithdrawEstimate({
+        token0Amount: '0',
+        token1Amount: '0',
+        proportion: '0%',
+        isValid: false,
+        error: 'Amount exceeds available pool liquidity',
       });
     }
-  }, [data?.pairPoolData, safeTokenInputs['pool.withdraw.lpToken']?.amount, selectedPool]);
+  }, [
+    data?.pairPoolData,
+    safeTokenInputs['pool.withdraw.lpToken']?.amount,
+    safeTokenInputs['pool.withdraw.lpToken']?.balance,
+    selectedPool,
+  ]);
+
+  // Track which field user is actively editing to avoid interfering with their input
+  const previousValuesRef = useRef({ tokenA: '', tokenB: '' });
+  const isCalculatingRef = useRef(false);
+
+  const calculateRatio = useCallback(
+    (sourceField: 'tokenA' | 'tokenB', amount: string) => {
+      if (
+        !data?.pairPoolData ||
+        !selectedPool?.token0 ||
+        !selectedPool?.token1 ||
+        isCalculatingRef.current
+      ) {
+        return;
+      }
+
+      isCalculatingRef.current = true;
+
+      const isTokenASource = sourceField === 'tokenA';
+      const targetInputIdentifier = isTokenASource ? 'pool.deposit.tokenB' : 'pool.deposit.tokenA';
+
+      try {
+        const reserves = convertPoolReservesToFormat(
+          data.pairPoolData,
+          selectedPool.token0.address,
+          selectedPool.token1.address
+        );
+
+        if (!reserves) {
+          return;
+        }
+
+        const inputTokenAddress = isTokenASource
+          ? selectedPool.token0.address
+          : selectedPool.token1.address;
+
+        const result = calculateProportionalAmount(amount, inputTokenAddress, reserves);
+
+        // Check if pool has no liquidity
+        const hasLiquidity = !reserves.token0.amount.isZero() && !reserves.token1.amount.isZero();
+
+        if (!hasLiquidity) {
+          // For pools with no liquidity, don't auto-calculate the other field
+          // Users can provide any ratio for initial liquidity
+          setValidationWarning(null);
+          return;
+        }
+
+        // Only update the target field if it's not currently focused (being typed into)
+        const targetInputElement = document.querySelector(
+          `input[data-input-id="${targetInputIdentifier}"]`
+        ) as HTMLInputElement;
+        const isTargetFieldFocused =
+          targetInputElement && document.activeElement === targetInputElement;
+
+        if (!isTargetFieldFocused) {
+          setTokenInputAmount(targetInputIdentifier, result.amount);
+        }
+
+        // Set validation warning if amount exceeds pool availability
+        if (result.exceedsPool && result.maxAvailable) {
+          const tokenSymbol = isTokenASource
+            ? selectedPool.token0.symbol
+            : selectedPool.token1.symbol;
+          setValidationWarning({
+            field: sourceField,
+            message: `Amount exceeds pool availability`,
+            maxAvailable: result.maxAvailable,
+            tokenSymbol,
+          });
+        } else {
+          setValidationWarning(null);
+        }
+      } catch (error) {
+        // Silent error handling
+      } finally {
+        setTimeout(() => {
+          isCalculatingRef.current = false;
+        }, 50);
+      }
+    },
+    [data?.pairPoolData, selectedPool, setTokenInputAmount]
+  );
+
+  // Monitor changes and calculate ratios with better user input tracking
+  useEffect(() => {
+    if (isCalculatingRef.current) return;
+
+    const tokenAAmount = safeTokenInputs['pool.deposit.tokenA']?.amount || '';
+    const tokenBAmount = safeTokenInputs['pool.deposit.tokenB']?.amount || '';
+    const previous = previousValuesRef.current;
+
+    // Determine which field changed
+    const tokenAChanged = tokenAAmount !== previous.tokenA;
+    const tokenBChanged = tokenBAmount !== previous.tokenB;
+
+    // Update previous values
+    previousValuesRef.current = { tokenA: tokenAAmount, tokenB: tokenBAmount };
+
+    // Helper to check if value is a valid number (including 0)
+    const isValidNumber = (val: string) => {
+      const trimmed = val.trim();
+      if (!trimmed) return false;
+      const num = parseFloat(trimmed);
+      return !isNaN(num) && num >= 0;
+    };
+
+    // Calculate ratios when fields change
+    if (tokenAChanged) {
+      // Only calculate ratio if the input is a valid number and greater than 0
+      if (isValidNumber(tokenAAmount) && parseFloat(tokenAAmount) > 0) {
+        calculateRatio('tokenA', tokenAAmount);
+      } else {
+        // Clear validation warning when field is empty or 0
+        setValidationWarning(null);
+      }
+    } else if (tokenBChanged) {
+      // Only calculate ratio if the input is a valid number and greater than 0
+      if (isValidNumber(tokenBAmount) && parseFloat(tokenBAmount) > 0) {
+        calculateRatio('tokenB', tokenBAmount);
+      } else {
+        // Clear validation warning when field is empty or 0
+        setValidationWarning(null);
+      }
+    }
+  }, [
+    safeTokenInputs['pool.deposit.tokenA']?.amount,
+    safeTokenInputs['pool.deposit.tokenB']?.amount,
+    calculateRatio,
+  ]);
 
   const typedSelectedPool = (() => {
     if (selectedPool === undefined || selectedPool === null) return null;
@@ -696,6 +898,7 @@ export function usePoolForm(
     pairPoolData: data?.pairPoolData,
     handleClick,
     withdrawEstimate,
+    validationWarning,
 
     // Staking properties from usePoolStaking
     hasStakingRewards,
@@ -758,7 +961,6 @@ function extractLpAmountFromTx(txResult: Record<string, unknown>): string | null
 
     return null;
   } catch (error) {
-    console.error('Error extracting LP amount from transaction:', error);
     return null;
   }
 }

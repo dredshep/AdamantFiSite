@@ -1,8 +1,9 @@
-import PlaceholderImageFromSeed from '@/components/app/Shared/PlaceholderImageFromSeed';
 import { useLpTokenBalance } from '@/hooks/useLpTokenBalance';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
+import { usePoolStore } from '@/store/forms/poolStore';
 import { SecretString } from '@/types';
 import React, { useEffect } from 'react';
+import TokenImageWithFallback from '../../TokenImageWithFallback';
 import TopRightBalanceLp from '../../TopRightBalanceLp';
 import InputLabel from './InputLabel';
 import { PoolInputIdentifier } from './TokenInputBase';
@@ -31,6 +32,7 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
 }) => {
   const { secretjs, connect } = useSecretNetwork();
   const lpTokenData = useLpTokenBalance(tokenAddress);
+  const { setTokenInputBalance } = usePoolStore();
 
   // Attempt to connect if not connected
   useEffect(() => {
@@ -38,6 +40,13 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
       void connect();
     }
   }, [secretjs, connect]);
+
+  // Sync LP token balance with pool store
+  useEffect(() => {
+    if (lpTokenData.amount !== null) {
+      setTokenInputBalance(inputIdentifier, lpTokenData.amount);
+    }
+  }, [lpTokenData.amount, inputIdentifier, setTokenInputBalance]);
 
   return (
     <div className={INPUT_STYLES.container}>
@@ -63,6 +72,7 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="0.0"
             disabled={isLoading}
+            data-input-id={inputIdentifier}
           />
           {isLoading && (
             <div className={INPUT_STYLES.loadingOverlay}>
@@ -71,7 +81,7 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
           )}
         </div>
         <div className={INPUT_STYLES.tokenSelectorStatic}>
-          <PlaceholderImageFromSeed seed={tokenAddress} size={24} />
+          <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
           {tokenSymbol}
         </div>
       </div>

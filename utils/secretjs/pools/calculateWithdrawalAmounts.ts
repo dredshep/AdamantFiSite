@@ -116,9 +116,9 @@ export function calculateWithdrawalAmounts(
 
     if (proportion > 1) {
       const totalLpSupplyDisplay = (totalLpSupplyRaw / Math.pow(10, 6)).toFixed(6);
-      console.error(
-        `❌ Cannot withdraw ${lpAmount} LP tokens. Total pool supply is only ${totalLpSupplyDisplay} LP tokens.`
-      );
+      // console.error(
+      //   `❌ Cannot withdraw ${lpAmount} LP tokens. Total pool supply is only ${totalLpSupplyDisplay} LP tokens.`
+      // );
       return {
         token0Amount: '0',
         token1Amount: '0',
