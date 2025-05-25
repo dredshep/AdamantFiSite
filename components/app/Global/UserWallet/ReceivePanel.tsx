@@ -1,11 +1,8 @@
-// C:\Users\sebas\projects\AdamantFiSite\components\app\Global\UserWallet\ReceivePanel.tsx
-
 import { SecretString } from '@/types';
 import { QRCodeSVG } from 'qrcode.react';
 import React from 'react';
 import { RiFileCopyLine } from 'react-icons/ri';
 import { toast } from 'react-toastify';
-import { CloseButton } from '../../Shared/CloseButton';
 
 interface ReceivePanelProps {
   walletAddress: SecretString;
@@ -21,20 +18,7 @@ export const ReceivePanel: React.FC<ReceivePanelProps> = ({ walletAddress, onClo
 
   return (
     <div className="p-4 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark bg-clip-text text-transparent">
-          Receive Tokens
-        </h2>
-        <button
-          onClick={onClose}
-          className="text-adamant-accentText hover:text-white transition-colors duration-200 p-2 rounded-lg hover:bg-white/5"
-        >
-          <CloseButton />
-        </button>
-      </div>
-
-      <div className="flex-grow overflow-auto space-y-8">
+      <div className="flex-1 overflow-auto space-y-8">
         {/* QR Code */}
         <div className="flex justify-center">
           <div className="bg-gradient-to-br from-adamant-gradientBright to-adamant-gradientDark p-[1px] rounded-2xl shadow-[0_0_20px_-4px_rgba(167,142,90,0.3)]">

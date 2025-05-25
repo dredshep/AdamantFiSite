@@ -33,4 +33,7 @@ export interface SwapStoreState {
   setSwappableTokens: (tokens: ConfigToken[]) => void;
   setConnectionRefused: (refused: boolean) => void;
   setSlippage: (slippage: number) => void;
+  getAvailableTokensForInput: (inputIdentifier: keyof SwapTokenInputs) => ConfigToken[];
+  clearTokenSelection: (inputIdentifier: keyof SwapTokenInputs) => void;
+  resetTokenSelections: () => void;
 }

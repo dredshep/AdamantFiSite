@@ -40,7 +40,7 @@ export const TOKENS: ConfigToken[] = [
     decimals: 6,
   },
   {
-    name: 'idk',
+    name: 'Secret ATOM',
     symbol: 'sATOM',
     address: 'secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4',
     codeHash: 'ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807',
@@ -75,7 +75,7 @@ export const TOKENS: ConfigToken[] = [
     decimals: 6,
   },
   {
-    name: 'bADMT',
+    name: 'bonded ADMT',
     symbol: 'bADMT',
     address: 'secret1cu5gvrvu24hm36fzyq46vca7u25llrymj6ntek',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
@@ -139,6 +139,13 @@ export const STAKING_CONTRACTS: StakingContract[] = [
     rewardTokenSymbol: 'bADMT',
     codeHash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a',
   },
+  {
+    pairSymbol: 'sSCRT/USDC.nbl-v2',
+    stakingContract: 'secret15rlkcn54mjkwfl6s735zjx3v7zcry6g499t5ev',
+    codeId: 2276,
+    rewardTokenSymbol: 'bADMT',
+    codeHash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a',
+  },
 ];
 
 // {"contract_address":"secret18reusruqrq7a0ug4vn6ue2pg59lm2dtsqxu6f3","contract_info":{"code_id":"30","creator":"secret16zvp2t86hdv5na3quygc9f2rnn9f9l4vszgtue","label":"secretswap-factory-3","created":{"block_height":"19549431","tx_index":"0"},"ibc_port_id":"","admin":"secret1kh0x34l6z66zty6j0cafn0j3fgs20aytulew52","admin_proof":null}}
@@ -146,3 +153,34 @@ export const FACTORY: Factory = {
   contract_address: 'secret18reusruqrq7a0ug4vn6ue2pg59lm2dtsqxu6f3',
   code_hash: '16ea6dca596d2e5e6eef41df6dc26a1368adaa238aa93f07959841e7968c51bd',
 };
+
+// LP Tokens as ConfigToken format for easier integration
+export const LP_TOKENS: ConfigToken[] = LIQUIDITY_PAIRS.map((pair) => ({
+  name: `${pair.symbol} LP Token`,
+  symbol: `${pair.symbol} LP`,
+  address: pair.lpToken,
+  codeHash: pair.lpTokenCodeHash,
+  decimals: 6, // LP tokens typically have 6 decimals
+}));
+
+// Helper functions for LP tokens
+export function getLpTokenInfo(lpTokenAddress: SecretString): LiquidityPair | undefined {
+  return LIQUIDITY_PAIRS.find((pair) => pair.lpToken === lpTokenAddress);
+}
+
+export function isLpToken(tokenAddress: SecretString): boolean {
+  return LIQUIDITY_PAIRS.some((pair) => pair.lpToken === tokenAddress);
+}
+
+export function getLpTokenByPairContract(pairContract: SecretString): ConfigToken | undefined {
+  const pair = LIQUIDITY_PAIRS.find((p) => p.pairContract === pairContract);
+  if (!pair) return undefined;
+
+  return {
+    name: `${pair.symbol} LP Token`,
+    symbol: `${pair.symbol} LP`,
+    address: pair.lpToken,
+    codeHash: pair.lpTokenCodeHash,
+    decimals: 6,
+  };
+}

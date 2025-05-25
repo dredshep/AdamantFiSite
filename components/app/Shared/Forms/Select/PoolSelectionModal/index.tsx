@@ -1,3 +1,4 @@
+import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
@@ -20,6 +21,19 @@ const PoolSelectionModal: React.FC = () => {
       token1Symbol.toLowerCase().includes(searchLower)
     );
   });
+
+  const handlePoolSelect = (pool: (typeof pools)[0]) => {
+    setSelectedPool({
+      address: pool.pair.contract_addr,
+      token0: pool.token0,
+      token1: pool.token1,
+      pairInfo: {
+        ...pool.pair,
+        liquidity_token: pool.pair.liquidity_token,
+      },
+    });
+    // Dialog will close automatically when Dialog.Close is clicked
+  };
 
   return (
     <Dialog.Portal>
@@ -45,37 +59,31 @@ const PoolSelectionModal: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-2 overflow-y-auto max-h-96 mt-4 px-6">
             {filteredPools.map((pool, index) => (
-              <button
-                key={index}
-                className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors"
-                onClick={() => {
-                  setSelectedPool({
-                    address: pool.pair.contract_addr,
-                    token0: pool.token0,
-                    token1: pool.token1,
-                    pairInfo: {
-                      ...pool.pair,
-                      liquidity_token: pool.pair.liquidity_token,
-                    },
-                  });
-                  const close = document.querySelector(
-                    '[data-radix-collection-item]'
-                  ) as HTMLElement;
-                  close?.click();
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">
-                      {pool.token0.symbol} / {pool.token1.symbol}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      {pool.pair.contract_addr.slice(0, 8)}...
-                      {pool.pair.contract_addr.slice(-8)}
-                    </span>
+              <Dialog.Close key={index} asChild>
+                <button
+                  className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors"
+                  onClick={() => handlePoolSelect(pool)}
+                >
+                  <div className="flex items-center gap-3">
+                    <DualTokenIcon
+                      token0Address={pool.token0.address}
+                      token1Address={pool.token1.address}
+                      token0Symbol={pool.token0.symbol}
+                      token1Symbol={pool.token1.symbol}
+                      size={40}
+                    />
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">
+                        {pool.token0.symbol} / {pool.token1.symbol}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        {pool.pair.contract_addr.slice(0, 8)}...
+                        {pool.pair.contract_addr.slice(-8)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </Dialog.Close>
             ))}
           </div>
         )}

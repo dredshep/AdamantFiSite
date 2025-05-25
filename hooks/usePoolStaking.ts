@@ -1,13 +1,18 @@
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
+import { useLoadBalancePreference } from '@/hooks/useLoadBalancePreference';
 import { useStaking } from '@/hooks/useStaking';
 import { useStakingStore } from '@/store/staking/stakingStore';
 import { SecretString } from '@/types';
 import { ViewingKeyStatus } from '@/types/staking';
 import isNotNullish from '@/utils/isNotNullish';
 import { convertToRawAmount } from '@/utils/staking/convertStakingAmount';
-import { getStakingContractInfo, hasStakingContract } from '@/utils/staking/stakingRegistry';
-import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
+import {
+  getStakingContractInfoForPool,
+  hasStakingContractForPool,
+} from '@/utils/staking/stakingRegistry';
 
 /**
  * A hook that provides staking functionality specific to liquidity pools
@@ -19,11 +24,15 @@ export function usePoolStaking(poolAddress: SecretString | null) {
   const { secretjs, walletAddress } = useKeplrConnection();
   const { autoStake, setAutoStake, stakingInputs, setStakingInputAmount } = useStakingStore();
   const [viewingKeyStatus, setViewingKeyStatus] = useState<ViewingKeyStatus>(ViewingKeyStatus.NONE);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Get load balance preferences
+  const loadBalanceConfig = useLoadBalancePreference();
 
   // Check if the pool has a staking contract
-  const hasStaking = isNotNullish(poolAddress) ? hasStakingContract(poolAddress) : false;
+  const hasStaking = isNotNullish(poolAddress) ? hasStakingContractForPool(poolAddress) : false;
   const stakingInfo =
-    isNotNullish(poolAddress) && hasStaking ? getStakingContractInfo(poolAddress) : null;
+    isNotNullish(poolAddress) && hasStaking ? getStakingContractInfoForPool(poolAddress) : null;
 
   // Use the base staking hook
   const staking = useStaking({
@@ -32,18 +41,59 @@ export function usePoolStaking(poolAddress: SecretString | null) {
     stakingInfo,
   });
 
-  // Initialize staking when component loads
+  // Initialize staking when component loads - but only once and respecting preferences
   useEffect(() => {
-    if (hasStaking && staking !== null) {
+    if (hasStaking && staking !== null && !hasInitialized) {
+      setHasInitialized(true);
       void initializeStaking();
     }
-  }, [hasStaking, staking, poolAddress]);
+  }, [hasStaking, staking, poolAddress, hasInitialized]);
+
+  // Check for existing viewing key when staking info changes
+  useEffect(() => {
+    if (stakingInfo && staking) {
+      // Check if we already have a viewing key
+      if (staking.hasViewingKey) {
+        setViewingKeyStatus(ViewingKeyStatus.CREATED);
+      } else {
+        // Try to get existing viewing key from Keplr without prompting user
+        const checkExistingViewingKey = async () => {
+          try {
+            const keplr = window.keplr;
+            if (!keplr) return;
+
+            const existingKey = await keplr.getSecret20ViewingKey(
+              'secret-4',
+              stakingInfo.stakingAddress
+            );
+            if (existingKey) {
+              setViewingKeyStatus(ViewingKeyStatus.CREATED);
+              // Initialize the staking hook with the existing key
+              await staking.initialize();
+            } else {
+              setViewingKeyStatus(ViewingKeyStatus.NONE);
+            }
+          } catch (error) {
+            // No existing key found, that's fine
+            setViewingKeyStatus(ViewingKeyStatus.NONE);
+          }
+        };
+
+        void checkExistingViewingKey();
+      }
+    }
+  }, [stakingInfo, staking]);
 
   /**
    * Initialize the staking functionality and set up viewing key
    */
   const initializeStaking = async () => {
     if (staking === null) return;
+
+    // Don't reinitialize if we already have a viewing key
+    if (viewingKeyStatus === ViewingKeyStatus.CREATED) {
+      return;
+    }
 
     setViewingKeyStatus(ViewingKeyStatus.PENDING);
 
@@ -52,7 +102,11 @@ export function usePoolStaking(poolAddress: SecretString | null) {
 
       if (staking.hasViewingKey !== null && staking.hasViewingKey !== '') {
         setViewingKeyStatus(ViewingKeyStatus.CREATED);
-        void refreshBalances();
+
+        // Only auto-refresh balances if load preference allows it
+        if (loadBalanceConfig.shouldAutoLoad) {
+          void refreshBalances();
+        }
       } else {
         setViewingKeyStatus(ViewingKeyStatus.NONE);
       }
@@ -75,7 +129,12 @@ export function usePoolStaking(poolAddress: SecretString | null) {
 
       if (success) {
         setViewingKeyStatus(ViewingKeyStatus.CREATED);
-        void refreshBalances();
+
+        // Only auto-refresh balances if load preference allows it
+        if (loadBalanceConfig.shouldAutoLoad) {
+          void refreshBalances();
+        }
+
         toast.success('Viewing key set up successfully');
       } else {
         setViewingKeyStatus(ViewingKeyStatus.ERROR);
@@ -89,12 +148,28 @@ export function usePoolStaking(poolAddress: SecretString | null) {
   };
 
   /**
-   * Refresh staking balances
+   * Refresh staking balances - can be called manually
    */
   const refreshBalances = async () => {
     if (staking === null) return;
 
-    await Promise.all([staking.fetchStakedBalance(), staking.fetchPendingRewards()]);
+    try {
+      // Fetch balances without individual toast messages
+      const [stakedBalance, pendingRewards] = await Promise.all([
+        staking.fetchStakedBalance(),
+        staking.fetchPendingRewards(),
+      ]);
+
+      // Only show success if at least one balance was fetched successfully
+      if (stakedBalance !== null || pendingRewards !== null) {
+        toast.success('Staking balances refreshed successfully');
+      } else {
+        toast.error('Failed to refresh staking balances');
+      }
+    } catch (error) {
+      console.error('Error refreshing balances:', error);
+      toast.error('Failed to refresh staking balances');
+    }
   };
 
   /**
@@ -198,6 +273,7 @@ export function usePoolStaking(poolAddress: SecretString | null) {
     setAutoStake,
     viewingKeyStatus,
     stakingInputs,
+    loadBalanceConfig,
 
     // Actions
     setStakingInputAmount,

@@ -1,3 +1,4 @@
+import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import ViewingKeyStatusComponent from '@/components/common/ViewingKeyStatus';
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
@@ -10,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import StakingActions from './StakingActions';
 import StakingInput from './StakingInput';
 import StakingOverview from './StakingOverview';
+import StakingPoolSelector from './StakingPoolSelector';
 
 const StakingForm: React.FC = () => {
   const { selectedPool } = usePoolStore();
@@ -28,21 +30,24 @@ const StakingForm: React.FC = () => {
     unstakeLpTokens,
     claimRewards,
     refreshBalances,
+    loadBalanceConfig,
   } = poolStaking;
 
-  // Refresh staking balances when the component is mounted
-  useEffect(() => {
-    if (viewingKeyStatus === ViewingKeyStatus.CREATED && staking !== null) {
-      void refreshBalances();
-    }
-  }, [viewingKeyStatus, staking, refreshBalances]);
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 [StakingForm Debug]');
+    console.log('Selected pool:', selectedPool?.address);
+    console.log('Has staking rewards:', hasStakingRewards);
+    console.log('Staking info:', stakingInfo);
+    console.log('Staking state:', staking);
+    console.log('Load balance config:', loadBalanceConfig);
+  }
 
   // Fetch LP token balance when viewing key is created
   useEffect(() => {
     if (
       viewingKeyStatus === ViewingKeyStatus.CREATED &&
-      selectedPool?.pairInfo?.liquidity_token !== undefined &&
-      typeof selectedPool?.pairInfo?.liquidity_token === 'string' &&
+      selectedPool?.address &&
       secretjs !== null &&
       secretjs !== undefined
     ) {
@@ -52,7 +57,16 @@ const StakingForm: React.FC = () => {
           const keplr = (window as unknown as Window).keplr;
           if (!keplr) return;
 
-          const lpTokenAddress = selectedPool.pairInfo.liquidity_token;
+          // Get the LP token address from LIQUIDITY_PAIRS config instead of pairInfo
+          const pairInfo = LIQUIDITY_PAIRS.find(
+            (pair) => pair.pairContract === selectedPool.address
+          );
+          if (!pairInfo) {
+            console.error('Could not find LP token info for pool:', selectedPool.address);
+            return;
+          }
+
+          const lpTokenAddress = pairInfo.lpToken;
 
           // Get viewing key for LP token
           let viewingKey = await keplr
@@ -78,14 +92,7 @@ const StakingForm: React.FC = () => {
             return;
           }
 
-          // Find the matching pair to get the LP token code hash
-          const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === lpTokenAddress);
-          if (!pairInfo) {
-            console.error('Could not find LP token code hash');
-            return;
-          }
-
-          // Get LP token balance
+          // Get LP token balance using the code hash from LIQUIDITY_PAIRS
           const balance = await secretjs.query.snip20.getBalance({
             contract: {
               address: lpTokenAddress,
@@ -124,11 +131,7 @@ const StakingForm: React.FC = () => {
 
   // If staking is not available for this pool
   if (!selectedPool || !hasStakingRewards || stakingInfo === null) {
-    return (
-      <div className="flex flex-col gap-6 py-2.5 px-2.5 flex-1 justify-center items-center">
-        <p className="text-gray-400">Staking is not available for this pool.</p>
-      </div>
-    );
+    return <StakingPoolSelector />;
   }
 
   // Get readable token symbols
@@ -150,7 +153,7 @@ const StakingForm: React.FC = () => {
 
         <ViewingKeyStatusComponent
           status={viewingKeyStatus}
-          contractAddress={stakingInfo.lpTokenAddress}
+          contractAddress={stakingInfo.stakingAddress}
           onSetupViewingKey={setupViewingKey}
           isLoading={staking?.isOperationLoading('setupViewingKey') ?? false}
         />
@@ -188,52 +191,81 @@ const StakingForm: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 py-2.5 px-2.5 flex-1 justify-between">
-      <div className="flex flex-col gap-6">
-        <div className="mb-1">
-          <h3 className="text-white font-medium mb-2">Staking {lpPairName} LP</h3>
-          <p className="text-gray-400 text-sm">
-            Stake your liquidity provider tokens to earn {stakingInfo.rewardTokenSymbol} rewards.
-          </p>
+    <div className="flex flex-col gap-6 py-6 px-6 flex-1">
+      {/* Header Section - Compact */}
+      <div className="text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <TokenImageWithFallback
+            tokenAddress={stakingInfo?.stakingAddress}
+            size={24}
+            alt={`${lpPairName} staking pool`}
+          />
+          <h2 className="text-xl font-semibold text-adamant-text-box-main">
+            Staking {lpPairName} LP
+          </h2>
         </div>
+        <p className="text-adamant-text-box-secondary text-sm">
+          Stake your LP tokens to earn{' '}
+          <span className="font-medium text-adamant-accentText">
+            {stakingInfo.rewardTokenSymbol}
+          </span>{' '}
+          rewards
+        </p>
+      </div>
 
+      {/* Main Content */}
+      <div className="space-y-6">
         <StakingOverview
           stakedBalance={stakedBalance}
           pendingRewards={pendingRewards}
           rewardSymbol={stakingInfo.rewardTokenSymbol}
           isLoading={isBalanceLoading}
+          showRefreshButton={loadBalanceConfig.shouldShowFetchButton}
+          onRefresh={refreshBalances}
+          isRefreshing={isBalanceLoading}
+          stakingContractAddress={stakingInfo?.stakingAddress}
+          pairSymbol={lpPairName}
         />
 
+        {/* Staking Input Section */}
         <StakingInput
           inputIdentifier="stakeAmount"
           operation="stake"
           balance={lpTokenBalance}
           balanceLabel="Available LP Balance"
+          tokenSymbol={lpPairName}
+          stakingContractAddress={stakingInfo?.stakingAddress}
           isLoading={(staking?.isOperationLoading('stake') ?? false) || isLpBalanceLoading}
         />
 
+        {/* Unstaking Section - Only show if user has staked tokens */}
         {stakedBalance !== '0' && stakedBalance !== null && (
           <StakingInput
             inputIdentifier="unstakeAmount"
             operation="unstake"
             balance={stakedBalance}
             balanceLabel="Staked LP Balance"
+            tokenSymbol={lpPairName}
+            stakingContractAddress={stakingInfo?.stakingAddress}
             isLoading={staking?.isOperationLoading('unstake') ?? false}
           />
         )}
       </div>
 
-      <StakingActions
-        onStake={handleStake}
-        onUnstake={handleUnstake}
-        onClaim={handleClaim}
-        isStakeDisabled={isStakeDisabled}
-        isUnstakeDisabled={isUnstakeDisabled}
-        isClaimDisabled={isClaimDisabled}
-        isStakeLoading={staking?.isOperationLoading('stake') ?? false}
-        isUnstakeLoading={staking?.isOperationLoading('unstake') ?? false}
-        isClaimLoading={staking?.isOperationLoading('claim') ?? false}
-      />
+      {/* Action Buttons */}
+      <div className="mt-auto pt-6">
+        <StakingActions
+          onStake={handleStake}
+          onUnstake={handleUnstake}
+          onClaim={handleClaim}
+          isStakeDisabled={isStakeDisabled}
+          isUnstakeDisabled={isUnstakeDisabled}
+          isClaimDisabled={isClaimDisabled}
+          isStakeLoading={staking?.isOperationLoading('stake') ?? false}
+          isUnstakeLoading={staking?.isOperationLoading('unstake') ?? false}
+          isClaimLoading={staking?.isOperationLoading('claim') ?? false}
+        />
+      </div>
     </div>
   );
 };

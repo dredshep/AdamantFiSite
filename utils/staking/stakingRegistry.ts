@@ -66,10 +66,22 @@ function buildStakingContractsFromEnv(): Record<string, StakingContractInfo> {
 function buildDefaultStakingContracts(): Record<string, StakingContractInfo> {
   const contracts: Record<string, StakingContractInfo> = {};
 
+  // Debug logging
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('🔧 [Building Staking Contracts]');
+  //   console.log('CONFIG_STAKING_CONTRACTS:', CONFIG_STAKING_CONTRACTS);
+  //   console.log('LIQUIDITY_PAIRS:', LIQUIDITY_PAIRS);
+  // }
+
   // Map staking contracts from config to our format
   for (const stakingContract of CONFIG_STAKING_CONTRACTS) {
     // Find the matching LP pair to get the LP token address and code hash
     const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Looking for pair with symbol: "${stakingContract.pairSymbol}"`);
+      console.log('Matching pair found:', matchingPair);
+    }
 
     if (matchingPair) {
       // Use the LP token address as the key in our contracts record
@@ -80,7 +92,19 @@ function buildDefaultStakingContracts(): Record<string, StakingContractInfo> {
         stakingCodeHash: stakingContract.codeHash,
         rewardTokenSymbol: stakingContract.rewardTokenSymbol,
       };
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Added staking contract for LP token: ${matchingPair.lpToken}`);
+      }
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`❌ No matching pair found for symbol: "${stakingContract.pairSymbol}"`);
+      }
     }
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Final contracts mapping:', contracts);
   }
 
   return contracts;
@@ -92,9 +116,18 @@ const DEFAULT_STAKING_CONTRACTS: Record<string, StakingContractInfo> =
 
 // Build the contracts record from environment variables or use defaults
 const STAKING_CONTRACTS: Record<string, StakingContractInfo> =
-  process.env['NEXT_PUBLIC_USE_ENV_STAKING_CONFIG'] === 'true'
-    ? buildStakingContractsFromEnv()
-    : DEFAULT_STAKING_CONTRACTS;
+  // Force use of tokens.ts configuration instead of env vars (which are testnet)
+  // process.env['NEXT_PUBLIC_USE_ENV_STAKING_CONFIG'] === 'true'
+  //   ? buildStakingContractsFromEnv()
+  //   : buildDefaultStakingContracts();
+  buildDefaultStakingContracts();
+
+// Debug the final mapping
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 [Final STAKING_CONTRACTS mapping]:', STAKING_CONTRACTS);
+  console.log('🔧 [Keys]:', Object.keys(STAKING_CONTRACTS));
+  console.log('🔧 [Values]:', Object.values(STAKING_CONTRACTS));
+}
 
 /**
  * Checks if an LP token has an associated staking contract
@@ -104,9 +137,84 @@ export function hasStakingContract(lpTokenAddress: string): boolean {
 }
 
 /**
+ * Checks if a pool contract has an associated staking contract
+ * Maps pool contract address to LP token address first
+ */
+export function hasStakingContractForPool(poolAddress: string): boolean {
+  const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === poolAddress);
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Checking staking for pool:', poolAddress);
+    console.log(
+      'Available pairs:',
+      LIQUIDITY_PAIRS.map((p) => ({ symbol: p.symbol, address: p.pairContract }))
+    );
+    console.log('Matching pair found:', matchingPair);
+  }
+
+  if (!matchingPair) return false;
+
+  const hasStaking = hasStakingContract(matchingPair.lpToken);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('LP token:', matchingPair.lpToken);
+    console.log('Has staking contract:', hasStaking);
+    console.log('Available staking contracts:', Object.keys(STAKING_CONTRACTS));
+  }
+
+  return hasStaking;
+}
+
+/**
  * Gets staking contract information for an LP token
  * @returns Staking contract info or null if no staking contract exists
  */
 export function getStakingContractInfo(lpTokenAddress: string): StakingContractInfo | null {
   return STAKING_CONTRACTS[lpTokenAddress] || null;
+}
+
+/**
+ * Gets staking contract information for a pool contract
+ * Maps pool contract address to LP token address first
+ */
+export function getStakingContractInfoForPool(poolAddress: string): StakingContractInfo | null {
+  const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === poolAddress);
+  if (!matchingPair) return null;
+
+  return getStakingContractInfo(matchingPair.lpToken);
+}
+
+/**
+ * Gets all available staking contracts with their pool information
+ */
+export function getAllStakingPools(): Array<{
+  poolAddress: string;
+  lpTokenAddress: string;
+  pairSymbol: string;
+  stakingInfo: StakingContractInfo;
+}> {
+  const stakingPools: Array<{
+    poolAddress: string;
+    lpTokenAddress: string;
+    pairSymbol: string;
+    stakingInfo: StakingContractInfo;
+  }> = [];
+
+  for (const stakingContract of CONFIG_STAKING_CONTRACTS) {
+    const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
+    if (matchingPair) {
+      const stakingInfo = STAKING_CONTRACTS[matchingPair.lpToken];
+      if (stakingInfo) {
+        stakingPools.push({
+          poolAddress: matchingPair.pairContract,
+          lpTokenAddress: matchingPair.lpToken,
+          pairSymbol: matchingPair.symbol,
+          stakingInfo,
+        });
+      }
+    }
+  }
+
+  return stakingPools;
 }

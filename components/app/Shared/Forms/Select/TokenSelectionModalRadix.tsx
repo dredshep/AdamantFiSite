@@ -15,9 +15,9 @@ interface TokenSelectionModalProps {
 }
 
 const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({ onClose, inputIdentifier }) => {
-  const { setTokenInputProperty } = useSwapStore();
+  const { setTokenInputProperty, getAvailableTokensForInput } = useSwapStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const tokens = useSwapStore((state) => state.swappableTokens) as ConfigToken[] | undefined;
+  const tokens = getAvailableTokensForInput(inputIdentifier);
 
   const handleTokenSelect = (selectedToken: ConfigToken) => {
     setTokenInputProperty(inputIdentifier, 'tokenAddress', selectedToken.address);
@@ -46,7 +46,7 @@ const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({ onClose, inpu
           className="flex flex-col gap-2 overflow-y-auto max-h-64 mt-4"
           style={{ scrollbarWidth: 'none' }}
         >
-          {tokens
+          {tokens.length > 0
             ? searchToken(searchTerm, tokens).map((token, index) => (
                 <TokenSelectionItem
                   token={token}

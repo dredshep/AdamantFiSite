@@ -1,4 +1,3 @@
-import { useSecretNetworkStore } from '@/store/secretNetworkStore';
 import { getSecretNetworkEnvVars } from '@/utils/env';
 import isNotNullish from '@/utils/isNotNullish';
 import { Window as KeplrWindow } from '@keplr-wallet/types';
@@ -113,19 +112,59 @@ async function withRetry<T>(
   throw lastError;
 }
 
-export function useSecretNetwork() {
-  const {
-    secretjs,
-    keplr,
-    walletAddress,
-    isConnecting,
-    setSecretjs,
-    setKeplr,
-    setWalletAddress,
-    setIsConnecting,
-  } = useSecretNetworkStore();
+// Read-only client for queries that don't require wallet
+export const secretClient = new SecretNetworkClient({
+  chainId: getSecretNetworkEnvVars().CHAIN_ID,
+  url: getSecretNetworkEnvVars().LCD_URL,
+});
 
+// Function to create wallet-connected client when needed
+export async function createWalletClient(): Promise<SecretNetworkClient | null> {
+  try {
+    const keplr = (window as unknown as KeplrWindow).keplr;
+    if (!keplr) {
+      throw new Error('Keplr not installed');
+    }
+
+    const env = getSecretNetworkEnvVars();
+    const chainId = env.CHAIN_ID;
+
+    // Suggest chain info for pulsar-3 with retry
+    if (chainId === 'pulsar-3') {
+      await withRetry(() => keplr.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
+    }
+
+    await withRetry(() => keplr.enable(chainId));
+
+    const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
+    const enigmaUtils = keplr.getEnigmaUtils(chainId);
+    const accounts = await withRetry(() => offlineSigner.getAccounts());
+
+    if (!accounts[0]) {
+      throw new Error('No accounts found');
+    }
+
+    return new SecretNetworkClient({
+      chainId,
+      url: env.LCD_URL,
+      wallet: offlineSigner,
+      walletAddress: accounts[0].address,
+      encryptionUtils: enigmaUtils,
+    });
+  } catch (error) {
+    console.error('Failed to create wallet client:', error);
+    return null;
+  }
+}
+
+export function useSecretNetwork() {
+  // Internal state - no longer using external store
+  const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
+  const [keplr, setKeplr] = useState<typeof window.keplr | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<SecretNetworkError | null>(null);
+
   const toastsShown = useRef<ToastShownState>({
     success: false,
     noKeplr: false,
@@ -292,25 +331,6 @@ export function useSecretNetwork() {
         encryptionUtils: enigmaUtils,
       });
 
-      // Verify connection with retry
-      try {
-        await withRetry(() =>
-          client.query.bank.balance({
-            address: firstAccount.address,
-            denom: 'uscrt',
-          })
-        );
-      } catch (e) {
-        console.error('Failed to verify connection:', e);
-        setError(SecretNetworkError.CONNECTION_FAILED);
-        showToastOnce(
-          'connectionFailed',
-          TOAST_IDS.CONNECTION_FAILED,
-          'Failed to connect to Secret Network'
-        );
-        return;
-      }
-
       console.log('Successfully connected to Secret Network');
       setWalletAddress(firstAccount.address);
       setSecretjs(client);
@@ -343,17 +363,7 @@ export function useSecretNetwork() {
     } finally {
       setIsConnecting(false);
     }
-  }, [
-    isConnecting,
-    secretjs,
-    setIsConnecting,
-    setKeplr,
-    setSecretjs,
-    setWalletAddress,
-    env,
-    waitForKeplr,
-    showToastOnce,
-  ]);
+  }, [isConnecting, secretjs, env, waitForKeplr, showToastOnce]);
 
   useEffect(() => {
     const initConnection = async () => {

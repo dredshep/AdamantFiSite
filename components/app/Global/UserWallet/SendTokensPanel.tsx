@@ -1,11 +1,10 @@
-// C:\Users\sebas\projects\AdamantFiSite\components\app\Global\UserWallet\SendTokensPanel.tsx
-
+import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
 import { sendTokens } from '@/utils/wallet/sendTokens';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { RiArrowDownSLine } from 'react-icons/ri';
 import { toast } from 'react-toastify';
-import { CloseButton } from '../../Shared/CloseButton';
 
 interface SendTokensPanelProps {
   walletAddress: SecretString;
@@ -16,8 +15,30 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('uscrt');
+  const [isTokenDropdownOpen, setIsTokenDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { listAllTokens } = useTokenStore();
   const tokens = listAllTokens() ?? [];
+
+  // Add SCRT as the first option
+  const allTokenOptions = [{ symbol: 'SCRT', address: 'uscrt', name: 'Secret Network' }, ...tokens];
+
+  const selectedTokenData =
+    allTokenOptions.find(
+      (token) => token.address === selectedToken || token.symbol === selectedToken
+    ) ?? allTokenOptions[0]!;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsTokenDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSend = async () => {
     try {
@@ -42,63 +63,96 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
   };
 
   return (
-    <aside className="flex flex-col h-screen w-[312px] fixed top-0 right-0 bg-adamant-box-veryDark">
-      {/* Header */}
-      <div className="p-4 border-b border-white/10 flex items-center justify-between">
-        <h2 className="text-xl font-bold bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark bg-clip-text text-transparent">
-          Send Tokens
-        </h2>
-        <button
-          onClick={onClose}
-          className="text-adamant-accentText hover:text-white transition-colors duration-200 p-2 rounded-lg hover:bg-white/5"
-        >
-          <CloseButton />
-        </button>
-      </div>
-
+    <div className="flex flex-col h-full">
       {/* Scrollable middle */}
-      <div className="flex-grow overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <div>
-          <label className="block text-sm text-adamant-accentText font-medium mb-2">
+          <label className="block text-sm text-adamant-text-box-main font-medium mb-3">
             Recipient Address
           </label>
           <input
             type="text"
             value={recipientAddress}
             onChange={(e) => setRecipientAddress(e.target.value)}
-            className="w-full bg-adamant-app-input/50 backdrop-blur-sm border border-adamant-gradientBright/20 rounded-xl px-4 py-3 text-white font-mono text-sm outline-none transition-all hover:bg-adamant-app-input/70 focus:bg-adamant-app-input/90"
+            className="w-full bg-adamant-box-dark/50 backdrop-blur-sm border border-adamant-box-border rounded-xl px-4 py-3 text-adamant-text-box-main font-mono text-sm outline-none transition-all hover:bg-adamant-box-dark/70 focus:bg-adamant-box-dark/90 focus:border-adamant-gradientBright/50"
             placeholder="secret1..."
           />
         </div>
 
         <div>
-          <label className="block text-sm text-adamant-accentText font-medium mb-2">Amount</label>
+          <label className="block text-sm text-adamant-text-box-main font-medium mb-3">
+            Amount & Token
+          </label>
           <div className="relative">
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-adamant-app-input/50 backdrop-blur-sm border border-adamant-gradientBright/20 rounded-xl px-4 py-3 pr-24 text-white font-mono text-sm outline-none transition-all hover:bg-adamant-app-input/70 focus:bg-adamant-app-input/90 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-adamant-box-dark/50 backdrop-blur-sm border border-adamant-box-border rounded-xl px-4 py-3 pr-32 text-adamant-text-box-main font-mono text-sm outline-none transition-all hover:bg-adamant-box-dark/70 focus:bg-adamant-box-dark/90 focus:border-adamant-gradientBright/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="0.0"
             />
-            <select
-              value={selectedToken}
-              onChange={(e) => setSelectedToken(e.target.value)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-adamant-app-input/70 backdrop-blur-sm rounded-lg px-3 py-1.5 text-white border border-adamant-gradientBright/20 outline-none transition-all hover:bg-adamant-app-input/90 focus:border-adamant-gradientBright/30 cursor-pointer text-sm font-medium"
-            >
-              <option value="uscrt">SCRT</option>
-              {tokens.map((token, index) => (
-                <option key={index} value={token.address}>
-                  {token.symbol}
-                </option>
-              ))}
-            </select>
+
+            {/* Custom Token Selector */}
+            <div ref={dropdownRef} className="absolute right-2 top-1/2 -translate-y-1/2">
+              <button
+                type="button"
+                onClick={() => setIsTokenDropdownOpen(!isTokenDropdownOpen)}
+                className="flex items-center gap-2 bg-adamant-box-regular hover:bg-adamant-box-light border border-adamant-box-border rounded-lg px-3 py-2 transition-all duration-200"
+              >
+                <TokenImageWithFallback
+                  tokenAddress={selectedTokenData.address as SecretString}
+                  size={20}
+                  alt={selectedTokenData.symbol}
+                  className="rounded-full"
+                />
+                <span className="text-adamant-text-box-main text-sm font-medium">
+                  {selectedTokenData.symbol}
+                </span>
+                <RiArrowDownSLine
+                  className={`w-4 h-4 text-adamant-text-box-secondary transition-transform ${
+                    isTokenDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown */}
+              {isTokenDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-48 bg-adamant-box-dark border border-adamant-box-border rounded-xl shadow-xl z-10 max-h-48 overflow-y-auto">
+                  {allTokenOptions.map((token, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        setSelectedToken(token.address);
+                        setIsTokenDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-adamant-box-regular transition-colors text-left"
+                    >
+                      <TokenImageWithFallback
+                        tokenAddress={token.address as SecretString}
+                        size={24}
+                        alt={token.symbol}
+                        className="rounded-full"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-adamant-text-box-main text-sm font-medium">
+                          {token.symbol}
+                        </span>
+                        <span className="text-adamant-text-box-secondary text-xs">
+                          {token.name}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Footer pinned at bottom */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-adamant-box-border">
         <button
           onClick={() => void handleSend()}
           className="w-full py-3.5 rounded-xl bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark text-black font-bold uppercase hover:from-adamant-gradientDark hover:to-adamant-gradientBright transition-all duration-300 shadow-[0_0_20px_-4px_rgba(167,142,90,0.3)]"
@@ -106,6 +160,6 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
           Send
         </button>
       </div>
-    </aside>
+    </div>
   );
 };

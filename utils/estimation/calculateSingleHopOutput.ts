@@ -74,8 +74,17 @@ export const calculateSingleHopOutput = (
     idealOutputAdjusted = new Decimal(0);
   }
 
-  // Calculate price impact
-  const priceImpact = idealOutputAdjusted.sub(output).div(idealOutputAdjusted).mul(100).toFixed(2);
+  // Calculate price impact with proper handling for edge cases
+  let priceImpact: string;
+  if (idealOutputAdjusted.isZero()) {
+    console.warn('Ideal output is zero, cannot calculate price impact.');
+    priceImpact = '0.00';
+  } else if (output.isNegative()) {
+    console.warn('Output is negative, setting price impact to 100%.');
+    priceImpact = '100.00';
+  } else {
+    priceImpact = idealOutputAdjusted.sub(output).div(idealOutputAdjusted).mul(100).toFixed(2);
+  }
   console.log(`Price Impact: ${priceImpact}%`);
 
   // Correct calculation of Liquidity Provider Fee
@@ -87,7 +96,7 @@ export const calculateSingleHopOutput = (
   return {
     output,
     idealOutput: idealOutputAdjusted,
-    priceImpact, // Now priceImpact is properly initialized and returned
+    priceImpact,
     lpFee,
   };
 };

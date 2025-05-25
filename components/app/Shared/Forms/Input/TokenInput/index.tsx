@@ -41,13 +41,6 @@ const TokenInput: React.FC<TokenInputProps> = ({
 }) => {
   const { swapTokenInputs, setTokenInputProperty } = useSwapStore();
 
-  // console.log('TokenInput Render:', {
-  //   inputIdentifier,
-  //   formType,
-  //   value,
-  //   swapTokenInputs,
-  // });
-
   // Only use pool-related hooks when formType is 'pool'
   const { selectedPool } = formType === 'pool' ? usePoolStore() : { selectedPool: undefined };
   const poolForm = formType === 'pool' ? usePoolForm(selectedPool?.address) : null;

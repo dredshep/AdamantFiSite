@@ -1,6 +1,3 @@
-// C:\Users\sebas\projects\AdamantFiSite\components\app\Global\UserWallet\index.tsx
-// UserWallet.tsx
-
 import PlaceholderImageFromSeed from '@/components/app/Shared/PlaceholderImageFromSeed';
 import { useModalStore } from '@/store/modalStore';
 import { useSwapStore } from '@/store/swapStore';

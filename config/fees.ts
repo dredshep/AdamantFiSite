@@ -15,6 +15,11 @@ export const POOL_FEE: Fee = {
 export const SCRT_TX_FEE = 0.0001;
 
 /**
+ * Staking transaction fee (based on actual transaction: AA20CD986813DC894D96752BBD50EEA445693CCFDD58E0FF495D9C2335D91DE6)
+ */
+export const STAKING_TX_FEE = 0.05; // 50,000 uscrt
+
+/**
  * Helper function to convert Fee to decimal
  */
 export const feeToDecimal = (fee: Fee): number => {

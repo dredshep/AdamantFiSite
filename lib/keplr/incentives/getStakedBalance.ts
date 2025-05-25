@@ -1,12 +1,12 @@
 import { debugKeplrQuery } from '@/lib/keplr/utils';
-import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { SecretNetworkClient } from 'secretjs';
 import {
-  LPStakingQueryMsg,
   LPStakingQueryAnswer,
+  LPStakingQueryMsg,
   isBalanceResponse,
   isQueryErrorResponse,
 } from '@/types/secretswap/lp-staking';
+import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
+import { SecretNetworkClient } from 'secretjs';
 
 /**
  * Parameters for getStakedBalance function
@@ -14,27 +14,47 @@ import {
 export interface StakedBalanceParams {
   /** SecretNetworkClient instance */
   secretjs: SecretNetworkClient;
-  /** LP token address */
+  /** LP token address (used for registry lookup) */
   lpToken: string;
   /** Wallet address to check balance for */
   address: string;
   /** Viewing key for authenticated queries */
   viewingKey: string;
+  /** Optional: Direct staking contract address (bypasses registry lookup) */
+  stakingContractAddress?: string;
+  /** Optional: Direct staking contract code hash (bypasses registry lookup) */
+  stakingContractCodeHash?: string;
 }
 
 /**
  * Get the staked balance for a wallet address using a viewing key
  */
 export const getStakedBalance = async (params: StakedBalanceParams): Promise<string> => {
-  const { secretjs, lpToken, address, viewingKey } = params;
+  const {
+    secretjs,
+    lpToken,
+    address,
+    viewingKey,
+    stakingContractAddress,
+    stakingContractCodeHash,
+  } = params;
 
   if (viewingKey.trim() === '') {
     throw new Error('A valid viewing key is required');
   }
 
-  const lpStakingContract = getStakingContractInfo(lpToken);
-  const lpStakingContractAddress = lpStakingContract?.stakingAddress;
-  const lpStakingContractHash = lpStakingContract?.stakingCodeHash;
+  // Use direct contract info if provided, otherwise fall back to registry lookup
+  let lpStakingContractAddress: string;
+  let lpStakingContractHash: string;
+
+  if (stakingContractAddress && stakingContractCodeHash) {
+    lpStakingContractAddress = stakingContractAddress;
+    lpStakingContractHash = stakingContractCodeHash;
+  } else {
+    const lpStakingContract = getStakingContractInfo(lpToken);
+    lpStakingContractAddress = lpStakingContract?.stakingAddress || '';
+    lpStakingContractHash = lpStakingContract?.stakingCodeHash || '';
+  }
 
   if (typeof lpStakingContractAddress !== 'string' || lpStakingContractAddress.trim() === '') {
     throw new Error('lpStaking contract address is not configured');

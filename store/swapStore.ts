@@ -8,9 +8,10 @@ import {
   TokenInputState,
   WalletState,
 } from '@/types';
+import { getSwappableTokensForToken } from '@/utils/apis/getSwappableTokens';
 import { create } from 'zustand';
 
-export const useSwapStore = create<SwapStoreState>((set) => ({
+export const useSwapStore = create<SwapStoreState>((set, get) => ({
   swapTokenInputs: {
     'swap.pay': {
       tokenAddress: 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek',
@@ -98,4 +99,85 @@ export const useSwapStore = create<SwapStoreState>((set) => ({
         slippage,
       },
     })),
+
+  // New method to get available tokens for selection based on the other input
+  getAvailableTokensForInput: (inputIdentifier: keyof SwapTokenInputs): ConfigToken[] => {
+    const state = get();
+    const otherInputIdentifier = inputIdentifier === 'swap.pay' ? 'swap.receive' : 'swap.pay';
+    const otherTokenAddress = state.swapTokenInputs[otherInputIdentifier].tokenAddress;
+
+    // Handle null case
+    if (!state.swappableTokens) {
+      return [];
+    }
+
+    // Find the other token to get its symbol
+    const otherToken = state.swappableTokens.find((token) => token.address === otherTokenAddress);
+
+    if (!otherToken) {
+      // If no other token is selected, return all swappable tokens
+      return state.swappableTokens;
+    }
+
+    // Return only tokens that can be swapped with the other token
+    const compatibleTokens = getSwappableTokensForToken(otherToken.symbol);
+
+    // Filter out the currently selected token from the other input
+    const availableTokens = compatibleTokens.filter((token) => token.address !== otherTokenAddress);
+
+    // If no compatible tokens found, show all swappable tokens (this handles edge cases)
+    if (availableTokens.length === 0) {
+      console.warn(
+        `No compatible tokens found for ${otherToken.symbol}, showing all swappable tokens`
+      );
+      return state.swappableTokens.filter((token) => token.address !== otherTokenAddress);
+    }
+
+    return availableTokens;
+  },
+
+  // Clear token selection for a specific input
+  clearTokenSelection: (inputIdentifier: keyof SwapTokenInputs) =>
+    set((state) => ({
+      ...state,
+      swapTokenInputs: {
+        ...state.swapTokenInputs,
+        [inputIdentifier]: {
+          ...state.swapTokenInputs[inputIdentifier],
+          tokenAddress: 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek' as SecretString, // Default to sSCRT
+          amount: '',
+        },
+      },
+    })),
+
+  // Reset both token selections
+  resetTokenSelections: () =>
+    set((state) => {
+      // Smart reset: if already at default, change to different tokens
+      const currentPayToken = state.swapTokenInputs['swap.pay'].tokenAddress;
+      const currentReceiveToken = state.swapTokenInputs['swap.receive'].tokenAddress;
+
+      const defaultsSCRTtoUSDC =
+        currentPayToken === 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek' &&
+        currentReceiveToken === 'secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2';
+
+      return {
+        ...state,
+        swapTokenInputs: {
+          'swap.pay': {
+            tokenAddress: 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek' as SecretString, // Always sSCRT for pay
+            amount: '',
+            balance: '',
+          },
+          'swap.receive': {
+            // If currently sSCRT → USDC, reset to sSCRT → SILK, otherwise reset to sSCRT → USDC
+            tokenAddress: defaultsSCRTtoUSDC
+              ? ('secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd' as SecretString) // SILK
+              : ('secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2' as SecretString), // USDC
+            amount: '',
+            balance: '',
+          },
+        },
+      };
+    }),
 }));

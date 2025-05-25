@@ -1,9 +1,16 @@
+export enum LoadBalancePreference {
+  None = 'None',
+  All = 'All',
+  Pair = 'Pair',
+}
+
 interface SecretNetworkEnvVars {
   RPC_URL: string;
   CHAIN_ID: string;
   LCD_URL: string;
   INCENTIVES_CONTRACT_ADDRESS: string;
   INCENTIVES_CONTRACT_HASH: string;
+  LOAD_BALANCE_PREFERENCE: LoadBalancePreference;
 }
 
 export class EnvVarError extends Error {
@@ -40,6 +47,11 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
       value: process.env['NEXT_PUBLIC_INCENTIVES_CONTRACT_HASH'],
       description: 'Incentives contract hash for LP staking',
     },
+    LOAD_BALANCE_PREFERENCE: {
+      envKey: 'NEXT_PUBLIC_LOAD_BALANCE_PREFERENCE',
+      value: process.env['NEXT_PUBLIC_LOAD_BALANCE_PREFERENCE'],
+      description: 'Load balance preference (None, All, or Pair)',
+    },
   } as const;
 
   const missingVars = Object.entries(requiredVars)
@@ -62,6 +74,16 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
     throw new EnvVarError(errorMessage);
   }
 
+  // Validate LOAD_BALANCE_PREFERENCE enum value
+  const loadBalanceValue = requiredVars.LOAD_BALANCE_PREFERENCE.value as string;
+  if (!Object.values(LoadBalancePreference).includes(loadBalanceValue as LoadBalancePreference)) {
+    throw new EnvVarError(
+      `Invalid NEXT_PUBLIC_LOAD_BALANCE_PREFERENCE value: "${loadBalanceValue}". Must be one of: ${Object.values(
+        LoadBalancePreference
+      ).join(', ')}`
+    );
+  }
+
   // At this point, we're sure all values exist and are non-empty strings
   return {
     RPC_URL: requiredVars.RPC_URL.value as string,
@@ -69,6 +91,7 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
     LCD_URL: requiredVars.LCD_URL.value as string,
     INCENTIVES_CONTRACT_ADDRESS: requiredVars.INCENTIVES_CONTRACT_ADDRESS.value as string,
     INCENTIVES_CONTRACT_HASH: requiredVars.INCENTIVES_CONTRACT_HASH.value as string,
+    LOAD_BALANCE_PREFERENCE: loadBalanceValue as LoadBalancePreference,
   };
 }
 

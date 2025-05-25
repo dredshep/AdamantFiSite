@@ -9,11 +9,19 @@ export const getPoolData = async (
   poolAddress: string,
   codeHash: string
 ): Promise<PoolData> => {
+  console.log(`🔍 Querying pool data:`, {
+    poolAddress,
+    codeHash,
+    query: { pool: {} },
+  });
+
   const response: PoolQueryResponse = await secretjs.query.compute.queryContract({
     contract_address: poolAddress,
     code_hash: codeHash,
     query: { pool: {} },
   });
+
+  console.log(`📊 Pool query response:`, response);
 
   if (typeof response !== 'object' || response === null) {
     throw new Error('Invalid response from pool contract');
@@ -22,14 +30,29 @@ export const getPoolData = async (
   const reserves = response.assets.reduce(
     (acc: { [key: string]: { amount: Decimal; decimals: number } }, asset) => {
       const decimals = getTokenDecimals(asset.info.token.contract_addr);
+      const amount = new Decimal(asset.amount);
+      console.log(`💰 Processing asset:`, {
+        contractAddr: asset.info.token.contract_addr,
+        amount: asset.amount,
+        decimals,
+        isZero: amount.isZero(),
+      });
       acc[asset.info.token.contract_addr] = {
-        amount: new Decimal(asset.amount),
+        amount,
         decimals,
       };
       return acc;
     },
     {}
   );
+
+  console.log(`🏦 Final reserves:`, reserves);
+
+  // Check if pool has any liquidity
+  const hasLiquidity = Object.values(reserves).some((reserve) => !reserve.amount.isZero());
+  if (!hasLiquidity) {
+    throw new Error('Pool has no liquidity - all reserves are zero');
+  }
 
   return {
     reserves,

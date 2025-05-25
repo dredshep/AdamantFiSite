@@ -3,8 +3,8 @@ import AppLayout from '@/components/app/Global/AppLayout';
 import DepositForm from '@/components/app/Pages/Pool/DepositForm';
 import StakingForm from '@/components/app/Pages/Pool/StakingForm';
 import WithdrawForm from '@/components/app/Pages/Pool/WithdrawForm';
+import SparklyTab from '@/components/app/Pages/Pools/SparklyTab';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { SecretString } from '@/types';
@@ -51,14 +51,6 @@ export default function PoolPage() {
   const { pools, loading, error } = usePoolsAndTokens();
   const { setSelectedPool } = usePoolStore();
   const { pool: poolAddress } = router.query;
-
-  // Check if the pool has staking rewards
-  const poolStaking = usePoolStaking(
-    typeof poolAddress === 'string' && poolAddress.startsWith('secret1')
-      ? (poolAddress as SecretString)
-      : null
-  );
-  const { hasStakingRewards } = poolStaking;
 
   // All hooks must be at the top level
   useEffect(() => {
@@ -167,17 +159,6 @@ export default function PoolPage() {
   const symbolA = getTokenSymbol(currentPool.token0.address);
   const symbolB = getTokenSymbol(currentPool.token1.address);
 
-  // Define the tabs to display, conditionally including the staking tab
-  const tabs = [
-    { value: 'deposit', label: 'Deposit' },
-    { value: 'withdraw', label: 'Withdraw' },
-  ];
-
-  // Add staking tab if staking is available for this pool
-  if (hasStakingRewards) {
-    tabs.push({ value: 'staking', label: 'Staking' });
-  }
-
   // Render main content
   return (
     <AppLayout>
@@ -187,20 +168,30 @@ export default function PoolPage() {
             <Breadcrumb linkPath="/pools" linkText="Pools" currentText={`${symbolA}-${symbolB}`} />
           </div>
 
-          <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto">
+          <div className="mt-4 bg-adamant-box-regular rounded-xl max-w-full md:max-w-xl mx-auto mb-4">
             <Tabs.Root className="flex flex-col" defaultValue="deposit">
               <Tabs.List className="flex mb-4 p-2.5 gap-2.5" aria-label="Manage your liquidity">
-                {tabs.map(({ value, label }) => (
-                  <Tabs.Trigger
-                    key={value}
-                    className="flex-1 bg-adamant-app-box-lighter px-4 py-4 rounded-xl text-white/75
+                <Tabs.Trigger
+                  key="deposit"
+                  className="flex-1 bg-adamant-app-box-lighter px-4 py-4 rounded-xl text-white/75
+                           data-[state=active]:text-black data-[state=active]:bg-white/75
+                           hover:bg-white/5 transition-colors font-medium tracking-wide"
+                  value="deposit"
+                >
+                  Deposit
+                </Tabs.Trigger>
+
+                <Tabs.Trigger
+                  key="withdraw"
+                  className="flex-1 bg-adamant-app-box-lighter px-4 py-4 rounded-xl text-white/75
                              data-[state=active]:text-black data-[state=active]:bg-white/75
                              hover:bg-white/5 transition-colors font-medium tracking-wide"
-                    value={value}
-                  >
-                    {label}
-                  </Tabs.Trigger>
-                ))}
+                  value="withdraw"
+                >
+                  Withdraw
+                </Tabs.Trigger>
+
+                <SparklyTab value="staking">Staking</SparklyTab>
               </Tabs.List>
 
               <Tabs.Content value="deposit" className="outline-none">
@@ -211,11 +202,9 @@ export default function PoolPage() {
                 <WithdrawForm />
               </Tabs.Content>
 
-              {hasStakingRewards && (
-                <Tabs.Content value="staking" className="outline-none">
-                  <StakingForm />
-                </Tabs.Content>
-              )}
+              <Tabs.Content value="staking" className="outline-none">
+                <StakingForm />
+              </Tabs.Content>
             </Tabs.Root>
           </div>
         </div>

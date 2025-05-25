@@ -1,4 +1,5 @@
 import Navbar from '@/components/app/Global/Navbar';
+import Footer from '@/components/layout/Footer';
 // import { Roboto } from 'next/font/google';
 import Head from 'next/head';
 import { ReactNode } from 'react';
@@ -17,7 +18,7 @@ export default function Layout({ children }: LayoutProps) {
     <div
       className={
         // roboto.className +
-        ' bg-adamant-background bg-cover bg-fixed min-h-screen text-white font-sans'
+        ' bg-adamant-background bg-cover bg-fixed min-h-screen text-white font-sans flex flex-col'
       }
     >
       <Head>
@@ -25,7 +26,8 @@ export default function Layout({ children }: LayoutProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <Navbar />
-      {children}
+      <main className="flex-1">{children}</main>
+      <Footer />
     </div>
   );
 }

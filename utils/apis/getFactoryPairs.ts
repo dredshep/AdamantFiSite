@@ -1,6 +1,6 @@
 import { FACTORY, TOKENS } from '@/config/tokens';
+import { secretClient } from '@/hooks/useSecretNetwork';
 import { Pair, PairsResponse } from '@/types/api/Factory';
-import { secretClient } from '../secretClient';
 
 let cachedPairs: Pair[] | null = null;
 let cacheTimestamp: number | null = null;

@@ -59,13 +59,15 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         lpToken: stakingInfo.lpTokenAddress,
         address: walletAddress,
         viewingKey,
+        stakingContractAddress: stakingInfo.stakingAddress,
+        stakingContractCodeHash: stakingInfo.stakingCodeHash,
       });
 
       setStakedBalance(balance);
       return balance;
     } catch (error) {
       console.error('Error fetching staked balance:', error);
-      toast.error('Failed to fetch staked balance');
+      // Don't show individual toast - let the calling function handle it
       return null;
     } finally {
       setLoadingState('fetchBalance', false);
@@ -85,13 +87,15 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         lpToken: stakingInfo.lpTokenAddress,
         address: walletAddress,
         viewingKey,
+        stakingContractAddress: stakingInfo.stakingAddress,
+        stakingContractCodeHash: stakingInfo.stakingCodeHash,
       });
 
       setPendingRewards(rewards);
       return rewards;
     } catch (error) {
       console.error('Error fetching pending rewards:', error);
-      toast.error('Failed to fetch pending rewards');
+      // Don't show individual toast - let the calling function handle it
       return null;
     } finally {
       setLoadingState('fetchRewards', false);
@@ -241,25 +245,28 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         return false;
       }
 
-      // Try to get existing viewing key
+      // Try to get existing viewing key for the STAKING CONTRACT (not LP token)
       try {
-        const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.lpTokenAddress);
+        const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.stakingAddress);
         if (key) {
           setViewingKey(key);
           return true;
         }
       } catch (e) {
-        console.log('No existing viewing key found, will try to create one', e);
+        console.log(
+          'No existing viewing key found for staking contract, will try to create one',
+          e
+        );
       }
 
-      // Suggest token to Keplr
-      await keplr.suggestToken('secret-4', stakingInfo.lpTokenAddress);
+      // Suggest the STAKING CONTRACT to Keplr (not LP token)
+      await keplr.suggestToken('secret-4', stakingInfo.stakingAddress, stakingInfo.stakingCodeHash);
 
       // Need to wait a bit for Keplr to register the token
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Try to get viewing key again
-      const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.lpTokenAddress);
+      // Try to get viewing key again for the STAKING CONTRACT
+      const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.stakingAddress);
       if (key) {
         setViewingKey(key);
         return true;
@@ -273,13 +280,12 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
     }
   }, [secretjs, stakingInfo, walletAddress]);
 
-  // Initialize - set up viewing key and fetch initial data
+  // Initialize - set up viewing key but don't auto-fetch balances (prevent infinite loops)
   const initialize = useCallback(async () => {
     const hasViewingKey = await setupViewingKey();
-    if (hasViewingKey) {
-      await Promise.all([fetchStakedBalance(), fetchPendingRewards()]);
-    }
-  }, [setupViewingKey, fetchStakedBalance, fetchPendingRewards]);
+    // Don't auto-fetch balances here - let the calling component decide based on load preferences
+    return hasViewingKey;
+  }, [setupViewingKey]);
 
   return {
     // State

@@ -1,13 +1,14 @@
-import { useSecretNetworkContext } from '@/contexts/SecretNetworkContext';
 import { TokenService } from '@/services/secret/TokenService';
 import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
+import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
 import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { Keplr, Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import ErrorToast from '../components/app/Shared/Toasts/ErrorToast';
+import { useSecretNetwork } from './useSecretNetwork';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -77,12 +78,12 @@ export function useTokenBalance(
   tokenAddress: SecretString | undefined,
   autoFetch: boolean = false
 ): TokenBalanceHookReturn {
-  const { secretjs } = useSecretNetworkContext();
+  const { secretjs } = useSecretNetwork();
   const { setBalance, getBalance, setLoading, setError } = useTokenBalanceStore();
   const [toastShown, setToastShown] = useState<string | null>(null);
   const [isRejected, setIsRejected] = useState(false);
 
-  const tokenService = useMemo(() => (secretjs ? new TokenService(secretjs) : null), [secretjs]);
+  const tokenService = useMemo(() => (secretjs ? new TokenService() : null), [secretjs]);
 
   useEffect(() => {
     const handleKeplrReady = () => {
@@ -283,18 +284,32 @@ export function useTokenBalance(
   }, [tokenAddress, secretjs, tokenService, fetchBalance]);
 
   useEffect(() => {
-    void checkViewingKey();
+    // Only check viewing key if load balance preference allows it
+    try {
+      const envVars = getSecretNetworkEnvVars();
+      if (envVars.LOAD_BALANCE_PREFERENCE !== LoadBalancePreference.None) {
+        void checkViewingKey();
+      }
+    } catch (error) {
+      // If env vars are not set, don't check viewing key
+      console.warn('Environment variables not set, skipping viewing key check:', error);
+    }
   }, [checkViewingKey]);
 
   useEffect(() => {
-    if (!autoFetch) return;
-    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0) return;
-    if (!secretjs) {
-      setError(tokenAddress, TokenBalanceError.NO_SECRET_JS);
-      showErrorToast(TokenBalanceError.NO_SECRET_JS);
+    // Check environment preference first
+    try {
+      const envVars = getSecretNetworkEnvVars();
+      const shouldFetch =
+        autoFetch && envVars.LOAD_BALANCE_PREFERENCE !== LoadBalancePreference.None;
+
+      if (!shouldFetch) return;
+    } catch (error) {
+      // If env vars are not set, default to not fetching
+      console.warn('Environment variables not set, disabling auto-fetch:', error);
       return;
     }
-    if (!tokenService) return;
+    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0) return;
 
     void fetchBalance();
     const interval = setInterval(() => {
@@ -304,16 +319,7 @@ export function useTokenBalance(
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [
-    tokenService,
-    tokenAddress,
-    secretjs,
-    fetchBalance,
-    isRejected,
-    setError,
-    showErrorToast,
-    autoFetch,
-  ]);
+  }, [tokenService, tokenAddress, fetchBalance, isRejected, setError, showErrorToast, autoFetch]);
 
   const currentBalance = getBalance(tokenAddress ?? '');
 

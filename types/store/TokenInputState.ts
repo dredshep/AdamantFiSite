@@ -1,4 +1,4 @@
-import { SecretString } from "../SecretString";
+import { SecretString } from '../SecretString';
 
 export interface TokenInputState {
   tokenAddress: SecretString;

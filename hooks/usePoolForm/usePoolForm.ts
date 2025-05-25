@@ -6,6 +6,7 @@ import { useTxStore } from '@/store/txStore';
 import { PoolTokenInputs, SecretString } from '@/types';
 import { Asset, ContractInfo } from '@/types/secretswap/shared';
 import isNotNullish from '@/utils/isNotNullish';
+import { calculateWithdrawalAmounts } from '@/utils/secretjs/pools/calculateWithdrawalAmounts';
 import { provideLiquidity } from '@/utils/secretjs/pools/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/pools/withdrawLiquidity';
 import { Window } from '@keplr-wallet/types';
@@ -516,7 +517,6 @@ export function usePoolForm(
 
     // Add validation for zero values
     if (total_share === '0') {
-      console.log('Pool has no liquidity');
       setWithdrawEstimate({
         token0Amount: '0',
         token1Amount: '0',
@@ -531,36 +531,38 @@ export function usePoolForm(
       return;
     }
 
-    // Calculate proportion of pool
-    const proportion = parseFloat(lpAmount) / parseFloat(total_share);
-
-    // Validate the proportion calculation
-    if (!isFinite(proportion) || isNaN(proportion)) {
-      console.log('Invalid proportion calculation');
-      setWithdrawEstimate({
-        token0Amount: '0',
-        token1Amount: '0',
-      });
+    if (!selectedPool.token0 || !selectedPool.token1) {
       return;
     }
 
-    // Calculate expected amounts
-    const token0Amount = (parseFloat(asset0Amount) * proportion).toFixed(6);
-    const token1Amount = (parseFloat(asset1Amount) * proportion).toFixed(6);
-
-    // Validate final amounts
-    if (isNaN(parseFloat(token0Amount)) || isNaN(parseFloat(token1Amount))) {
-      setWithdrawEstimate({
-        token0Amount: '0',
-        token1Amount: '0',
-      });
-      return;
-    }
-
-    setWithdrawEstimate({
-      token0Amount,
-      token1Amount,
+    // Use the new utility function
+    const result = calculateWithdrawalAmounts({
+      lpAmount,
+      totalLpSupply: total_share,
+      asset0Amount,
+      asset1Amount,
+      token0: selectedPool.token0,
+      token1: selectedPool.token1,
     });
+
+    console.log('🧮 NEW UTILITY RESULT:', result);
+
+    if (result.isValid) {
+      console.log('✅ Setting valid withdraw estimate:', {
+        token0Amount: result.token0Amount,
+        token1Amount: result.token1Amount,
+      });
+      setWithdrawEstimate({
+        token0Amount: result.token0Amount,
+        token1Amount: result.token1Amount,
+      });
+    } else {
+      console.error('❌ Withdrawal calculation failed:', result.error);
+      setWithdrawEstimate({
+        token0Amount: '0',
+        token1Amount: '0',
+      });
+    }
   }, [data?.pairPoolData, safeTokenInputs['pool.withdraw.lpToken']?.amount, selectedPool]);
 
   const typedSelectedPool = (() => {

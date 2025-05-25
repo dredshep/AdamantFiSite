@@ -34,6 +34,7 @@ export const useSwapFormLean = () => {
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0');
   const { setPending, setResult } = useTxStore.getState();
   const [isEstimating, setIsEstimating] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Find token details from config
   function findToken(address: SecretString | undefined): ConfigToken | undefined {
@@ -111,13 +112,24 @@ export const useSwapFormLean = () => {
         const liquidityPair = findLiquidityPair(payToken.symbol, receiveToken.symbol);
 
         if (!liquidityPair) {
-          console.log('❌ Estimation failed: No liquidity pair found for these tokens');
+          console.log('❌ Estimation failed: No liquidity pair found for these tokens', {
+            payToken,
+            receiveToken,
+          });
           resetAndSetIsEstimating(false);
           return;
         }
 
         const poolAddress = liquidityPair.pairContract;
         const codeHash = liquidityPair.pairContractCodeHash;
+
+        console.log(`🔗 Using liquidity pair:`, {
+          payTokenSymbol: payToken.symbol,
+          receiveTokenSymbol: receiveToken.symbol,
+          poolAddress,
+          codeHash,
+          liquidityPair,
+        });
 
         // Get the actual pool data from the blockchain
         const poolData = await getPoolData(secretjs, poolAddress, codeHash);
@@ -156,14 +168,25 @@ export const useSwapFormLean = () => {
         await Promise.resolve();
       } catch (error) {
         console.error('❌ Error during estimation:', error);
-        resetEstimationValues();
+
+        // Check if it's a no liquidity error and provide specific feedback
+        if (error instanceof Error && error.message.includes('no liquidity')) {
+          console.log('💧 Pool has no liquidity - setting appropriate values');
+          setEstimatedOutput('0');
+          setPriceImpact('N/A');
+          setPoolFee('0');
+          setTxFee('0');
+          setMinReceive('0');
+        } else {
+          resetEstimationValues();
+        }
       } finally {
         setIsEstimating(false);
       }
     };
 
     void runEstimate();
-  }, [payDetails.amount, payToken, receiveToken, secretjs, slippage, gas]);
+  }, [payDetails.amount, payToken, receiveToken, secretjs, slippage, gas, refreshTrigger]);
 
   const handleSwapClick = async () => {
     const keplr = (window as unknown as Window).keplr;
@@ -185,7 +208,10 @@ export const useSwapFormLean = () => {
     const liquidityPair = findLiquidityPair(payToken.symbol, receiveToken.symbol);
 
     if (!liquidityPair) {
-      console.error('No liquidity pair found for these tokens');
+      console.error('No liquidity pair found for these tokens', {
+        payToken,
+        receiveToken,
+      });
       return;
     }
 
@@ -326,6 +352,23 @@ export const useSwapFormLean = () => {
     }
   };
 
+  // Function to swap the positions of pay and receive tokens
+  const swapTokens = () => {
+    const { setTokenInputProperty } = useSwapStore.getState();
+
+    // Get current token addresses
+    const currentPayAddress = payDetails.tokenAddress;
+    const currentReceiveAddress = receiveDetails.tokenAddress;
+
+    // Swap the token addresses
+    setTokenInputProperty('swap.pay', 'tokenAddress', currentReceiveAddress);
+    setTokenInputProperty('swap.receive', 'tokenAddress', currentPayAddress);
+
+    // Clear the amounts when swapping
+    setTokenInputProperty('swap.pay', 'amount', '');
+    setTokenInputProperty('swap.receive', 'amount', '');
+  };
+
   const showDebugAlert = () => {
     if (payToken == null || receiveToken == null) {
       toast.error('Pay or receive token is undefined');
@@ -369,7 +412,13 @@ RawData: ${JSON.stringify(
       2
     )}`;
 
-    alert(alertMessage);
+    console.log({ alertMessage });
+  };
+
+  // Function to manually refresh the estimation
+  const refreshEstimation = () => {
+    console.log('🔄 Manually refreshing estimation...');
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   return {
@@ -387,5 +436,7 @@ RawData: ${JSON.stringify(
     estimatedOutput,
     isEstimating,
     handleSwapClick,
+    swapTokens,
+    refreshEstimation,
   };
 };

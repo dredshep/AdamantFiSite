@@ -1,6 +1,7 @@
 import FormButton from '@/components/app/Shared/Forms/FormButton';
 import PoolTokenInput from '@/components/app/Shared/Forms/Input/PoolTokenInput';
 import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -21,6 +22,22 @@ const WithdrawForm: React.FC = () => {
           </Dialog.Trigger>
           <PoolSelectionModal />
         </Dialog.Root>
+      </div>
+    );
+  }
+
+  // Get the LP token address from LIQUIDITY_PAIRS config
+  const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
+  const lpTokenAddress = pairInfo?.lpToken;
+
+  // If we can't find the LP token, show an error
+  if (!lpTokenAddress) {
+    return (
+      <div className="flex flex-col gap-6 py-2.5 px-2.5 flex-1 justify-center items-center">
+        <div className="text-red-400 text-center">
+          <p>LP token not found for this pool</p>
+          <p className="text-sm text-gray-400 mt-2">Pool: {selectedPool.address}</p>
+        </div>
       </div>
     );
   }
@@ -64,7 +81,7 @@ const WithdrawForm: React.FC = () => {
           poolInputIdentifier="pool.withdraw.lpToken"
           token={{
             symbol: `${selectedPool.token0?.symbol} / ${selectedPool.token1?.symbol} LP`,
-            address: selectedPool.pairInfo.liquidity_token,
+            address: lpTokenAddress,
           }}
           label="Withdraw LP Tokens"
         />

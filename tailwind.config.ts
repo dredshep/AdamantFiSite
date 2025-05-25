@@ -40,6 +40,7 @@ const config = {
           box: {
             dark: '#0C0C20',
             veryDark: '#0B0B16',
+            regular: '#2a2835',
             light: '#0D0C22',
             buttonDark: '#100F20',
             buttonLight: '#151426',
@@ -50,7 +51,34 @@ const config = {
             boxHighlight: '#444a5f',
             input: '#10131f',
             selectTrigger: '#232631',
-            buttonDisabled: '#888ea6',
+            buttonDisabled: '#999ca4',
+          },
+          button: {
+            box: {
+              gradientA: '#e9e9ea',
+              gradientB: '#c6c6c7',
+            },
+            form: {
+              main: '#ffffff',
+              secondary: '#232631',
+            },
+          },
+          text: {
+            box: {
+              main: '#ffffff',
+              secondary: '#819dae',
+            },
+            form: {
+              main: '#ffffff',
+              secondary: '#929499',
+            },
+            button: {
+              box: '#1a1836',
+              form: {
+                main: '#000000',
+                secondary: '#ffffff',
+              },
+            },
           },
         },
       },
