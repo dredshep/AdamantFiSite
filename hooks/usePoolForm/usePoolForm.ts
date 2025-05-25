@@ -38,14 +38,6 @@ interface PoolMetrics {
 // Standard network fee for Secret Network
 const SCRT_TX_FEE = '0.0001';
 
-// Add this type definition for array logs at the top of the file
-interface TxLogEntry {
-  type: string;
-  key: string;
-  value: string | { [key: string]: unknown } | Record<string, unknown>;
-  msg?: number;
-}
-
 function calculatePoolMetrics(
   amount0: string,
   amount1: string,
@@ -279,6 +271,9 @@ export function usePoolForm(
     }, 2000); // Increased debounce time
 
     void fetchBalancesWithRateLimit();
+
+    // Return empty cleanup function for consistency
+    return () => {};
   }, [walletAddress, selectedPool, secretjs, isBalanceLoading]);
 
   const { data, isLoading, error } = useQuery({
