@@ -102,62 +102,107 @@ export function usePoolForm(
 
   const initialMountRef = useRef(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const balanceCache = useRef<
+    Map<string, { balance: { balance: { amount: string } } | null; timestamp: number }>
+  >(new Map());
+  const pendingRequests = useRef<Map<string, Promise<{ balance: { amount: string } } | null>>>(
+    new Map()
+  );
+
+  // Cache duration: 30 seconds
+  const BALANCE_CACHE_DURATION = 30000;
 
   async function getTokenBalance(
     secretjs: SecretNetworkClient,
     tokenAddress: SecretString,
     tokenCodeHash: string
   ): Promise<{ balance: { amount: string } } | null> {
+    const cacheKey = `${tokenAddress}-${secretjs.address}`;
+
+    // Check cache first
+    const cached = balanceCache.current.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < BALANCE_CACHE_DURATION) {
+      console.log(`Using cached balance for ${tokenAddress}`);
+      return cached.balance;
+    }
+
+    // Check if request is already pending
+    const pendingRequest = pendingRequests.current.get(cacheKey);
+    if (pendingRequest) {
+      console.log(`Waiting for pending request for ${tokenAddress}`);
+      return pendingRequest;
+    }
+
     const keplr = (window as unknown as Window).keplr;
     if (!isNotNullish(keplr)) {
       toast.error('Please install the Keplr extension');
       return null;
     }
 
-    try {
-      // First try to get the viewing key
-      let viewingKey = await keplr
-        .getSecret20ViewingKey('secret-4', tokenAddress)
-        .catch(() => null);
+    // Create and cache the promise
+    const requestPromise = (async () => {
+      try {
+        // Add delay to prevent rate limiting
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000 + 500));
 
-      // If no viewing key, suggest the token first
-      if (viewingKey === null) {
-        try {
-          await keplr.suggestToken('secret-4', tokenAddress);
-          // Try getting the key again after suggesting
-          viewingKey = await keplr
-            .getSecret20ViewingKey('secret-4', tokenAddress)
-            .catch(() => null);
-        } catch (error) {
-          console.error('Error suggesting token:', error);
+        // First try to get the viewing key
+        let viewingKey = await keplr
+          .getSecret20ViewingKey('secret-4', tokenAddress)
+          .catch(() => null);
+
+        // If no viewing key, suggest the token first
+        if (viewingKey === null) {
+          try {
+            await keplr.suggestToken('secret-4', tokenAddress);
+            // Try getting the key again after suggesting
+            viewingKey = await keplr
+              .getSecret20ViewingKey('secret-4', tokenAddress)
+              .catch(() => null);
+          } catch (error) {
+            console.error('Error suggesting token:', error);
+            return null;
+          }
+        }
+
+        if (viewingKey === null) {
+          console.error('No viewing key available after suggesting token');
           return null;
         }
-      }
 
-      if (viewingKey === null) {
-        console.error('No viewing key available after suggesting token');
+        const balance = await secretjs.query.snip20.getBalance({
+          contract: {
+            address: tokenAddress,
+            code_hash: tokenCodeHash,
+          },
+          address: secretjs.address,
+          auth: { key: viewingKey },
+        });
+
+        // Cache the result
+        balanceCache.current.set(cacheKey, {
+          balance,
+          timestamp: Date.now(),
+        });
+
+        return balance;
+      } catch (error) {
+        console.error('Error getting token balance:', error);
         return null;
+      } finally {
+        // Remove from pending requests
+        pendingRequests.current.delete(cacheKey);
       }
+    })();
 
-      const balance = await secretjs.query.snip20.getBalance({
-        contract: {
-          address: tokenAddress,
-          code_hash: tokenCodeHash,
-        },
-        address: secretjs.address,
-        auth: { key: viewingKey },
-      });
+    // Cache the promise
+    pendingRequests.current.set(cacheKey, requestPromise);
 
-      return balance;
-    } catch (error) {
-      console.error('Error getting token balance:', error);
-      return null;
-    }
+    return requestPromise;
   }
 
-  // @ts-expect-error: Not all code paths return a value.
+  // Debounced balance fetching with proper rate limiting
   useEffect(() => {
-    if (!secretjs) return;
+    if (!secretjs || !walletAddress) return;
 
     // Skip the first mount and wait 2 seconds
     if (initialMountRef.current) {
@@ -168,51 +213,43 @@ export function usePoolForm(
       return () => clearTimeout(timer);
     }
 
-    if (!isBalanceLoading) return;
+    if (!isBalanceLoading || !selectedPool?.token0 || !selectedPool?.token1) return;
 
-    const connectAndFetchBalances = debounce(async () => {
+    const fetchBalancesWithRateLimit = debounce(async () => {
       try {
-        const keplr = (window as unknown as Window).keplr;
+        console.log('Fetching token balances for wallet:', walletAddress);
 
-        if (!keplr) {
-          alert('Please install the Keplr extension');
+        const token0Address = selectedPool.token0?.address;
+        const token1Address = selectedPool.token1?.address;
+        const token0CodeHash = selectedPool.token0?.codeHash;
+        const token1CodeHash = selectedPool.token1?.codeHash;
+
+        if (!token0Address || !token1Address || !token0CodeHash || !token1CodeHash) {
+          console.error('Missing token information');
           return;
         }
 
-        if (walletAddress !== null && walletAddress !== undefined && walletAddress !== '') {
-          console.log('Wallet address changed:', walletAddress);
+        // Fetch balances with staggered timing to avoid rate limits
+        const balance0Promise = getTokenBalance(secretjs, token0Address, token0CodeHash);
 
-          const token0Address = selectedPool?.token0?.address;
-          const token1Address = selectedPool?.token1?.address;
+        // Wait 1 second before second request
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          if (token0Address === undefined || token1Address === undefined) {
-            console.error('Token address is undefined');
-            return;
-          }
+        const balance1Promise = getTokenBalance(secretjs, token1Address, token1CodeHash);
 
-          // Get code hashes from the tokens, ensuring they are not null
-          const token0CodeHash = selectedPool?.token0?.codeHash;
-          const token1CodeHash = selectedPool?.token1?.codeHash;
+        const [balance0, balance1] = await Promise.all([balance0Promise, balance1Promise]);
 
-          if (token0CodeHash === null || token1CodeHash === null) {
-            console.error('Token code hash is undefined');
-            return;
-          }
+        console.log('Balance of token0:', balance0);
+        console.log('Balance of token1:', balance1);
 
-          const [balance0, balance1] = await Promise.all([
-            getTokenBalance(secretjs, token0Address, token0CodeHash!),
-            getTokenBalance(secretjs, token1Address, token1CodeHash!),
-          ]);
-
-          console.log('Balance of token0:', balance0);
-          console.log('Balance of token1:', balance1);
-        }
+        // Update the store with the fetched balances if needed
+        // This would require extending the store to handle balance updates
       } catch (error) {
-        console.error('Error connecting or fetching balances:', error);
+        console.error('Error fetching balances:', error);
       }
-    }, 1000);
+    }, 2000); // Increased debounce time
 
-    void connectAndFetchBalances();
+    void fetchBalancesWithRateLimit();
   }, [walletAddress, selectedPool, secretjs, isBalanceLoading]);
 
   const { data, isLoading, error } = useQuery({
@@ -231,14 +268,17 @@ export function usePoolForm(
           : LIQUIDITY_PAIRS[0]?.pairContractCodeHash;
 
       return await fetchPoolData(validPoolAddress, pairCodeHash, (pool: SelectedPoolType) => {
+        // Get the LP token address from LIQUIDITY_PAIRS configuration
+        const lpTokenAddress = pairInfo?.lpToken || '';
+
         setSelectedPool({
           address: pool.address,
           token0: pool.token0,
           token1: pool.token1,
           pairInfo: {
             ...pool.pairInfo,
-            liquidity_token: '' as SecretString,
-            token_code_hash: '',
+            liquidity_token: lpTokenAddress as SecretString,
+            token_code_hash: pairInfo?.lpTokenCodeHash || '',
             asset0_volume: '0',
             asset1_volume: '0',
             factory: {
@@ -250,6 +290,9 @@ export function usePoolForm(
       });
     },
     enabled: typeof poolAddress === 'string',
+    // Add stale time to prevent excessive refetching
+    staleTime: 30000, // 30 seconds
+    gcTime: 300000, // 5 minutes (renamed from cacheTime in newer versions)
   });
 
   const loadingState: LoadingState = {
@@ -505,7 +548,14 @@ export function usePoolForm(
       return;
 
     const lpAmount = safeTokenInputs['pool.withdraw.lpToken']?.amount;
-    if (lpAmount === undefined || parseFloat(lpAmount) === 0) {
+
+    // Improved validation to handle empty strings and invalid numbers
+    if (
+      !lpAmount ||
+      lpAmount.trim() === '' ||
+      isNaN(parseFloat(lpAmount)) ||
+      parseFloat(lpAmount) <= 0
+    ) {
       setWithdrawEstimate(null);
       return;
     }
@@ -545,19 +595,12 @@ export function usePoolForm(
       token1: selectedPool.token1,
     });
 
-    console.log('🧮 NEW UTILITY RESULT:', result);
-
     if (result.isValid) {
-      console.log('✅ Setting valid withdraw estimate:', {
-        token0Amount: result.token0Amount,
-        token1Amount: result.token1Amount,
-      });
       setWithdrawEstimate({
         token0Amount: result.token0Amount,
         token1Amount: result.token1Amount,
       });
     } else {
-      console.error('❌ Withdrawal calculation failed:', result.error);
       setWithdrawEstimate({
         token0Amount: '0',
         token1Amount: '0',

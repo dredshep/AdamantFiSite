@@ -32,23 +32,9 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   onFetchBalance,
   withLabel = true,
 }) => {
-  console.log('🎨 TopRightBalance render:', {
-    balance,
-    loading,
-    error,
-    tokenSymbol,
-    hasMax,
-    inputIdentifier,
-    hasFetchCallback: !!onFetchBalance,
-  });
-
   const handleFetchClick = () => {
-    console.log('🔄 Regular TopRightBalance Fetch button clicked');
     if (onFetchBalance) {
-      console.log('✅ Calling onFetchBalance callback');
       onFetchBalance();
-    } else {
-      console.log('❌ No onFetchBalance callback provided');
     }
   };
 

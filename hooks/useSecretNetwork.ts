@@ -1,7 +1,7 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
 import isNotNullish from '@/utils/isNotNullish';
 import { Window as KeplrWindow } from '@keplr-wallet/types';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast, ToastOptions } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
@@ -112,11 +112,20 @@ async function withRetry<T>(
   throw lastError;
 }
 
-// Read-only client for queries that don't require wallet
-export const secretClient = new SecretNetworkClient({
-  chainId: getSecretNetworkEnvVars().CHAIN_ID,
-  url: getSecretNetworkEnvVars().LCD_URL,
-});
+// Read-only client for queries that don't require wallet (singleton)
+let _secretClient: SecretNetworkClient | null = null;
+export const getSecretClient = (): SecretNetworkClient => {
+  if (!_secretClient) {
+    _secretClient = new SecretNetworkClient({
+      chainId: getSecretNetworkEnvVars().CHAIN_ID,
+      url: getSecretNetworkEnvVars().LCD_URL,
+    });
+  }
+  return _secretClient;
+};
+
+// Legacy export for backward compatibility
+export const secretClient = getSecretClient();
 
 // Function to create wallet-connected client when needed
 export async function createWalletClient(): Promise<SecretNetworkClient | null> {
@@ -157,229 +166,253 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
   }
 }
 
-export function useSecretNetwork() {
-  // Internal state - no longer using external store
-  const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
-  const [keplr, setKeplr] = useState<typeof window.keplr | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<SecretNetworkError | null>(null);
+// Singleton state for the Secret Network connection
+interface SecretNetworkState {
+  secretjs: SecretNetworkClient | null;
+  keplr: typeof window.keplr | null;
+  walletAddress: string | null;
+  isConnecting: boolean;
+  error: SecretNetworkError | null;
+  toastsShown: ToastShownState;
+}
 
-  const toastsShown = useRef<ToastShownState>({
+// Global singleton state
+let globalState: SecretNetworkState = {
+  secretjs: null,
+  keplr: null,
+  walletAddress: null,
+  isConnecting: false,
+  error: null,
+  toastsShown: {
     success: false,
     noKeplr: false,
     noSigner: false,
     noAccounts: false,
     connectionFailed: false,
     networkError: false,
-  });
-  const env = getSecretNetworkEnvVars();
-  const keplrCheckInterval = useRef<number | null>(null);
+  },
+};
 
-  // Helper function to show toasts only once
-  const showToastOnce = useCallback(
-    (
-      type: keyof ToastShownState,
-      toastId: string,
-      message: string,
-      options?: { onClick?: () => void }
-    ) => {
-      if (!toastsShown.current[type]) {
-        // Dismiss any existing toast with this ID first
-        toast.dismiss(toastId);
+// Subscribers for state changes
+const subscribers = new Set<() => void>();
 
-        // Create toast options with proper type handling
-        const toastOptions: ToastOptions = {
-          position: 'bottom-right',
-          toastId,
-        };
+// Function to notify all subscribers of state changes
+function notifySubscribers() {
+  subscribers.forEach((callback) => callback());
+}
 
-        // Only add onClick if it exists
-        if (options?.onClick) {
-          toastOptions.onClick = () => {
-            options.onClick?.();
-          };
-        }
+// Function to update global state
+function updateGlobalState(updates: Partial<SecretNetworkState>) {
+  globalState = { ...globalState, ...updates };
+  notifySubscribers();
+}
 
-        // Show the toast
-        toast[type === 'success' ? 'success' : 'error'](message, toastOptions);
+// Helper function to show toasts only once
+function showToastOnce(
+  type: keyof ToastShownState,
+  toastId: string,
+  message: string,
+  options?: { onClick?: () => void }
+) {
+  if (!globalState.toastsShown[type]) {
+    // Dismiss any existing toast with this ID first
+    toast.dismiss(toastId);
 
-        // Mark as shown
-        toastsShown.current[type] = true;
-      }
-    },
-    []
-  );
+    // Create toast options with proper type handling
+    const toastOptions: ToastOptions = {
+      position: 'bottom-right',
+      toastId,
+    };
 
-  // Function to check if Keplr is ready in the window object
-  const waitForKeplr = useCallback((): Promise<typeof window.keplr> => {
-    return new Promise((resolve, reject) => {
-      // If Keplr is already available, resolve immediately
+    // Only add onClick if it exists
+    if (options?.onClick) {
+      toastOptions.onClick = () => {
+        options.onClick?.();
+      };
+    }
+
+    toast.success(message, toastOptions);
+    updateGlobalState({
+      toastsShown: {
+        ...globalState.toastsShown,
+        [type]: true,
+      },
+    });
+  }
+}
+
+// Function to wait for Keplr
+function waitForKeplr(): Promise<typeof window.keplr> {
+  return new Promise((resolve, reject) => {
+    // If Keplr is already available, resolve immediately
+    if (window.keplr) {
+      return resolve(window.keplr);
+    }
+
+    // Check every 500ms for up to 10 seconds
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const checkInterval = setInterval(() => {
+      attempts++;
+
       if (window.keplr) {
+        clearInterval(checkInterval);
         return resolve(window.keplr);
       }
 
-      // Check every 500ms for up to 10 seconds
-      let attempts = 0;
-      const maxAttempts = 20;
-
-      const checkInterval = setInterval(() => {
-        attempts++;
-
-        if (window.keplr) {
-          clearInterval(checkInterval);
-          return resolve(window.keplr);
-        }
-
-        if (attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          reject(new Error('Keplr not found after waiting'));
-        }
-      }, 500);
-
-      // Store the interval ID so we can clear it if needed
-      keplrCheckInterval.current = checkInterval as unknown as number;
-    });
-  }, []);
-
-  // Clean up interval on unmount
-  useEffect(() => {
-    return () => {
-      if (keplrCheckInterval.current !== null) {
-        clearInterval(keplrCheckInterval.current);
+      if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        reject(new Error('Keplr not found after waiting'));
       }
-    };
-  }, []);
+    }, 500);
+  });
+}
 
-  // Reset toast tracking on component mount
-  useEffect(() => {
-    return () => {
-      // Reset toast tracking on unmount
-      toastsShown.current = {
-        success: false,
-        noKeplr: false,
-        noSigner: false,
-        noAccounts: false,
-        connectionFailed: false,
-        networkError: false,
-      };
-    };
-  }, []);
+// Main connection function
+async function connectKeplr(): Promise<void> {
+  if (globalState.isConnecting || globalState.secretjs !== null) {
+    return;
+  }
 
-  const connectKeplr = useCallback(async () => {
-    if (isConnecting || secretjs !== null) {
+  updateGlobalState({ isConnecting: true, error: null });
+
+  try {
+    console.log('Attempting to connect to Keplr...');
+
+    // Wait for Keplr to be available instead of immediately checking
+    const keplrInstance = await waitForKeplr().catch(
+      () => (window as unknown as KeplrWindow).keplr
+    );
+
+    if (!isNotNullish(keplrInstance)) {
+      console.error('Keplr not found');
+      updateGlobalState({ error: SecretNetworkError.NO_KEPLR });
+      showToastOnce('noKeplr', TOAST_IDS.NO_KEPLR, 'Please install Keplr extension', {
+        onClick: () => window.open('https://www.keplr.app/download', '_blank'),
+      });
       return;
     }
 
-    setIsConnecting(true);
-    setError(null);
+    const env = getSecretNetworkEnvVars();
 
-    try {
-      console.log('Attempting to connect to Keplr...');
-
-      // Wait for Keplr to be available instead of immediately checking
-      const keplrInstance = await waitForKeplr().catch(
-        () => (window as unknown as KeplrWindow).keplr
-      );
-
-      if (!isNotNullish(keplrInstance)) {
-        console.error('Keplr not found');
-        setError(SecretNetworkError.NO_KEPLR);
-        showToastOnce('noKeplr', TOAST_IDS.NO_KEPLR, 'Please install Keplr extension', {
-          onClick: () => window.open('https://www.keplr.app/download', '_blank'),
-        });
-        return;
-      }
-
-      // Suggest chain info for pulsar-3 with retry
-      if (env.CHAIN_ID === 'pulsar-3') {
-        console.log('Suggesting chain info for pulsar-3...');
-        await withRetry(() => keplrInstance.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
-      }
-
-      console.log(`Enabling Keplr for ${env.CHAIN_ID}...`);
-      await withRetry(() => keplrInstance.enable(env.CHAIN_ID));
-      setKeplr(keplrInstance);
-
-      const offlineSigner = keplrInstance.getOfflineSignerOnlyAmino(env.CHAIN_ID);
-      const enigmaUtils = keplrInstance.getEnigmaUtils(env.CHAIN_ID);
-
-      if (typeof offlineSigner === 'undefined' || offlineSigner === null) {
-        console.error('No offline signer found');
-        setError(SecretNetworkError.NO_SIGNER);
-        showToastOnce('noSigner', TOAST_IDS.NO_SIGNER, 'Failed to get Keplr signer');
-        return;
-      }
-
-      console.log('Getting accounts...');
-      const accounts = await withRetry(() => offlineSigner.getAccounts());
-      const firstAccount = accounts[0];
-
-      if (typeof firstAccount === 'undefined' || accounts.length === 0) {
-        console.error('No accounts found');
-        setError(SecretNetworkError.NO_ACCOUNTS);
-        showToastOnce('noAccounts', TOAST_IDS.NO_ACCOUNTS, 'No Keplr accounts found');
-        return;
-      }
-
-      console.log('Creating SecretNetworkClient...');
-      const client = new SecretNetworkClient({
-        chainId: env.CHAIN_ID,
-        url: env.LCD_URL,
-        wallet: offlineSigner,
-        walletAddress: firstAccount.address,
-        encryptionUtils: enigmaUtils,
-      });
-
-      console.log('Successfully connected to Secret Network');
-      setWalletAddress(firstAccount.address);
-      setSecretjs(client);
-
-      showToastOnce('success', TOAST_IDS.SUCCESS, 'Connected to Secret Network');
-    } catch (error) {
-      console.error('Error connecting to Secret Network:', error);
-      // Check for network-related errors specifically
-      const errorString = String(error);
-      if (
-        errorString.includes('NetworkError') ||
-        errorString.includes('fetch') ||
-        errorString.includes('network') ||
-        errorString.includes('timeout')
-      ) {
-        setError(SecretNetworkError.NETWORK_ERROR);
-        showToastOnce(
-          'networkError',
-          TOAST_IDS.NETWORK_ERROR,
-          'Network error connecting to Secret Network. Check your internet connection.'
-        );
-      } else {
-        setError(SecretNetworkError.CONNECTION_FAILED);
-        showToastOnce(
-          'connectionFailed',
-          TOAST_IDS.CONNECTION_FAILED,
-          'Failed to connect to Secret Network'
-        );
-      }
-    } finally {
-      setIsConnecting(false);
+    // Suggest chain info for pulsar-3 with retry
+    if (env.CHAIN_ID === 'pulsar-3') {
+      console.log('Suggesting chain info for pulsar-3...');
+      await withRetry(() => keplrInstance.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
     }
-  }, [isConnecting, secretjs, env, waitForKeplr, showToastOnce]);
+
+    console.log(`Enabling Keplr for ${env.CHAIN_ID}...`);
+    await withRetry(() => keplrInstance.enable(env.CHAIN_ID));
+    updateGlobalState({ keplr: keplrInstance });
+
+    const offlineSigner = keplrInstance.getOfflineSignerOnlyAmino(env.CHAIN_ID);
+    const enigmaUtils = keplrInstance.getEnigmaUtils(env.CHAIN_ID);
+
+    if (typeof offlineSigner === 'undefined' || offlineSigner === null) {
+      console.error('No offline signer found');
+      updateGlobalState({ error: SecretNetworkError.NO_SIGNER });
+      showToastOnce('noSigner', TOAST_IDS.NO_SIGNER, 'Failed to get Keplr signer');
+      return;
+    }
+
+    console.log('Getting accounts...');
+    const accounts = await withRetry(() => offlineSigner.getAccounts());
+    const firstAccount = accounts[0];
+
+    if (typeof firstAccount === 'undefined' || accounts.length === 0) {
+      console.error('No accounts found');
+      updateGlobalState({ error: SecretNetworkError.NO_ACCOUNTS });
+      showToastOnce('noAccounts', TOAST_IDS.NO_ACCOUNTS, 'No Keplr accounts found');
+      return;
+    }
+
+    console.log('Creating SecretNetworkClient...');
+    const client = new SecretNetworkClient({
+      chainId: env.CHAIN_ID,
+      url: env.LCD_URL,
+      wallet: offlineSigner,
+      walletAddress: firstAccount.address,
+      encryptionUtils: enigmaUtils,
+    });
+
+    console.log('Successfully connected to Secret Network');
+    updateGlobalState({
+      walletAddress: firstAccount.address,
+      secretjs: client,
+    });
+
+    showToastOnce('success', TOAST_IDS.SUCCESS, 'Connected to Secret Network');
+  } catch (error) {
+    console.error('Error connecting to Secret Network:', error);
+    // Check for network-related errors specifically
+    const errorString = String(error);
+    if (
+      errorString.includes('NetworkError') ||
+      errorString.includes('fetch') ||
+      errorString.includes('network') ||
+      errorString.includes('timeout')
+    ) {
+      updateGlobalState({ error: SecretNetworkError.NETWORK_ERROR });
+      showToastOnce(
+        'networkError',
+        TOAST_IDS.NETWORK_ERROR,
+        'Network error connecting to Secret Network. Check your internet connection.'
+      );
+    } else {
+      updateGlobalState({ error: SecretNetworkError.CONNECTION_FAILED });
+      showToastOnce(
+        'connectionFailed',
+        TOAST_IDS.CONNECTION_FAILED,
+        'Failed to connect to Secret Network'
+      );
+    }
+  } finally {
+    updateGlobalState({ isConnecting: false });
+  }
+}
+
+// Function to reset toast tracking
+function resetToasts() {
+  updateGlobalState({
+    toastsShown: {
+      success: false,
+      noKeplr: false,
+      noSigner: false,
+      noAccounts: false,
+      connectionFailed: false,
+      networkError: false,
+    },
+  });
+}
+
+// Hook to use the singleton Secret Network connection
+export function useSecretNetwork() {
+  const [state, setState] = useState(globalState);
 
   useEffect(() => {
-    const initConnection = async () => {
-      if (secretjs === null && !isConnecting && error === null) {
-        console.log('Initializing Secret Network connection...');
-        await connectKeplr();
-      }
+    // Subscribe to global state changes
+    const unsubscribe = () => {
+      setState({ ...globalState });
     };
 
-    void initConnection();
-  }, [connectKeplr, secretjs, isConnecting, error]);
+    subscribers.add(unsubscribe);
+
+    // Initial connection attempt
+    if (globalState.secretjs === null && !globalState.isConnecting && globalState.error === null) {
+      console.log('Initializing Secret Network connection...');
+      void connectKeplr();
+    }
+
+    return () => {
+      subscribers.delete(unsubscribe);
+    };
+  }, []);
 
   // Reconnect on window focus
   useEffect(() => {
     const handleFocus = () => {
-      if (secretjs === null && !isConnecting) {
+      if (globalState.secretjs === null && !globalState.isConnecting) {
         console.log('Window focused, attempting to reconnect...');
         void connectKeplr();
       }
@@ -387,26 +420,14 @@ export function useSecretNetwork() {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [connectKeplr, secretjs, isConnecting]);
-
-  // Provide a method to reset toast tracking
-  const resetToasts = useCallback(() => {
-    toastsShown.current = {
-      success: false,
-      noKeplr: false,
-      noSigner: false,
-      noAccounts: false,
-      connectionFailed: false,
-      networkError: false,
-    };
   }, []);
 
   return {
-    secretjs,
-    walletAddress,
-    keplr,
-    isConnecting,
-    error,
+    secretjs: state.secretjs,
+    walletAddress: state.walletAddress,
+    keplr: state.keplr,
+    isConnecting: state.isConnecting,
+    error: state.error,
     connect: connectKeplr,
     resetToasts,
   };

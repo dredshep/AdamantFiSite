@@ -46,7 +46,7 @@ const SwapForm: React.FC = () => {
   //   )
   // );
 
-  const [minReceiveInput, setMinReceiveInput] = useState(minReceive?.toString() ?? '');
+  const [, setMinReceiveInput] = useState(minReceive?.toString() ?? '');
   const [tempSlippage, setTempSlippage] = useState(slippage);
   const [hasSlippageChanges, setHasSlippageChanges] = useState(false);
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
@@ -29,10 +29,16 @@ export function usePoolStaking(poolAddress: SecretString | null) {
   // Get load balance preferences
   const loadBalanceConfig = useLoadBalancePreference();
 
-  // Check if the pool has a staking contract
-  const hasStaking = isNotNullish(poolAddress) ? hasStakingContractForPool(poolAddress) : false;
-  const stakingInfo =
-    isNotNullish(poolAddress) && hasStaking ? getStakingContractInfoForPool(poolAddress) : null;
+  // Memoize staking contract checks to prevent repeated calls
+  const hasStaking = useMemo(() => {
+    return isNotNullish(poolAddress) ? hasStakingContractForPool(poolAddress) : false;
+  }, [poolAddress]);
+
+  const stakingInfo = useMemo(() => {
+    return isNotNullish(poolAddress) && hasStaking
+      ? getStakingContractInfoForPool(poolAddress)
+      : null;
+  }, [poolAddress, hasStaking]);
 
   // Use the base staking hook
   const staking = useStaking({

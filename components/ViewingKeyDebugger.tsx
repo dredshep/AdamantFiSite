@@ -155,7 +155,7 @@ export const ViewingKeyDebugger: React.FC = () => {
             // Auto-retry after a short delay for newly set viewing keys
             setTimeout(() => {
               if (tokenInfo?.address === tokenAddress && tokenInfo?.hasViewingKey) {
-                fetchTokenInfo(tokenAddress, true);
+                void fetchTokenInfo(tokenAddress, true);
               }
             }, 3000);
           } else {
@@ -191,7 +191,7 @@ export const ViewingKeyDebugger: React.FC = () => {
       showToastMessage('Token suggested to Keplr. Please check your wallet.');
 
       setTimeout(() => {
-        fetchTokenInfo(tokenAddress);
+        void fetchTokenInfo(tokenAddress);
       }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -223,7 +223,7 @@ export const ViewingKeyDebugger: React.FC = () => {
       showToastMessage(`${token.symbol} added to Keplr wallet successfully!`);
 
       setTimeout(() => {
-        fetchTokenInfo(tokenAddress);
+        void fetchTokenInfo(tokenAddress);
       }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -256,7 +256,7 @@ export const ViewingKeyDebugger: React.FC = () => {
       showToastMessage('Viewing key reset initiated. Please check Keplr.');
 
       setTimeout(() => {
-        fetchTokenInfo(tokenAddress);
+        void fetchTokenInfo(tokenAddress);
       }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -287,7 +287,7 @@ export const ViewingKeyDebugger: React.FC = () => {
 
   useEffect(() => {
     if (selectedToken) {
-      fetchTokenInfo(selectedToken);
+      void fetchTokenInfo(selectedToken);
     }
   }, [selectedToken, walletAddress]);
 
@@ -471,7 +471,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                                 </span>
                               ) : tokenInfo.hasViewingKey && walletAddress ? (
                                 <button
-                                  onClick={() => fetchTokenInfo(selectedToken)}
+                                  onClick={() => void fetchTokenInfo(selectedToken)}
                                   className="text-adamant-gradientBright hover:text-adamant-gradientDark text-xs flex items-center transition-colors duration-150"
                                 >
                                   <ReloadIcon className="w-3 h-3 mr-1" />
@@ -548,7 +548,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                 <Tabs.Content value="actions" className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button
-                      onClick={() => fetchTokenInfo(selectedToken)}
+                      onClick={() => void fetchTokenInfo(selectedToken)}
                       disabled={isLoading}
                       className="bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark hover:from-adamant-dark hover:to-adamant-dark disabled:from-adamant-app-buttonDisabled disabled:to-adamant-app-buttonDisabled text-white p-4 rounded-lg transition-all duration-200 flex items-center justify-center font-medium transform hover:scale-105 disabled:hover:scale-100"
                     >
@@ -560,7 +560,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Refresh Analysis
                     </button>
                     <button
-                      onClick={() => addTokenToWallet(selectedToken)}
+                      onClick={() => void addTokenToWallet(selectedToken)}
                       disabled={isLoading}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
@@ -568,7 +568,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Add Token to Wallet
                     </button>
                     <button
-                      onClick={() => suggestToken(selectedToken)}
+                      onClick={() => void suggestToken(selectedToken)}
                       disabled={isLoading}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
@@ -576,7 +576,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Suggest Token to Keplr
                     </button>
                     <button
-                      onClick={() => resetViewingKey(selectedToken)}
+                      onClick={() => void resetViewingKey(selectedToken)}
                       disabled={isLoading}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >

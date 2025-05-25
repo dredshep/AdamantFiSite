@@ -26,41 +26,80 @@ export function calculateWithdrawalAmounts(
   const { lpAmount, totalLpSupply, asset0Amount, asset1Amount, token0, token1 } = input;
 
   // Validate inputs
-  if (!lpAmount || parseFloat(lpAmount) <= 0) {
+  if (!lpAmount || typeof lpAmount !== 'string' || lpAmount.trim() === '') {
     return {
       token0Amount: '0',
       token1Amount: '0',
       proportion: 0,
       isValid: false,
-      error: 'Invalid LP amount',
+      error: 'Invalid LP amount: empty or invalid string',
     };
   }
 
-  if (!totalLpSupply || parseFloat(totalLpSupply) <= 0) {
+  const lpAmountNum = parseFloat(lpAmount);
+  if (isNaN(lpAmountNum) || lpAmountNum <= 0) {
     return {
       token0Amount: '0',
       token1Amount: '0',
       proportion: 0,
       isValid: false,
-      error: 'Invalid total LP supply',
+      error: 'Invalid LP amount: not a positive number',
     };
   }
 
-  if (!asset0Amount || !asset1Amount) {
+  if (!totalLpSupply || typeof totalLpSupply !== 'string' || totalLpSupply.trim() === '') {
     return {
       token0Amount: '0',
       token1Amount: '0',
       proportion: 0,
       isValid: false,
-      error: 'Invalid asset amounts',
+      error: 'Invalid total LP supply: empty or invalid string',
+    };
+  }
+
+  const totalLpSupplyNum = parseFloat(totalLpSupply);
+  if (isNaN(totalLpSupplyNum) || totalLpSupplyNum <= 0) {
+    return {
+      token0Amount: '0',
+      token1Amount: '0',
+      proportion: 0,
+      isValid: false,
+      error: 'Invalid total LP supply: not a positive number',
+    };
+  }
+
+  if (
+    !asset0Amount ||
+    !asset1Amount ||
+    typeof asset0Amount !== 'string' ||
+    typeof asset1Amount !== 'string'
+  ) {
+    return {
+      token0Amount: '0',
+      token1Amount: '0',
+      proportion: 0,
+      isValid: false,
+      error: 'Invalid asset amounts: missing or invalid',
+    };
+  }
+
+  const asset0Num = parseFloat(asset0Amount);
+  const asset1Num = parseFloat(asset1Amount);
+  if (isNaN(asset0Num) || isNaN(asset1Num) || asset0Num < 0 || asset1Num < 0) {
+    return {
+      token0Amount: '0',
+      token1Amount: '0',
+      proportion: 0,
+      isValid: false,
+      error: 'Invalid asset amounts: not valid numbers',
     };
   }
 
   try {
     // Convert LP amount from display format to raw format
     // LP tokens have 6 decimals
-    const lpAmountRaw = parseFloat(lpAmount) * Math.pow(10, 6);
-    const totalLpSupplyRaw = parseFloat(totalLpSupply);
+    const lpAmountRaw = lpAmountNum * Math.pow(10, 6);
+    const totalLpSupplyRaw = totalLpSupplyNum;
 
     // Calculate proportion of pool being withdrawn
     const proportion = lpAmountRaw / totalLpSupplyRaw;
@@ -90,8 +129,8 @@ export function calculateWithdrawalAmounts(
     }
 
     // Calculate raw amounts to be withdrawn
-    const asset0AmountRaw = parseFloat(asset0Amount);
-    const asset1AmountRaw = parseFloat(asset1Amount);
+    const asset0AmountRaw = asset0Num;
+    const asset1AmountRaw = asset1Num;
 
     const token0WithdrawRaw = asset0AmountRaw * proportion;
     const token1WithdrawRaw = asset1AmountRaw * proportion;

@@ -2,7 +2,7 @@ import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { SecretString } from '@/types';
 import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
 import { Window } from '@keplr-wallet/types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useSecretNetwork } from './useSecretNetwork';
 
@@ -24,6 +24,16 @@ interface LpTokenBalanceHookReturn {
   suggestToken: () => Promise<void>;
 }
 
+// Global cache for LP token balances to prevent duplicate requests
+const lpBalanceCache = new Map<
+  string,
+  { amount: string | null; timestamp: number; error: LpTokenBalanceError | null }
+>();
+const pendingLpRequests = new Map<string, Promise<void>>();
+
+// Cache duration: 30 seconds
+const LP_BALANCE_CACHE_DURATION = 30000;
+
 export function useLpTokenBalance(
   lpTokenAddress: SecretString | undefined
 ): LpTokenBalanceHookReturn {
@@ -31,6 +41,7 @@ export function useLpTokenBalance(
   const [amount, setAmount] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<LpTokenBalanceError | null>(null);
+  const lastFetchTime = useRef<number>(0);
 
   // Find LP token info from LIQUIDITY_PAIRS config
   const lpTokenInfo = lpTokenAddress
@@ -70,6 +81,34 @@ export function useLpTokenBalance(
         return;
       }
 
+      const cacheKey = `${lpTokenAddress}-${secretjs.address}`;
+
+      // Check cache first (unless manual refresh)
+      if (!isManual) {
+        const cached = lpBalanceCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < LP_BALANCE_CACHE_DURATION) {
+          console.log(`Using cached LP balance for ${lpTokenAddress}`);
+          setAmount(cached.amount);
+          setError(cached.error);
+          return;
+        }
+      }
+
+      // Check if request is already pending
+      const pendingRequest = pendingLpRequests.get(cacheKey);
+      if (pendingRequest) {
+        console.log(`Waiting for pending LP balance request for ${lpTokenAddress}`);
+        await pendingRequest;
+        return;
+      }
+
+      // Rate limiting: don't fetch more than once every 5 seconds
+      const now = Date.now();
+      if (!isManual && now - lastFetchTime.current < 5000) {
+        console.log('Rate limiting LP balance fetch');
+        return;
+      }
+
       // Check environment preference (only for automatic fetches)
       if (!isManual) {
         try {
@@ -84,77 +123,101 @@ export function useLpTokenBalance(
 
       setLoading(true);
       setError(null);
+      lastFetchTime.current = now;
 
-      try {
-        const keplr = (window as unknown as Window).keplr;
-        if (!keplr) {
-          setError(LpTokenBalanceError.NO_KEPLR);
-          return;
-        }
+      // Create and cache the promise
+      const requestPromise = (async () => {
+        try {
+          // Add random delay to prevent rate limiting
+          if (!isManual) {
+            await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000 + 500));
+          }
 
-        let viewingKey = await keplr
-          .getSecret20ViewingKey('secret-4', lpTokenAddress)
-          .catch(() => null);
+          const keplr = (window as unknown as Window).keplr;
+          if (!keplr) {
+            const error = LpTokenBalanceError.NO_KEPLR;
+            setError(error);
+            lpBalanceCache.set(cacheKey, { amount: null, timestamp: now, error });
+            return;
+          }
 
-        if (viewingKey === null) {
-          await keplr.suggestToken('secret-4', lpTokenAddress);
-          viewingKey = await keplr
+          let viewingKey = await keplr
             .getSecret20ViewingKey('secret-4', lpTokenAddress)
             .catch(() => null);
-        }
 
-        if (viewingKey === null) {
-          setError(LpTokenBalanceError.NO_VIEWING_KEY);
-          return;
-        }
-
-        const balance = await secretjs.query.snip20.getBalance({
-          contract: {
-            address: lpTokenAddress,
-            code_hash: lpTokenInfo.lpTokenCodeHash,
-          },
-          address: secretjs.address,
-          auth: { key: viewingKey },
-        });
-
-        if (
-          balance !== undefined &&
-          balance !== null &&
-          typeof balance === 'object' &&
-          'balance' in balance &&
-          balance.balance !== undefined &&
-          balance.balance !== null &&
-          typeof balance.balance === 'object' &&
-          'amount' in balance.balance &&
-          typeof balance.balance.amount === 'string'
-        ) {
-          const rawAmount = parseInt(balance.balance.amount);
-          const displayAmount = (rawAmount / 1_000_000).toString();
-          setAmount(displayAmount);
-          setError(null);
-        } else {
-          setError(LpTokenBalanceError.UNKNOWN_ERROR);
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          if (error.message.includes('viewing key')) {
-            setError(LpTokenBalanceError.NO_VIEWING_KEY);
-          } else if (error.message.includes('network')) {
-            setError(LpTokenBalanceError.NETWORK_ERROR);
-          } else {
-            setError(LpTokenBalanceError.UNKNOWN_ERROR);
+          if (viewingKey === null) {
+            await keplr.suggestToken('secret-4', lpTokenAddress);
+            viewingKey = await keplr
+              .getSecret20ViewingKey('secret-4', lpTokenAddress)
+              .catch(() => null);
           }
-        } else {
-          setError(LpTokenBalanceError.UNKNOWN_ERROR);
+
+          if (viewingKey === null) {
+            const error = LpTokenBalanceError.NO_VIEWING_KEY;
+            setError(error);
+            lpBalanceCache.set(cacheKey, { amount: null, timestamp: now, error });
+            return;
+          }
+
+          const balance = await secretjs.query.snip20.getBalance({
+            contract: {
+              address: lpTokenAddress,
+              code_hash: lpTokenInfo.lpTokenCodeHash,
+            },
+            address: secretjs.address,
+            auth: { key: viewingKey },
+          });
+
+          if (
+            balance !== undefined &&
+            balance !== null &&
+            typeof balance === 'object' &&
+            'balance' in balance &&
+            balance.balance !== undefined &&
+            balance.balance !== null &&
+            typeof balance.balance === 'object' &&
+            'amount' in balance.balance &&
+            typeof balance.balance.amount === 'string'
+          ) {
+            const rawAmount = parseInt(balance.balance.amount);
+            const displayAmount = (rawAmount / 1_000_000).toString();
+            setAmount(displayAmount);
+            setError(null);
+
+            // Cache the successful result
+            lpBalanceCache.set(cacheKey, { amount: displayAmount, timestamp: now, error: null });
+          } else {
+            const error = LpTokenBalanceError.UNKNOWN_ERROR;
+            setError(error);
+            lpBalanceCache.set(cacheKey, { amount: null, timestamp: now, error });
+          }
+        } catch (error) {
+          let errorType = LpTokenBalanceError.UNKNOWN_ERROR;
+
+          if (error instanceof Error) {
+            if (error.message.includes('viewing key')) {
+              errorType = LpTokenBalanceError.NO_VIEWING_KEY;
+            } else if (error.message.includes('network')) {
+              errorType = LpTokenBalanceError.NETWORK_ERROR;
+            }
+          }
+
+          setError(errorType);
+          lpBalanceCache.set(cacheKey, { amount: null, timestamp: now, error: errorType });
+        } finally {
+          setLoading(false);
+          pendingLpRequests.delete(cacheKey);
         }
-      } finally {
-        setLoading(false);
-      }
+      })();
+
+      // Cache the promise
+      pendingLpRequests.set(cacheKey, requestPromise);
+      await requestPromise;
     },
     [lpTokenAddress, lpTokenInfo, secretjs]
   );
 
-  // Auto-fetch balance when dependencies are ready
+  // Auto-fetch balance when dependencies are ready (with rate limiting)
   useEffect(() => {
     if (lpTokenAddress && lpTokenInfo && secretjs) {
       void fetchBalance();

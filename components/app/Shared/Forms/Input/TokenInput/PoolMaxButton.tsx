@@ -30,8 +30,13 @@ const PoolMaxButton: React.FC<PoolMaxButtonProps> = ({ poolInputIdentifier: inpu
 
   const handleMax = () => {
     if (isLpToken && lpTokenData.amount !== null) {
-      // For LP tokens, use the balance from the LP token hook
-      setTokenInputAmount(inputIdentifier, lpTokenData.amount);
+      // Validate the amount before setting it
+      const amount = lpTokenData.amount;
+      if (amount && parseFloat(amount) > 0) {
+        setTokenInputAmount(inputIdentifier, amount);
+      } else {
+        console.error('❌ Invalid LP token amount:', amount);
+      }
     } else {
       // For regular tokens, use the existing setMax function
       setMax(inputIdentifier);

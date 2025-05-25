@@ -9,7 +9,7 @@ interface ReceivePanelProps {
   onClose: () => void; // Switches back to 'main' view in WalletSidebar
 }
 
-export const ReceivePanel: React.FC<ReceivePanelProps> = ({ walletAddress, onClose }) => {
+export const ReceivePanel: React.FC<ReceivePanelProps> = ({ walletAddress }) => {
   const copyAddressToClipboard = () => {
     void navigator.clipboard.writeText(walletAddress).then(() => {
       toast.success('Address copied to clipboard!');

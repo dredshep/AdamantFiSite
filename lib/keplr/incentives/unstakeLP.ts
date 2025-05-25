@@ -1,5 +1,5 @@
-import { SecretNetworkClient } from 'secretjs';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
+import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 export interface UnstakeLPParams {
   secretjs: SecretNetworkClient;
@@ -40,7 +40,7 @@ export const unstakeLP = async ({ secretjs, lpToken, amount }: UnstakeLPParams) 
 
     // Create the unstake message
     const unstakeMsg = {
-      withdraw: {
+      redeem: {
         amount: amount,
       },
     };
@@ -60,8 +60,14 @@ export const unstakeLP = async ({ secretjs, lpToken, amount }: UnstakeLPParams) 
       }
     );
 
-    console.log('Unstaking successful', unstakeTx);
+    console.log('Unstaking transaction result:', unstakeTx);
 
+    // Check if the transaction was successful
+    if (unstakeTx.code !== TxResultCode.Success) {
+      throw new Error(`Unstaking failed: ${unstakeTx.rawLog}`);
+    }
+
+    console.log('Unstaking successful');
     return unstakeTx;
   } catch (error) {
     console.error('Error unstaking LP tokens:', error);

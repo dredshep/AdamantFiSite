@@ -93,9 +93,20 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             <h3 className="text-lg font-medium text-adamant-text-box-main mb-1">
               No staked {pairSymbol} tokens
             </h3>
-            <p className="text-adamant-text-box-secondary text-sm">
+            <p className="text-adamant-text-box-secondary text-sm mb-4">
               Stake your LP tokens to earn {rewardSymbol} rewards
             </p>
+            {/* Show refresh button even in empty state if requested */}
+            {showRefreshButton && onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary px-4 py-2 rounded-lg transition-all duration-200 font-medium flex items-center gap-2 mx-auto text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
+              </button>
+            )}
           </div>
         </div>
       </div>

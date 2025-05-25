@@ -3,7 +3,6 @@ import TokenInput from '@/components/app/Shared/Forms/Input/TokenInput';
 import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
 
 import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
-import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolStore } from '@/store/forms/poolStore';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
@@ -12,8 +11,7 @@ import AutoStakeOption from './AutoStakeOption';
 
 const DepositForm: React.FC = () => {
   const { selectedPool } = usePoolStore();
-  const { handleClick } = usePoolForm(selectedPool?.address);
-  const { hasStakingRewards } = usePoolStaking(selectedPool?.address ?? null);
+  const { handleClick, hasStakingRewards } = usePoolForm(selectedPool?.address);
 
   if (!selectedPool) {
     return (

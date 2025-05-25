@@ -1,5 +1,5 @@
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { SecretNetworkClient } from 'secretjs';
+import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 export interface StakeLPParams {
   secretjs: SecretNetworkClient;
@@ -65,8 +65,14 @@ export const stakeLP = async ({ secretjs, lpToken, amount }: StakeLPParams) => {
       }
     );
 
-    console.log('Staking successful', stakeTx);
+    console.log('Staking transaction result:', stakeTx);
 
+    // Check if the transaction was successful
+    if (stakeTx.code !== TxResultCode.Success) {
+      throw new Error(`Staking failed: ${stakeTx.rawLog}`);
+    }
+
+    console.log('Staking successful');
     return stakeTx;
   } catch (error) {
     console.error('Error staking LP tokens:', error);
