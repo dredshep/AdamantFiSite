@@ -3,6 +3,7 @@ import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
 import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
+import { toastManager } from '@/utils/toast/toastManager';
 import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { Keplr, Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -147,14 +148,10 @@ export function useTokenBalance(
         console.log('Error caught in useTokenBalance:', err.message);
 
         if (err.message.includes('Viewing key request rejected')) {
-          const toastKey = 'viewing-key-rejected';
-          if (toastShown !== toastKey) {
-            toast.info('Please wait a few seconds before trying again...', {
-              autoClose: 5000,
-              toastId: toastKey,
-            });
-            setToastShown(toastKey);
-          }
+          toastManager.viewingKeyRejected(() => {
+            setToastShown(null);
+            void fetchBalance();
+          });
           setBalance(tokenAddress, {
             amount: null,
             loading: false,
@@ -167,14 +164,18 @@ export function useTokenBalance(
         let errorType = TokenBalanceError.UNKNOWN_ERROR;
         if (err.message.includes('Keplr not installed')) {
           errorType = TokenBalanceError.NO_KEPLR;
+          toastManager.keplrNotInstalled();
         } else if (err.message.includes('Viewing key required')) {
           errorType = TokenBalanceError.NO_VIEWING_KEY;
+          toastManager.viewingKeyRequired();
         } else if (err.message.includes('network')) {
           errorType = TokenBalanceError.NETWORK_ERROR;
+          toastManager.networkError();
+        } else {
+          toastManager.balanceFetchError();
         }
 
         setError(tokenAddress, errorType);
-        showErrorToast(errorType, err.message);
       }
     }
   }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError, toastShown]);
@@ -232,9 +233,7 @@ export function useTokenBalance(
       const keplr: Keplr | undefined = (window as unknown as Window).keplr;
 
       if (!keplr) {
-        toast.error('Keplr not installed', {
-          toastId: 'keplr-not-installed',
-        });
+        toastManager.keplrNotInstalled();
         return;
       }
 

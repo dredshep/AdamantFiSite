@@ -1,4 +1,5 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
+import { toastManager } from '@/utils/toast/toastManager';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 
@@ -130,7 +131,7 @@ export default function NetworkSwitcher() {
     }
 
     if (!window.keplr) {
-      toast.error('Keplr extension not found. Please install Keplr first.');
+      toastManager.keplrNotInstalled();
       return;
     }
 
@@ -168,11 +169,11 @@ export default function NetworkSwitcher() {
         });
       } catch (error) {
         console.error('Error reconnecting to Keplr:', error);
-        toast.error('Error reconnecting to Keplr. Please try again.');
+        toastManager.connectionError();
       }
     } catch (error) {
       console.error('Failed to suggest chain to Keplr:', error);
-      toast.error('Failed to configure network in Keplr. Please try again.');
+      toastManager.connectionError();
     } finally {
       setIsProcessing(false);
     }
@@ -186,7 +187,7 @@ export default function NetworkSwitcher() {
     }
 
     if (!window.keplr) {
-      toast.error('Keplr extension not found. Please install Keplr first.');
+      toastManager.keplrNotInstalled();
       return;
     }
 
@@ -244,7 +245,7 @@ export default function NetworkSwitcher() {
       }
     } catch (error) {
       console.error('Failed to suggest chain to Keplr:', error);
-      toast.error('Failed to configure network in Keplr. Please try again.');
+      toastManager.connectionError();
     } finally {
       setIsProcessing(false);
     }

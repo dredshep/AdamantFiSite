@@ -11,6 +11,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // import inter font
 import { ViewingKeyDebugger } from '@/components/ViewingKeyDebugger';
 import { getSwappableTokens } from '@/utils/apis/getSwappableTokens';
+import { toastManager } from '@/utils/toast/toastManager';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -46,6 +47,18 @@ export default function App({ Component, pageProps }: AppProps) {
     initializeTokens(indexedTokens);
   }, [setSwappableTokens, initializeTokens]);
 
+  // Immediate Keplr check on mount
+  useEffect(() => {
+    // Small delay to ensure window is fully loaded
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && !window.keplr) {
+        toastManager.keplrNotInstalled();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     // Removed initializePrices call since it's not available
   }, []);
@@ -57,14 +70,15 @@ export default function App({ Component, pageProps }: AppProps) {
         <ViewingKeyDebugger />
         <ToastContainer
           position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
+          autoClose={6000}
+          hideProgressBar={true}
           newestOnTop
-          closeOnClick
+          closeOnClick={false}
           rtl={false}
           pauseOnFocusLoss
-          draggable
+          draggable={false}
           pauseOnHover
+          toastClassName="custom-toast-container"
         />
       </div>
     </QueryClientProvider>

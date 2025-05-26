@@ -13,6 +13,7 @@ import {
 import { calculateWithdrawalAmounts } from '@/utils/secretjs/pools/calculateWithdrawalAmounts';
 import { provideLiquidity } from '@/utils/secretjs/pools/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/pools/withdrawLiquidity';
+import { toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -159,7 +160,7 @@ export function usePoolForm(
 
     const keplr = (window as unknown as Window).keplr;
     if (!isNotNullish(keplr)) {
-      toast.error('Please install the Keplr extension');
+      toastManager.keplrNotInstalled();
       return null;
     }
 

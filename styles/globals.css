@@ -38,6 +38,16 @@
   );
 }
 
+/* Glitter background animation */
+@keyframes glitter {
+  0% {
+    transform: translateX(-50%) translateY(-50%);
+  }
+  100% {
+    transform: translateX(-50%) translateY(-60%);
+  }
+}
+
 /* Star particle animation */
 @keyframes sparkle {
   0% {
@@ -56,4 +66,44 @@
 
 .animate-sparkle {
   animation: sparkle 2.5s infinite; /* Slower star animation */
+}
+
+/* Custom Toast Styles */
+.custom-toast-container {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.custom-toast-body {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Override default toastify styles */
+.Toastify__toast {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-bottom: 1rem !important;
+  border-radius: 0 !important;
+  min-height: auto !important;
+}
+
+.Toastify__toast--default,
+.Toastify__toast--info,
+.Toastify__toast--success,
+.Toastify__toast--warning,
+.Toastify__toast--error {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.Toastify__close-button {
+  display: none !important;
+}
+
+.Toastify__progress-bar {
+  display: none !important;
 }

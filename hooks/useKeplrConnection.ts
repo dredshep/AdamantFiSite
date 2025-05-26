@@ -1,4 +1,5 @@
 import isNotNullish from '@/utils/isNotNullish';
+import { toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -15,7 +16,7 @@ export function useKeplrConnection(
   const connect = useCallback(async () => {
     const keplr = (window as unknown as Window).keplr;
     if (!isNotNullish(keplr)) {
-      toast.error('Please install Keplr extension');
+      toastManager.keplrNotInstalled();
       return null;
     }
 
@@ -50,7 +51,7 @@ export function useKeplrConnection(
       return client;
     } catch (error) {
       console.error('Error connecting to Keplr:', error);
-      toast.error('Failed to connect to Keplr');
+      toastManager.connectionError();
       return null;
     }
   }, [chainId, rpcUrl]);

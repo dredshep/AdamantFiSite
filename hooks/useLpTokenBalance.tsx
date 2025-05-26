@@ -1,6 +1,7 @@
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { SecretString } from '@/types';
 import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
+import { toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -58,7 +59,7 @@ export function useLpTokenBalance(
       const keplr = (window as unknown as Window).keplr;
       if (!keplr) {
         setError(LpTokenBalanceError.NO_KEPLR);
-        toast.error('Please install the Keplr extension');
+        toastManager.keplrNotInstalled();
         return;
       }
 
@@ -70,7 +71,7 @@ export function useLpTokenBalance(
         toast.error('Token suggestion was rejected');
       } else {
         setError(LpTokenBalanceError.UNKNOWN_ERROR);
-        toast.error('Failed to suggest LP token to Keplr');
+        toastManager.connectionError();
       }
     }
   }, [lpTokenAddress, lpTokenInfo]);

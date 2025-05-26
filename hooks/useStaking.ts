@@ -8,6 +8,7 @@ import {
 } from '@/lib/keplr/incentives';
 import { useTxStore } from '@/store/txStore';
 import isNotNullish from '@/utils/isNotNullish';
+import { toastManager } from '@/utils/toast/toastManager';
 import { useCallback, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
@@ -241,7 +242,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
     try {
       const keplr = window.keplr;
       if (!keplr) {
-        toast.error('Keplr wallet not found');
+        toastManager.keplrNotInstalled();
         return false;
       }
 
