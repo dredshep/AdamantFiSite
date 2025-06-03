@@ -6,7 +6,7 @@ import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
 import { toastManager } from '@/utils/toast/toastManager';
 import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { Keplr, Window } from '@keplr-wallet/types';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import ErrorToast from '../components/app/Shared/Toasts/ErrorToast';
 import { useSecretNetwork } from './useSecretNetwork';
@@ -83,6 +83,12 @@ export function useTokenBalance(
   const { setBalance, getBalance, setLoading, setError } = useTokenBalanceStore();
   const [toastShown, setToastShown] = useState<string | null>(null);
   const [isRejected, setIsRejected] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const lastFetchTime = useRef<number>(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Rate limiting: minimum 2 seconds between calls for the same token
+  const RATE_LIMIT_MS = 2000;
 
   const tokenService = useMemo(() => (secretjs ? new TokenService() : null), [secretjs]);
 
@@ -111,10 +117,23 @@ export function useTokenBalance(
       return;
     }
 
+    // Rate limiting check
+    const now = Date.now();
+    if (now - lastFetchTime.current < RATE_LIMIT_MS) {
+      return; // Skip if called too recently
+    }
+
+    // Prevent concurrent calls
+    if (isFetching) {
+      return;
+    }
+
     if (isRejected) {
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
+    setIsFetching(true);
+    lastFetchTime.current = now;
     setIsRejected(false);
     setLoading(tokenAddress, true);
 
@@ -177,8 +196,10 @@ export function useTokenBalance(
 
         setError(tokenAddress, errorType);
       }
+    } finally {
+      setIsFetching(false);
     }
-  }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError, toastShown]);
+  }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError, isRejected]);
 
   const showErrorToast = useCallback(
     (errorType: TokenBalanceError, details?: string) => {
@@ -243,36 +264,9 @@ export function useTokenBalance(
           .catch(() => null);
 
         if (typeof viewingKey === 'string' && viewingKey.length > 0) {
-          // Try to fetch balance with the viewing key
-          // Get token from token store
-          const token = useTokenStore.getState().getTokenByAddress(tokenAddress);
-
-          if (!token || !token.codeHash) {
-            console.error(`Code hash not found for token: ${tokenAddress}`);
-            return;
-          }
-
-          const tokenCodeHash = token.codeHash;
-          const response = await tokenService
-            .getBalance(tokenAddress, tokenCodeHash)
-            .catch((err: unknown) => {
-              // Type guard for Error objects
-              if (err instanceof Error) {
-                const errorMessage = err.message;
-                // Explicit string comparison
-                if (
-                  typeof errorMessage === 'string' &&
-                  (errorMessage.includes('unauthorized') || errorMessage.includes('viewing key'))
-                ) {
-                  return null;
-                }
-              }
-              throw err; // Re-throw other errors
-            });
-
-          if (response !== null) {
-            void fetchBalance();
-          }
+          // Just verify we have a viewing key, don't automatically fetch balance
+          // The regular polling will handle balance fetching
+          return true;
         }
       } catch (error) {
         console.log('Viewing key check failed:', error);
@@ -280,7 +274,8 @@ export function useTokenBalance(
     } catch (error) {
       console.log('Keplr check failed:', error);
     }
-  }, [tokenAddress, secretjs, tokenService, fetchBalance]);
+    return false;
+  }, [tokenAddress, secretjs, tokenService]);
 
   useEffect(() => {
     // Only check viewing key if load balance preference allows it
@@ -296,6 +291,12 @@ export function useTokenBalance(
   }, [checkViewingKey]);
 
   useEffect(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     // Check environment preference first
     try {
       const envVars = getSecretNetworkEnvVars();
@@ -308,17 +309,26 @@ export function useTokenBalance(
       console.warn('Environment variables not set, disabling auto-fetch:', error);
       return;
     }
+
     if (typeof tokenAddress !== 'string' || tokenAddress.length === 0) return;
 
+    // Initial fetch
     void fetchBalance();
-    const interval = setInterval(() => {
-      if (!isRejected) {
+
+    // Set up interval
+    intervalRef.current = setInterval(() => {
+      if (!isRejected && !isFetching) {
         void fetchBalance();
       }
     }, REFRESH_INTERVAL);
 
-    return () => clearInterval(interval);
-  }, [tokenService, tokenAddress, fetchBalance, isRejected, setError, showErrorToast, autoFetch]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [tokenAddress, autoFetch, isRejected, isFetching]);
 
   const currentBalance = getBalance(tokenAddress ?? '');
 

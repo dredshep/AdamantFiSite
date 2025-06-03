@@ -681,7 +681,7 @@ export function debugKeplrQuery<T>(
     // On success, log in development
     if (process.env.NODE_ENV === 'development') {
       void promise.then(() => {
-        console.log('Keplr query completed successfully:', { context });
+        // console.log('Keplr query completed successfully:', { context });
       });
     }
 

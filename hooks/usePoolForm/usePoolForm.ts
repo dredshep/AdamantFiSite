@@ -403,39 +403,6 @@ export function usePoolForm(
       return;
     }
 
-    // Check if amounts exceed pool availability (only for pools with liquidity)
-    const token0Asset = assets.find((asset) => asset.info.token.contract_addr === address0);
-    const token1Asset = assets.find((asset) => asset.info.token.contract_addr === address1);
-
-    if (token0Asset && token1Asset) {
-      const token0Decimals = selectedPool.token0.decimals || 6;
-      const token1Decimals = selectedPool.token1.decimals || 6;
-
-      const token0Reserve = parseFloat(token0Asset.amount) / Math.pow(10, token0Decimals);
-      const token1Reserve = parseFloat(token1Asset.amount) / Math.pow(10, token1Decimals);
-
-      // Only check if pool has liquidity
-      if (token0Reserve > 0 && token1Reserve > 0) {
-        if (parseFloat(amount0) > token0Reserve) {
-          toast.error(
-            `Amount exceeds pool availability. Maximum: ${token0Reserve.toFixed(6)} ${
-              selectedPool.token0.symbol
-            }`
-          );
-          return;
-        }
-
-        if (parseFloat(amount1) > token1Reserve) {
-          toast.error(
-            `Amount exceeds pool availability. Maximum: ${token1Reserve.toFixed(6)} ${
-              selectedPool.token1.symbol
-            }`
-          );
-          return;
-        }
-      }
-    }
-
     // Calculate pool metrics (currently unused but available for future features)
     // const metrics = calculatePoolMetrics(
     //   amount0,
@@ -772,20 +739,9 @@ export function usePoolForm(
           setTokenInputAmount(targetInputIdentifier, result.amount);
         }
 
-        // Set validation warning if amount exceeds pool availability
-        if (result.exceedsPool && result.maxAvailable) {
-          const tokenSymbol = isTokenASource
-            ? selectedPool.token0.symbol
-            : selectedPool.token1.symbol;
-          setValidationWarning({
-            field: sourceField,
-            message: `Amount exceeds pool availability`,
-            maxAvailable: result.maxAvailable,
-            tokenSymbol,
-          });
-        } else {
-          setValidationWarning(null);
-        }
+        // Clear any existing validation warnings since we no longer check pool availability
+        // Users are only limited by their personal token balance, not pool reserves
+        setValidationWarning(null);
       } catch (error) {
         // Silent error handling
       } finally {

@@ -1,5 +1,6 @@
 // kent: I don't think it's worth using this type
 // seb: It helps me when i input the wrong string xD
+import { getActiveStakingPools } from '@/config/staking';
 import { STAKING_CONTRACTS as CONFIG_STAKING_CONTRACTS, LIQUIDITY_PAIRS } from '@/config/tokens';
 import { SecretString } from '@/types';
 
@@ -66,20 +67,33 @@ export interface StakingContractInfo {
 function buildDefaultStakingContracts(): Record<string, StakingContractInfo> {
   const contracts: Record<string, StakingContractInfo> = {};
 
-  // Map staking contracts from config to our format
+  // First, use the new STAKING_POOLS config if available
+  for (const stakingPool of getActiveStakingPools()) {
+    contracts[stakingPool.lpTokenAddress as string] = {
+      lpTokenAddress: stakingPool.lpTokenAddress,
+      lpTokenCodeHash: stakingPool.lpTokenCodeHash,
+      stakingAddress: stakingPool.stakingAddress,
+      stakingCodeHash: stakingPool.stakingCodeHash,
+      rewardTokenSymbol: stakingPool.rewardTokenSymbol,
+    };
+  }
+
+  // Then, fall back to the old CONFIG_STAKING_CONTRACTS for any not in new config
   for (const stakingContract of CONFIG_STAKING_CONTRACTS) {
     // Find the matching LP pair to get the LP token address and code hash
     const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
 
     if (matchingPair) {
-      // Use the LP token address as the key in our contracts record
-      contracts[matchingPair.lpToken as string] = {
-        lpTokenAddress: matchingPair.lpToken,
-        lpTokenCodeHash: matchingPair.lpTokenCodeHash,
-        stakingAddress: stakingContract.stakingContract,
-        stakingCodeHash: stakingContract.codeHash,
-        rewardTokenSymbol: stakingContract.rewardTokenSymbol,
-      };
+      // Only add if not already in contracts (new config takes precedence)
+      if (!((matchingPair.lpToken as string) in contracts)) {
+        contracts[matchingPair.lpToken as string] = {
+          lpTokenAddress: matchingPair.lpToken,
+          lpTokenCodeHash: matchingPair.lpTokenCodeHash,
+          stakingAddress: stakingContract.stakingContract,
+          stakingCodeHash: stakingContract.codeHash,
+          rewardTokenSymbol: stakingContract.rewardTokenSymbol,
+        };
+      }
     }
   }
 
@@ -187,9 +201,35 @@ export function getAllStakingPools(): Array<{
     stakingInfo: StakingContractInfo;
   }> = [];
 
+  // First, use the new STAKING_POOLS configuration
+  for (const stakingPool of getActiveStakingPools()) {
+    // Find the matching LP pair to get the pool address
+    const matchingPair = LIQUIDITY_PAIRS.find(
+      (pair) => pair.lpToken === stakingPool.lpTokenAddress
+    );
+
+    if (matchingPair) {
+      stakingPools.push({
+        poolAddress: matchingPair.pairContract,
+        lpTokenAddress: stakingPool.lpTokenAddress,
+        pairSymbol: stakingPool.poolId, // Use poolId as it matches the pair symbol
+        stakingInfo: {
+          lpTokenAddress: stakingPool.lpTokenAddress,
+          lpTokenCodeHash: stakingPool.lpTokenCodeHash,
+          stakingAddress: stakingPool.stakingAddress,
+          stakingCodeHash: stakingPool.stakingCodeHash,
+          rewardTokenSymbol: stakingPool.rewardTokenSymbol,
+        },
+      });
+    }
+  }
+
+  // Then, add any from the old configuration that aren't already included
+  const existingLpTokens = new Set(stakingPools.map((pool) => pool.lpTokenAddress));
+
   for (const stakingContract of CONFIG_STAKING_CONTRACTS) {
     const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
-    if (matchingPair) {
+    if (matchingPair && !existingLpTokens.has(matchingPair.lpToken)) {
       const stakingInfo = STAKING_CONTRACTS[matchingPair.lpToken];
       if (stakingInfo) {
         stakingPools.push({

@@ -95,12 +95,13 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
           height: height,
         },
       };
+      // console.log('🎁 Rewards query:', rewardsQuery);
 
-      console.log('Querying rewards with viewing key:', {
-        contract_address: lpStakingContractAddress,
-        code_hash: lpStakingContractHash,
-        query: rewardsQuery,
-      });
+      // console.log('Querying rewards with viewing key:', {
+      //   contract_address: lpStakingContractAddress,
+      //   code_hash: lpStakingContractHash,
+      //   query: rewardsQuery,
+      // });
 
       try {
         const queryResult = await secretjs.query.compute.queryContract({
@@ -109,13 +110,20 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
           query: rewardsQuery,
         });
 
-        console.log('Rewards query result:', queryResult);
+        // console.log('Rewards query result:', queryResult);
 
         const parsedResult = queryResult as LPStakingQueryAnswer;
 
         // Handle different possible response formats
         if (isRewardsResponse(parsedResult)) {
-          return parsedResult.rewards.rewards;
+          const rawRewards = parsedResult.rewards.rewards;
+          // console.log('🎁 Raw rewards from contract:', {
+          //   rawRewards,
+          //   type: typeof rawRewards,
+          //   parsed: parseInt(rawRewards),
+          //   withDecimals: parseInt(rawRewards) / 1_000_000,
+          // });
+          return rawRewards;
         } else if (isQueryErrorResponse(parsedResult)) {
           throw new Error(`Query error: ${parsedResult.query_error.msg}`);
         } else {

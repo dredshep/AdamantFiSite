@@ -71,6 +71,8 @@
 
 import StakingPoolSelectionModal from '@/components/app/Shared/Forms/Select/StakingPoolSelectionModal';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
+import { getActiveStakingPools } from '@/config/staking';
+import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useStakingStore } from '@/store/staking/stakingStore';
 import { SecretString } from '@/types';
 import { amountExceedsBalance } from '@/utils/staking/convertStakingAmount';
@@ -99,10 +101,35 @@ const StakingInput: React.FC<StakingInputProps> = ({
   const { stakingInputs, setStakingInputAmount } = useStakingStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Get LP token address for reward estimates
+  // Note: stakingContractAddress is the staking contract, we need to find the LP token
+  // We need to reverse lookup from staking contract to LP token
+  const stakingInfo = getActiveStakingPools().find(
+    (pool) => pool.stakingAddress === stakingContractAddress
+  );
+  const lpTokenAddress = stakingInfo?.lpTokenAddress;
+
+  // Use reward estimates hook only for stake operations
+  const rewardEstimates = useRewardEstimates(lpTokenAddress || '');
+
   const operationLabel = operation === 'stake' ? 'Stake' : 'Unstake';
   const amount = stakingInputs[inputIdentifier].amount;
   const isInvalid = amountExceedsBalance(amount, balance);
   const balanceNumber = parseFloat(balance) || 0;
+
+  // Calculate reward estimates for stake operations when amount is entered
+  const shouldShowEstimates =
+    operation === 'stake' && amount && parseFloat(amount) > 0 && !isInvalid;
+  const estimates = shouldShowEstimates ? rewardEstimates.estimateRewardsForAmount(amount) : null;
+
+  // Helper to format numbers cleanly
+  const formatBalance = (value: number): string => {
+    if (value < 0.001) return value.toFixed(8);
+    return value.toLocaleString('en-US', {
+      maximumFractionDigits: 6,
+      minimumFractionDigits: 0,
+    });
+  };
 
   const handleInputChange = (value: string) => {
     // Allow only numbers and decimal point - reusing validation pattern from TokenInputBase
@@ -124,30 +151,27 @@ const StakingInput: React.FC<StakingInputProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-2.5 bg-adamant-app-input/30 backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40">
-      {/* Header with label and balance */}
-      <div className="flex justify-between items-center">
-        <label className="text-adamant-text-form-main text-sm font-medium normal-case">
-          {operationLabel} Amount
-        </label>
-
-        {/* Balance display */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">
-            {balanceLabel}: {balanceNumber.toFixed(6)} {tokenSymbol}
-          </span>
-          {/* MAX button */}
-          <button
-            onClick={handleMaxClick}
-            className="bg-adamant-button-form-main text-adamant-button-form-secondary text-xs font-medium px-2 py-0.5 rounded transition-colors disabled:opacity-50"
-            disabled={isLoading || balance === '0'}
-          >
-            MAX
-          </button>
+    <div className="bg-adamant-app-input/20 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium text-adamant-text-box-main">{operationLabel}</h3>
+        <div className="text-right">
+          <div className="text-sm text-adamant-text-box-secondary">{balanceLabel}</div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-adamant-text-box-main">
+              {balanceNumber.toLocaleString('en-US', { maximumFractionDigits: 6 })}
+            </span>
+            <button
+              onClick={handleMaxClick}
+              className="text-xs text-adamant-accentText hover:text-adamant-accentText/80 transition-colors"
+            >
+              MAX
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Input section */}
+      {/* Input Section */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
           <input
@@ -189,6 +213,36 @@ const StakingInput: React.FC<StakingInputProps> = ({
 
       {/* Error message */}
       {isInvalid && <div className="text-red-500 text-xs">Amount exceeds available balance</div>}
+
+      {/* Reward Estimates - Only show for stake operations */}
+      {shouldShowEstimates && estimates && (
+        <div className="bg-adamant-accentText/5 backdrop-blur-sm rounded-lg p-3 border border-adamant-accentText/20">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-adamant-accentText">Estimated bADMT Rewards</h4>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <div>
+              <p className="text-adamant-text-box-secondary">Daily</p>
+              <p className="font-medium text-adamant-text-box-main">
+                {formatBalance(estimates.dailyRewards)} bADMT
+              </p>
+            </div>
+            <div>
+              <p className="text-adamant-text-box-secondary">Weekly</p>
+              <p className="font-medium text-adamant-text-box-main">
+                {formatBalance(estimates.weeklyRewards)} bADMT
+              </p>
+            </div>
+            <div>
+              <p className="text-adamant-text-box-secondary">Monthly</p>
+              <p className="font-medium text-adamant-text-box-main">
+                {formatBalance(estimates.monthlyRewards)} bADMT
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

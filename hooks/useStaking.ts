@@ -9,7 +9,7 @@ import {
 import { useTxStore } from '@/store/txStore';
 import isNotNullish from '@/utils/isNotNullish';
 import { toastManager } from '@/utils/toast/toastManager';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
@@ -27,33 +27,77 @@ interface UseStakingParams {
   stakingInfo: StakingContractInfo | null;
 }
 
+// Global rate limiter to prevent excessive API calls
+const globalLastCallTimestamps = new Map<string, number>(); // Key: contract-wallet-operation
+const RATE_LIMIT_WINDOW_MS = 5000; // 5 seconds minimum between calls for the same resource
+
+/**
+ * Checks if an API call can proceed based on rate limiting rules.
+ * @param stakingContractAddress The address of the staking contract.
+ * @param walletAddr The user's wallet address.
+ * @param operationName A unique name for the operation (e.g., 'fetchBalance').
+ * @returns True if the call can proceed, false if it should be skipped.
+ */
+function canCallApi(
+  stakingContractAddress: string | undefined,
+  walletAddr: string | undefined,
+  operationName: string
+): boolean {
+  if (!stakingContractAddress || !walletAddr) {
+    // console.warn(`Rate limiter: Missing contractAddress or walletAddress for ${operationName}. Allowing call by default.`);
+    return true; // Allow if critical identifiers are missing, to avoid blocking valid calls due to unforeseen state issues.
+  }
+
+  const key = `${stakingContractAddress}-${walletAddr}-${operationName}`;
+  const now = Date.now();
+  const lastCallTime = globalLastCallTimestamps.get(key) || 0;
+
+  if (now - lastCallTime < RATE_LIMIT_WINDOW_MS) {
+    // console.log(`Rate limiter: Skipped ${operationName} for ${stakingContractAddress} / ${walletAddr}. Last call at ${new Date(lastCallTime).toISOString()}, Now: ${new Date(now).toISOString()}`);
+    return false; // Skip call
+  }
+
+  // Record the attempt time before the call is made
+  globalLastCallTimestamps.set(key, now);
+  return true;
+}
+
 export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingParams) {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [stakedBalance, setStakedBalance] = useState<string | null>(null);
   const [pendingRewards, setPendingRewards] = useState<string | null>(null);
   const [viewingKey, setViewingKey] = useState<string | null>(null);
   const { setPending, setResult } = useTxStore();
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadingRef = useRef<Record<string, boolean>>({});
+  const isPollingActiveRef = useRef<boolean>(false);
 
   // Helper function to set loading state for operations
   const setLoadingState = useCallback((operation: string, isLoading: boolean) => {
+    loadingRef.current = { ...loadingRef.current, [operation]: isLoading };
     setLoading((prev) => ({ ...prev, [operation]: isLoading }));
   }, []);
 
   // Check if an operation is currently loading
-  const isOperationLoading = useCallback(
-    (operation: string) => {
-      return Boolean(loading[operation]);
-    },
-    [loading]
-  );
+  const isOperationLoading = useCallback((operation: string) => {
+    return Boolean(loadingRef.current[operation]);
+  }, []);
 
   // Fetch staked balance
   const fetchStakedBalance = useCallback(async () => {
-    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo || !isNotNullish(viewingKey))
+    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo || !isNotNullish(viewingKey)) {
       return null;
+    }
+
+    if (loadingRef.current.fetchBalance) {
+      return null;
+    }
+
+    if (!canCallApi(stakingInfo?.stakingAddress, walletAddress, 'fetchStakedBalance')) {
+      return null;
+    }
 
     setLoadingState('fetchBalance', true);
-
     try {
       const balance = await getStakedBalance({
         secretjs,
@@ -63,12 +107,10 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         stakingContractAddress: stakingInfo.stakingAddress,
         stakingContractCodeHash: stakingInfo.stakingCodeHash,
       });
-
       setStakedBalance(balance);
       return balance;
     } catch (error) {
       console.error('Error fetching staked balance:', error);
-      // Don't show individual toast - let the calling function handle it
       return null;
     } finally {
       setLoadingState('fetchBalance', false);
@@ -77,11 +119,19 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
 
   // Fetch pending rewards
   const fetchPendingRewards = useCallback(async () => {
-    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo || !isNotNullish(viewingKey))
+    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo || !isNotNullish(viewingKey)) {
       return null;
+    }
+
+    if (loadingRef.current.fetchRewards) {
+      return null;
+    }
+
+    if (!canCallApi(stakingInfo?.stakingAddress, walletAddress, 'fetchPendingRewards')) {
+      return null;
+    }
 
     setLoadingState('fetchRewards', true);
-
     try {
       const rewards = await getRewards({
         secretjs,
@@ -91,12 +141,11 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         stakingContractAddress: stakingInfo.stakingAddress,
         stakingContractCodeHash: stakingInfo.stakingCodeHash,
       });
-
+      // console.log('rewards', rewards); // Keep this log for now as it seems useful for user
       setPendingRewards(rewards);
       return rewards;
     } catch (error) {
       console.error('Error fetching pending rewards:', error);
-      // Don't show individual toast - let the calling function handle it
       return null;
     } finally {
       setLoadingState('fetchRewards', false);
@@ -235,6 +284,53 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
       setPending(false);
     }
   }, [secretjs, stakingInfo, setPending, setResult, fetchPendingRewards, setLoadingState]);
+
+  // Auto-poll pending rewards every 10 seconds
+  useEffect(() => {
+    if (!secretjs || !walletAddress || !stakingInfo || !viewingKey) {
+      // Clear any existing interval if dependencies are not met
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        isPollingActiveRef.current = false;
+      }
+      return;
+    }
+
+    // Don't set up polling if it's already active with the same dependencies
+    if (isPollingActiveRef.current) {
+      return;
+    }
+
+    // Clear any existing interval before setting up a new one
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    // Debounce the setup to prevent rapid re-initialization
+    const setupTimeout = setTimeout(() => {
+      isPollingActiveRef.current = true;
+
+      // Initial fetch of both balance and rewards
+      void fetchStakedBalance();
+      void fetchPendingRewards();
+
+      // Set up polling interval for both
+      pollingIntervalRef.current = setInterval(() => {
+        void fetchStakedBalance();
+        void fetchPendingRewards();
+      }, 10000); // 10 seconds for more responsive updates
+    }, 100); // 100ms debounce
+
+    return () => {
+      clearTimeout(setupTimeout);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        isPollingActiveRef.current = false;
+      }
+    };
+  }, [secretjs, walletAddress, stakingInfo, viewingKey]);
 
   const setupViewingKey = useCallback(async () => {
     if (!secretjs || !stakingInfo || !isNotNullish(walletAddress)) return false;

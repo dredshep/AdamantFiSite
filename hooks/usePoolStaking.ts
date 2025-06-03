@@ -79,7 +79,7 @@ export function usePoolStaking(poolAddress: SecretString | null) {
             } else {
               setViewingKeyStatus(ViewingKeyStatus.NONE);
             }
-          } catch (error) {
+          } catch (_error) {
             // No existing key found, that's fine
             setViewingKeyStatus(ViewingKeyStatus.NONE);
           }
@@ -111,7 +111,7 @@ export function usePoolStaking(poolAddress: SecretString | null) {
 
         // Only auto-refresh balances if load preference allows it
         if (loadBalanceConfig.shouldAutoLoad) {
-          void refreshBalances();
+          refreshBalances();
         }
       } else {
         setViewingKeyStatus(ViewingKeyStatus.NONE);
@@ -138,7 +138,7 @@ export function usePoolStaking(poolAddress: SecretString | null) {
 
         // Only auto-refresh balances if load preference allows it
         if (loadBalanceConfig.shouldAutoLoad) {
-          void refreshBalances();
+          refreshBalances();
         }
 
         toast.success('Viewing key set up successfully');
@@ -156,22 +156,20 @@ export function usePoolStaking(poolAddress: SecretString | null) {
   /**
    * Refresh staking balances - can be called manually
    */
-  const refreshBalances = async () => {
+  const refreshBalances = () => {
     if (staking === null) return;
 
     try {
-      // Fetch balances without individual toast messages
-      const [stakedBalance, pendingRewards] = await Promise.all([
-        staking.fetchStakedBalance(),
-        staking.fetchPendingRewards(),
-      ]);
-
-      // Only show success if at least one balance was fetched successfully
-      if (stakedBalance !== null || pendingRewards !== null) {
-        toast.success('Staking balances refreshed successfully');
-      } else {
-        toast.error('Failed to refresh staking balances');
+      // Only manually refresh if we're not already polling automatically
+      // The useStaking hook already handles automatic polling when a viewing key is available
+      if (!staking.hasViewingKey) {
+        toast.info('Please set up viewing key first to view balances');
+        return;
       }
+
+      // Since useStaking already handles automatic polling, we don't need to manually call these
+      // Just show a message that balances are being refreshed automatically
+      toast.info('Balances are automatically refreshed every 10 seconds');
     } catch (error) {
       console.error('Error refreshing balances:', error);
       toast.error('Failed to refresh staking balances');

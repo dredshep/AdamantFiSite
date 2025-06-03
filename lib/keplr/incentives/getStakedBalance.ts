@@ -30,6 +30,12 @@ export interface StakedBalanceParams {
  * Get the staked balance for a wallet address using a viewing key
  */
 export const getStakedBalance = async (params: StakedBalanceParams): Promise<string> => {
+  // Reduced logging - only log on errors or when debugging is needed
+  // console.log('🚀 getStakedBalance called!', {
+  //   userAddress: params.address,
+  //   lpToken: params.lpToken,
+  // });
+
   const {
     secretjs,
     lpToken,
@@ -72,11 +78,11 @@ export const getStakedBalance = async (params: StakedBalanceParams): Promise<str
           key: viewingKey,
         },
       };
-      console.log('Querying staked balance with viewing key:', {
-        contract_address: lpStakingContractAddress,
-        code_hash: lpStakingContractHash,
-        query: balanceQuery,
-      });
+      // console.log('Querying staked balance with viewing key:', {
+      //   contract_address: lpStakingContractAddress,
+      //   code_hash: lpStakingContractHash,
+      //   query: balanceQuery,
+      // });
 
       try {
         const queryResult = await secretjs.query.compute.queryContract({
@@ -85,13 +91,21 @@ export const getStakedBalance = async (params: StakedBalanceParams): Promise<str
           query: balanceQuery,
         });
 
-        console.log('Staked balance result:', queryResult);
+        // console.log('Staked balance result:', queryResult);
 
         const parsedResult = queryResult as LPStakingQueryAnswer;
 
         // Handle different possible response formats
         if (isBalanceResponse(parsedResult)) {
-          return parsedResult.balance.amount;
+          const rawStakedBalance = parsedResult.balance.amount;
+          // console.log('💰 User staked balance from contract:', {
+          //   rawStakedBalance,
+          //   type: typeof rawStakedBalance,
+          //   parsed: parseInt(rawStakedBalance),
+          //   withDecimals: parseInt(rawStakedBalance) / 1_000_000,
+          //   userAddress: address,
+          // });
+          return rawStakedBalance;
         } else if (isQueryErrorResponse(parsedResult)) {
           throw new Error(`Query error: ${parsedResult.query_error.msg}`);
         } else {

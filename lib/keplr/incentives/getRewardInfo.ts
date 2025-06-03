@@ -1,3 +1,8 @@
+import {
+  calculateAnnualRewards,
+  calculateDailyRewards,
+  getEmissionAssumptions,
+} from '@/config/staking';
 import { debugKeplrQuery } from '@/lib/keplr/utils';
 import {
   LPStakingQueryAnswer,
@@ -88,13 +93,6 @@ export async function getRewardInfo(params: GetRewardInfoParams): Promise<Reward
       query: rewardSourcesQuery,
     });
 
-    console.log('Reward info query results:', {
-      totalLocked: totalLockedResult,
-      rewardToken: rewardTokenResult,
-      incentivizedToken: incentivizedTokenResult,
-      rewardSources: rewardSourcesResult,
-    });
-
     // Parse results
     const parsedTotalLocked = totalLockedResult as LPStakingQueryAnswer;
     const parsedRewardToken = rewardTokenResult as LPStakingQueryAnswer;
@@ -176,28 +174,10 @@ export async function estimateRewardRate(params: GetRewardInfoParams): Promise<{
 }> {
   const rewardInfo = await getRewardInfo(params);
 
-  // Based on your information: 1000 ADMT per block, 6 decimals
-  // Secret Network has ~6 second block times, so ~14,400 blocks per day
-  const BLOCKS_PER_DAY = 14400;
-  const REWARD_PER_BLOCK = 1000; // 1000 ADMT with 6 decimals = 0.001 ADMT
-  const DECIMALS = 6;
-
-  // Calculate daily rewards in raw units
-  const dailyRewardsRaw = BLOCKS_PER_DAY * REWARD_PER_BLOCK;
-  // Convert to display units (divide by 10^6)
-  const dailyRewards = dailyRewardsRaw / Math.pow(10, DECIMALS);
-
-  // Calculate annual rewards
-  const annualRewards = dailyRewards * 365;
-
-  const assumptions = [
-    `Assuming ${REWARD_PER_BLOCK} raw ADMT units per block (${
-      REWARD_PER_BLOCK / Math.pow(10, DECIMALS)
-    } ADMT)`,
-    `Assuming ${BLOCKS_PER_DAY} blocks per day (~6 second block time)`,
-    'Actual rates may vary based on network conditions and contract configuration',
-    'This is an estimation - actual emission rates should be verified with the contract deployer',
-  ];
+  // Use centralized configuration
+  const dailyRewards = calculateDailyRewards();
+  const annualRewards = calculateAnnualRewards();
+  const assumptions = getEmissionAssumptions();
 
   return {
     estimatedDailyRate: dailyRewards.toString(),

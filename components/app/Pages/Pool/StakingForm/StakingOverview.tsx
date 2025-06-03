@@ -1,5 +1,7 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
+import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { SecretString } from '@/types';
+import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { RefreshCw } from 'lucide-react';
 import React from 'react';
 
@@ -13,6 +15,7 @@ interface StakingOverviewProps {
   isRefreshing?: boolean;
   stakingContractAddress?: string;
   pairSymbol?: string;
+  lpTokenAddress?: string;
 }
 
 const StakingOverview: React.FC<StakingOverviewProps> = ({
@@ -25,7 +28,17 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   isRefreshing,
   stakingContractAddress = 'secret15rlkcn54mjkwfl6s735zjx3v7zcry6g499t5ev',
   pairSymbol = 'LP',
+  lpTokenAddress,
 }) => {
+  // Get LP token address from staking contract if not provided
+  const stakingInfo = stakingContractAddress
+    ? getStakingContractInfo(stakingContractAddress)
+    : null;
+  const resolvedLpTokenAddress = lpTokenAddress || stakingInfo?.lpTokenAddress;
+
+  // Use reward estimates hook if we have LP token address
+  const rewardEstimates = useRewardEstimates(resolvedLpTokenAddress || '');
+
   // Helper to format numbers cleanly
   const formatBalance = (value: string | null): string => {
     if (!value || value === '0') return '0';
@@ -41,81 +54,101 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
     });
   };
 
+  // Helper to format USD values
+  const formatUsd = (value: number | undefined): string => {
+    if (!value || isNaN(value)) return '$0.00';
+    return value.toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  // Helper to format percentage
+  const formatPercentage = (value: number): string => {
+    if (isNaN(value)) return '0%';
+    return `${value.toFixed(2)}%`;
+  };
+
   const hasStakedTokens = stakedBalance && stakedBalance !== '0';
   const hasPendingRewards =
     pendingRewards && pendingRewards !== '0' && parseFloat(pendingRewards) > 0;
 
-  // Empty state - but check if we need to fetch balances first
-  if (!isLoading && !hasStakedTokens) {
-    // If balances are null (not fetched yet) and we have a refresh function, show fetch button
-    if (stakedBalance === null && showRefreshButton && onRefresh) {
-      return (
-        <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-6 border border-adamant-box-border">
-          <div className="text-center space-y-4">
-            <TokenImageWithFallback
-              tokenAddress={stakingContractAddress as SecretString}
-              size={56}
-              alt={`${pairSymbol} staking pool`}
-              className="mx-auto opacity-60"
-            />
-            <div>
-              <h3 className="text-lg font-medium text-adamant-text-box-main mb-1">
-                Staking balances not loaded
-              </h3>
-              <p className="text-adamant-text-box-secondary text-sm mb-4">
-                Click below to check your staked {pairSymbol} tokens and {rewardSymbol} rewards
-              </p>
-              <button
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary px-6 py-3 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center gap-2 mx-auto"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Loading balances...' : 'Load staking balances'}
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+  // Calculate current stake rewards if user has staked tokens
+  const currentStakeRewards = hasStakedTokens
+    ? rewardEstimates.getCurrentStakeRewards(stakedBalance || '0')
+    : null;
 
-    // True empty state - balances were fetched and are actually zero
-    return (
-      <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-6 border border-adamant-box-border">
-        <div className="text-center space-y-4">
-          <TokenImageWithFallback
-            tokenAddress={stakingContractAddress as SecretString}
-            size={56}
-            alt={`${pairSymbol} staking pool`}
-            className="mx-auto opacity-60"
-          />
-          <div>
-            <h3 className="text-lg font-medium text-adamant-text-box-main mb-1">
-              No staked {pairSymbol} tokens
-            </h3>
-            <p className="text-adamant-text-box-secondary text-sm mb-4">
-              Stake your LP tokens to earn {rewardSymbol} rewards
-            </p>
-            {/* Show refresh button even in empty state if requested */}
-            {showRefreshButton && onRefresh && (
-              <button
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary px-4 py-2 rounded-lg transition-all duration-200 font-medium flex items-center gap-2 mx-auto text-sm"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Calculate user's share percentage
+  const userSharePercentage = hasStakedTokens
+    ? rewardEstimates.getUserSharePercentage(stakedBalance || '0')
+    : 0;
+
+  // Calculate staked value in USD (convert from raw amount to display amount first)
+  const stakedValueUsd =
+    hasStakedTokens && rewardEstimates.poolData.lpTokenPrice
+      ? (parseFloat(stakedBalance || '0') / 1_000_000) * rewardEstimates.poolData.lpTokenPrice
+      : undefined;
 
   return (
     <div className="space-y-4">
-      {/* Staked Balance - Simple and clean */}
+      {/* Pool Statistics - New section */}
+      <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-adamant-text-box-main">Pool Statistics</h3>
+          {showRefreshButton && onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="p-1 text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div>
+            <p className="text-adamant-text-box-secondary">Total Staked</p>
+            <div className="font-medium text-adamant-text-box-main">
+              {rewardEstimates.poolData.isLoading ? (
+                <div className="h-4 w-16 bg-adamant-app-input/30 animate-pulse rounded"></div>
+              ) : (
+                `${formatBalance(
+                  rewardEstimates.poolData.totalLockedFormatted.toString()
+                )} ${pairSymbol}`
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="text-adamant-text-box-secondary">TVL</p>
+            <div className="font-medium text-adamant-text-box-main">
+              {rewardEstimates.poolData.isLoading ? (
+                <div className="h-4 w-16 bg-adamant-app-input/30 animate-pulse rounded"></div>
+              ) : (
+                formatUsd(rewardEstimates.poolData.tvlUsd)
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="text-adamant-text-box-secondary">Daily Rewards</p>
+            <p className="font-medium text-adamant-accentText">
+              {`${formatBalance(
+                rewardEstimates.poolData.dailyPoolRewards.toString()
+              )} ${rewardSymbol}`}
+            </p>
+          </div>
+          <div>
+            <p className="text-adamant-text-box-secondary">Your Share</p>
+            <p className="font-medium text-adamant-text-box-main">
+              {hasStakedTokens ? formatPercentage(userSharePercentage) : '0%'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Staked Balance - Enhanced with USD value */}
       <div className="bg-adamant-box-dark/50 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -128,6 +161,11 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             <div>
               <p className="text-sm font-medium text-adamant-text-box-main">Staked</p>
               <p className="text-xs text-adamant-text-box-secondary">{pairSymbol} LP</p>
+              {stakedValueUsd && (
+                <p className="text-xs text-adamant-text-box-secondary">
+                  {formatUsd(stakedValueUsd)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -143,8 +181,8 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
         </div>
       </div>
 
-      {/* Pending Rewards - Only show if there are rewards or if loading */}
-      {(hasPendingRewards || isLoading) && (
+      {/* Pending Rewards - Enhanced with current earning rate */}
+      {(hasPendingRewards || hasStakedTokens) && (
         <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-4 border border-adamant-accentText/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -157,6 +195,11 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
               <div>
                 <p className="text-sm font-medium text-adamant-text-box-main">Rewards</p>
                 <p className="text-xs text-adamant-text-box-secondary">{rewardSymbol}</p>
+                {currentStakeRewards && currentStakeRewards.dailyRewards > 0 && (
+                  <p className="text-xs text-adamant-accentText">
+                    +{formatBalance(currentStakeRewards.dailyRewards.toString())}/day
+                  </p>
+                )}
               </div>
             </div>
 
@@ -175,20 +218,6 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Refresh Button - Minimal when needed */}
-      {showRefreshButton && (
-        <div className="flex justify-center">
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 text-adamant-text-box-secondary hover:text-adamant-accentText text-sm transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
         </div>
       )}
     </div>

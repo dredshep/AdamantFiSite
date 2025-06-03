@@ -17,8 +17,6 @@ export interface ProportionalAmountResult {
   amount: string;
   isValid: boolean;
   error?: string;
-  exceedsPool?: boolean;
-  maxAvailable?: string;
 }
 
 /**
@@ -74,41 +72,24 @@ export function calculateProportionalAmount(
     const token1Reserve = reserves.token1.amount.div(Decimal.pow(10, reserves.token1.decimals));
 
     let outputAmount: Decimal;
-    let maxInputAmount: Decimal;
 
     if (isToken0Input) {
       // Input is token0, calculate token1 amount
       // token1_amount = (token0_amount * token1_reserve) / token0_reserve
       outputAmount = inputAmountDecimal.mul(token1Reserve).div(token0Reserve);
-      maxInputAmount = token0Reserve;
     } else {
       // Input is token1, calculate token0 amount
       // token0_amount = (token1_amount * token0_reserve) / token1_reserve
       outputAmount = inputAmountDecimal.mul(token0Reserve).div(token1Reserve);
-      maxInputAmount = token1Reserve;
     }
-
-    // Check if input amount exceeds available pool reserves
-    const exceedsPool = inputAmountDecimal.gt(maxInputAmount);
-
-    // Don't cap the calculation - show the proportional amount even if it exceeds pool
-    // This allows users to see what the ratio would be, but validation will prevent submission
 
     // Format to 6 decimal places (standard for most tokens)
     const formattedAmount = outputAmount.toFixed(6);
-    const maxAvailable = maxInputAmount.toFixed(6);
 
-    const result: ProportionalAmountResult = {
+    return {
       amount: formattedAmount,
       isValid: true,
-      exceedsPool,
     };
-
-    if (exceedsPool) {
-      result.maxAvailable = maxAvailable;
-    }
-
-    return result;
   } catch (error) {
     return {
       amount: '0',

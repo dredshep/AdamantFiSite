@@ -147,12 +147,18 @@ const StakingForm: React.FC = () => {
 
   // Setup is complete, display the staking UI
   const rawStakedBalance = staking?.stakedBalance ?? null;
-  const pendingRewards = staking?.pendingRewards ?? null;
+  const rawPendingRewards = staking?.pendingRewards ?? null;
 
   // Convert staked balance from raw amount to display amount (6 decimals for LP tokens)
   const stakedBalance = rawStakedBalance
     ? (parseInt(rawStakedBalance) / 1_000_000).toString()
     : null;
+
+  // Convert pending rewards from raw amount to display amount (6 decimals for bADMT)
+  const pendingRewards = rawPendingRewards
+    ? (parseInt(rawPendingRewards) / 1_000_000).toString()
+    : null;
+
   const isBalanceLoading =
     (staking?.isOperationLoading('fetchBalance') ?? false) ||
     (staking?.isOperationLoading('fetchRewards') ?? false) ||
@@ -166,7 +172,8 @@ const StakingForm: React.FC = () => {
   const isStakeDisabled = isBalanceLoading || !hasStakeAmount;
   const isUnstakeDisabled =
     isBalanceLoading || !hasUnstakeAmount || rawStakedBalance === '0' || rawStakedBalance === null;
-  const isClaimDisabled = isBalanceLoading || pendingRewards === '0' || pendingRewards === null;
+  const isClaimDisabled =
+    isBalanceLoading || rawPendingRewards === '0' || rawPendingRewards === null;
 
   const handleStake = async () => {
     const success = await stakeLpTokens();
@@ -225,6 +232,7 @@ const StakingForm: React.FC = () => {
           isRefreshing={isBalanceLoading}
           stakingContractAddress={stakingInfo?.stakingAddress}
           pairSymbol={lpPairName}
+          lpTokenAddress={stakingInfo?.lpTokenAddress}
         />
 
         {/* Staking Input Section */}
