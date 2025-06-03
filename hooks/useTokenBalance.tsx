@@ -8,7 +8,6 @@ import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { Keplr, Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import ErrorToast from '../components/app/Shared/Toasts/ErrorToast';
 import { useSecretNetwork } from './useSecretNetwork';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
@@ -22,12 +21,12 @@ export enum TokenBalanceError {
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
-interface ErrorConfig {
-  title: string;
-  message: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}
+// interface ErrorConfig {
+//   title: string;
+//   message: string;
+//   actionLabel?: string;
+//   onAction?: () => void;
+// }
 
 interface TokenBalanceHookReturn {
   amount: string | null;
@@ -38,42 +37,42 @@ interface TokenBalanceHookReturn {
   isRejected: boolean;
 }
 
-const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
-  [TokenBalanceError.NO_KEPLR]: {
-    title: 'Keplr Not Found',
-    message: 'Please install Keplr wallet to view your balance',
-    actionLabel: 'Install Keplr',
-    onAction: () => window.open('https://www.keplr.app/download', '_blank'),
-  },
-  [TokenBalanceError.NO_VIEWING_KEY]: {
-    title: 'Viewing Key Required',
-    message: 'A viewing key is needed to see your balance',
-    actionLabel: 'Learn More',
-    onAction: () =>
-      window.open(
-        'https://docs.scrt.network/secret-network-documentation/development/development-concepts/viewing-keys',
-        '_blank'
-      ),
-  },
-  [TokenBalanceError.VIEWING_KEY_REJECTED]: {
-    title: 'Viewing Key Rejected',
-    message: 'You rejected the viewing key request. Click to try again.',
-    actionLabel: 'Try Again',
-    onAction: () => {},
-  },
-  [TokenBalanceError.NO_SECRET_JS]: {
-    title: 'Connection Error',
-    message: 'Not connected to Secret Network. Please refresh the page.',
-  },
-  [TokenBalanceError.NETWORK_ERROR]: {
-    title: 'Network Error',
-    message: 'Unable to fetch your balance. Please check your connection',
-  },
-  [TokenBalanceError.UNKNOWN_ERROR]: {
-    title: 'Unknown Error',
-    message: 'An unexpected error occurred while fetching your balance',
-  },
-};
+// const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
+//   [TokenBalanceError.NO_KEPLR]: {
+//     title: 'Keplr Not Found',
+//     message: 'Please install Keplr wallet to view your balance',
+//     actionLabel: 'Install Keplr',
+//     onAction: () => window.open('https://www.keplr.app/download', '_blank'),
+//   },
+//   [TokenBalanceError.NO_VIEWING_KEY]: {
+//     title: 'Viewing Key Required',
+//     message: 'A viewing key is needed to see your balance',
+//     actionLabel: 'Learn More',
+//     onAction: () =>
+//       window.open(
+//         'https://docs.scrt.network/secret-network-documentation/development/development-concepts/viewing-keys',
+//         '_blank'
+//       ),
+//   },
+//   [TokenBalanceError.VIEWING_KEY_REJECTED]: {
+//     title: 'Viewing Key Rejected',
+//     message: 'You rejected the viewing key request. Click to try again.',
+//     actionLabel: 'Try Again',
+//     onAction: () => {},
+//   },
+//   [TokenBalanceError.NO_SECRET_JS]: {
+//     title: 'Connection Error',
+//     message: 'Not connected to Secret Network. Please refresh the page.',
+//   },
+//   [TokenBalanceError.NETWORK_ERROR]: {
+//     title: 'Network Error',
+//     message: 'Unable to fetch your balance. Please check your connection',
+//   },
+//   [TokenBalanceError.UNKNOWN_ERROR]: {
+//     title: 'Unknown Error',
+//     message: 'An unexpected error occurred while fetching your balance',
+//   },
+// };
 
 export function useTokenBalance(
   tokenAddress: SecretString | undefined,
@@ -81,7 +80,6 @@ export function useTokenBalance(
 ): TokenBalanceHookReturn {
   const { secretjs } = useSecretNetwork();
   const { setBalance, getBalance, setLoading, setError } = useTokenBalanceStore();
-  const [toastShown, setToastShown] = useState<string | null>(null);
   const [isRejected, setIsRejected] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const lastFetchTime = useRef<number>(0);
@@ -160,15 +158,13 @@ export function useTokenBalance(
         lastUpdated: Date.now(),
         error: null,
       });
-
-      setToastShown(null);
     } catch (err) {
       if (err instanceof Error) {
         console.log('Error caught in useTokenBalance:', err.message);
 
         if (err.message.includes('Viewing key request rejected')) {
           toastManager.viewingKeyRejected(() => {
-            setToastShown(null);
+            setIsRejected(false);
             void fetchBalance();
           });
           setBalance(tokenAddress, {
@@ -201,44 +197,44 @@ export function useTokenBalance(
     }
   }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError, isRejected]);
 
-  const showErrorToast = useCallback(
-    (errorType: TokenBalanceError, details?: string) => {
-      const errorKey = `${errorType}-${details ?? ''}`;
-      console.log('Toast state:', { errorType, errorKey, toastShown });
-      if (toastShown === errorKey) return;
+  // const showErrorToast = useCallback(
+  //   (errorType: TokenBalanceError, details?: string) => {
+  //     const errorKey = `${errorType}-${details ?? ''}`;
+  //     console.log('Toast state:', { errorType, errorKey, toastShown });
+  //     if (toastShown === errorKey) return;
 
-      const errorConfig = { ...ERROR_MESSAGES[errorType] };
+  //     const errorConfig = { ...ERROR_MESSAGES[errorType] };
 
-      if (
-        errorType === TokenBalanceError.VIEWING_KEY_REJECTED &&
-        tokenService &&
-        typeof tokenAddress === 'string' &&
-        tokenAddress.length > 0
-      ) {
-        errorConfig.onAction = () => {
-          tokenService.clearRejectedViewingKey(tokenAddress);
-          setToastShown(null);
-          void fetchBalance();
-        };
-      }
+  //     if (
+  //       errorType === TokenBalanceError.VIEWING_KEY_REJECTED &&
+  //       tokenService &&
+  //       typeof tokenAddress === 'string' &&
+  //       tokenAddress.length > 0
+  //     ) {
+  //       errorConfig.onAction = () => {
+  //         tokenService.clearRejectedViewingKey(tokenAddress);
+  //         setToastShown(null);
+  //         void fetchBalance();
+  //       };
+  //     }
 
-      toast.error(
-        <ErrorToast
-          title={errorConfig.title}
-          message={errorConfig.message}
-          details={details}
-          actionLabel={errorConfig.actionLabel}
-          onActionClick={errorConfig.onAction}
-        />,
-        {
-          autoClose: errorType === TokenBalanceError.VIEWING_KEY_REJECTED ? false : 6000,
-          toastId: errorKey,
-        }
-      );
-      setToastShown(errorKey);
-    },
-    [toastShown, tokenService, tokenAddress, fetchBalance]
-  );
+  //     toast.error(
+  //       <ErrorToast
+  //         title={errorConfig.title}
+  //         message={errorConfig.message}
+  //         details={details}
+  //         actionLabel={errorConfig.actionLabel}
+  //         onActionClick={errorConfig.onAction}
+  //       />,
+  //       {
+  //         autoClose: errorType === TokenBalanceError.VIEWING_KEY_REJECTED ? false : 6000,
+  //         toastId: errorKey,
+  //       }
+  //     );
+  //     setToastShown(errorKey);
+  //   },
+  //   [toastShown, tokenService, tokenAddress, fetchBalance]
+  // );
 
   const checkViewingKey = useCallback(async () => {
     if (

@@ -315,8 +315,8 @@ export function generateEmissionReport(data: EmissionReportData): EmissionReport
       subscribersCount: subscribers.length,
       contractStopped,
       admin,
-      adminInvestigation,
-      setupCheck,
+      ...(adminInvestigation && { adminInvestigation }),
+      ...(setupCheck && { setupCheck }),
     },
   };
 }

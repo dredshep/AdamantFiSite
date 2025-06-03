@@ -420,7 +420,7 @@ export default function PoolsPage() {
     } catch (error) {
       console.error('Error in sequential pool data fetch:', error);
       // Reset loading states on error
-      setPoolDataMap((prevMap) => {
+      setPoolDataMap((_prevMap) => {
         const errorDataMap = new Map<string, PoolData>();
         pools.forEach((pool) => {
           errorDataMap.set(pool.contract_address, {
@@ -453,7 +453,7 @@ export default function PoolsPage() {
 
   // Function to refresh a specific pool's data
   const refreshPoolData = useCallback(
-    async (poolAddress: string, poolName: string) => {
+    async (poolAddress: string) => {
       if (!secretjs) return;
 
       // console.log(`🔄 Refreshing data for pool: ${poolName}`);
@@ -984,7 +984,7 @@ export default function PoolsPage() {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    refreshPoolData(pool.contract_address, pool.name);
+                                    refreshPoolData(pool.contract_address);
                                   }}
                                   disabled={poolData?.isLoading}
                                   className="p-2 rounded-lg border border-adamant-box-border
