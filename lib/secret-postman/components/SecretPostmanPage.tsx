@@ -20,7 +20,7 @@ export default function SecretPostmanPage({ className }: SecretPostmanPageProps)
   const {
     currentQuery,
     networkConfig,
-    history,
+    // history,
     isExecuting,
     showResources,
     setContractAddress,
@@ -34,7 +34,7 @@ export default function SecretPostmanPage({ className }: SecretPostmanPageProps)
     setShowResources,
     addToHistory,
     resetCurrentQuery,
-    setRawQuery,
+    // setRawQuery,
     insertIntoContractAddress,
     insertIntoCodeHash,
     insertIntoQueryName,
@@ -282,7 +282,7 @@ export default function SecretPostmanPage({ className }: SecretPostmanPageProps)
         const textarea = document.querySelector('[data-query-editor="raw"]') as HTMLTextAreaElement;
 
         if (textarea) {
-          const currentRawQuery = currentQuery.rawQuery;
+          // const currentRawQuery = currentQuery.rawQuery;
           const selectionStart = textarea.selectionStart || 0;
           const selectionEnd = textarea.selectionEnd || 0;
           insertIntoRawQuery(valueToInsert, selectionStart, selectionEnd);
