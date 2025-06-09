@@ -1,7 +1,7 @@
 import { LoadBalancePreference } from '@/utils/env';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import React, { useState } from 'react';
 import { RiArrowLeftLine, RiCheckLine } from 'react-icons/ri';
-import { toast } from 'react-toastify';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -37,9 +37,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
   const handleSave = () => {
     // Note: This would typically require a backend to persist the setting
     // For now, we'll just show a toast indicating the preference would be saved
-    toast.success(`Balance loading preference set to: ${selectedPreference}`);
-    toast.info(
-      'Note: This setting will reset on page refresh. Contact support to persist settings.'
+    showToastOnce(
+      'settings-saved',
+      `Balance loading preference set to: ${selectedPreference}`,
+      'success'
+    );
+    showToastOnce(
+      'settings-note',
+      'Note: This setting will reset on page refresh. Contact support to persist settings.',
+      'info',
+      {
+        autoClose: 8000,
+      }
     );
     onClose();
   };

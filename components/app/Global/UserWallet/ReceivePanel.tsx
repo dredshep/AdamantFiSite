@@ -1,8 +1,8 @@
 import { SecretString } from '@/types';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import { QRCodeSVG } from 'qrcode.react';
 import React from 'react';
 import { RiFileCopyLine } from 'react-icons/ri';
-import { toast } from 'react-toastify';
 
 interface ReceivePanelProps {
   walletAddress: SecretString;
@@ -12,7 +12,7 @@ interface ReceivePanelProps {
 export const ReceivePanel: React.FC<ReceivePanelProps> = ({ walletAddress }) => {
   const copyAddressToClipboard = () => {
     void navigator.clipboard.writeText(walletAddress).then(() => {
-      toast.success('Address copied to clipboard!');
+      showToastOnce('address-copied', 'Address copied to clipboard!', 'success');
     });
   };
 

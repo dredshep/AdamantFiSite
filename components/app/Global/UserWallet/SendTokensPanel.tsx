@@ -1,10 +1,10 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import { sendTokens } from '@/utils/wallet/sendTokens';
 import React, { useEffect, useRef, useState } from 'react';
 import { RiArrowDownSLine } from 'react-icons/ri';
-import { toast } from 'react-toastify';
 
 interface SendTokensPanelProps {
   walletAddress: SecretString;
@@ -43,7 +43,7 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
   const handleSend = async () => {
     try {
       if (!recipientAddress || !amount) {
-        toast.error('Please fill in all fields');
+        showToastOnce('send-validation-error', 'Please fill in all fields', 'error');
         return;
       }
 
@@ -54,10 +54,14 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
         denom: selectedToken,
       });
 
-      toast.success('Transaction submitted successfully');
+      showToastOnce('send-success', 'Transaction submitted successfully', 'success', {
+        message: 'Balances are automatically refreshed every 10 seconds',
+      });
       onClose();
     } catch (error) {
-      toast.error('Failed to send tokens');
+      showToastOnce('send-error', 'Failed to send tokens', 'error', {
+        message: 'Please check your inputs and try again',
+      });
       console.error(error);
     }
   };
