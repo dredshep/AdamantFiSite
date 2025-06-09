@@ -38,6 +38,22 @@ export default function App({ Component, pageProps }: AppProps) {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const error = event.reason as unknown;
 
+      // Handle Keplr rejection errors specifically
+      if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase();
+
+        // Check for Keplr-specific rejection messages
+        if (
+          errorMessage.includes('request rejected') ||
+          errorMessage.includes('user rejected') ||
+          (errorMessage.includes('rejected') && error.stack?.includes('moz-extension'))
+        ) {
+          event.preventDefault(); // Prevent the error from being logged to console as unhandled
+          console.log('Caught Keplr rejection error - user canceled operation');
+          return; // Don't show toast for user cancellations - they're intentional
+        }
+      }
+
       // Handle TokenServiceError specifically
       if (error instanceof TokenServiceError) {
         event.preventDefault(); // Prevent the error from being logged to console as unhandled
