@@ -208,31 +208,31 @@ function updateGlobalState(updates: Partial<SecretNetworkState>) {
 }
 
 // Helper function to show toasts only once
-function showToastOnceLocal(
-  type: keyof ToastShownState,
-  toastId: string,
-  message: string,
-  options?: { onClick?: () => void }
-) {
-  if (!globalState.toastsShown[type]) {
-    // Use the new Radix toast system - it handles duplicates automatically
-    if (options?.onClick) {
-      showToastOnce(toastId, message, 'success', {
-        actionLabel: 'Open',
-        onAction: options.onClick,
-      });
-    } else {
-      showToastOnce(toastId, message, 'success');
-    }
+// function showToastOnceLocal(
+//   type: keyof ToastShownState,
+//   toastId: string,
+//   message: string,
+//   options?: { onClick?: () => void }
+// ) {
+//   if (!globalState.toastsShown[type]) {
+//     // Use the new Radix toast system - it handles duplicates automatically
+//     if (options?.onClick) {
+//       showToastOnce(toastId, message, 'success', {
+//         actionLabel: 'Open',
+//         onAction: options.onClick,
+//       });
+//     } else {
+//       showToastOnce(toastId, message, 'success');
+//     }
 
-    updateGlobalState({
-      toastsShown: {
-        ...globalState.toastsShown,
-        [type]: true,
-      },
-    });
-  }
-}
+//     updateGlobalState({
+//       toastsShown: {
+//         ...globalState.toastsShown,
+//         [type]: true,
+//       },
+//     });
+//   }
+// }
 
 // Function to wait for Keplr
 function waitForKeplr(): Promise<typeof window.keplr> {

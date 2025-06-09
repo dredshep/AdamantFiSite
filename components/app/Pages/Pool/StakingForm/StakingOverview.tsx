@@ -241,7 +241,9 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             </div>
           </div>
           <button
-            onClick={handleUpdateAllocation}
+            onClick={() => {
+              void handleUpdateAllocation();
+            }}
             disabled={isUpdatingAllocation || !secretjs}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg
                      bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30
