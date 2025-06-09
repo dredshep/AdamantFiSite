@@ -1,8 +1,7 @@
 import isNotNullish from '@/utils/isNotNullish';
-import { toastManager } from '@/utils/toast/toastManager';
+import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
 export function useKeplrConnection(
@@ -28,12 +27,16 @@ export function useKeplrConnection(
       const accounts = await offlineSigner?.getAccounts();
 
       if (!accounts?.length || !accounts[0]) {
-        toast.error('No accounts found');
+        showToastOnce('no-accounts-found', 'No accounts found', 'error', {
+          message: 'Please check your Keplr wallet and try again',
+        });
         return null;
       }
 
       if (offlineSigner === undefined) {
-        toast.error('No offline signer found');
+        showToastOnce('no-offline-signer', 'No offline signer found', 'error', {
+          message: 'Unable to access Keplr wallet signer',
+        });
         return null;
       }
 
@@ -51,7 +54,9 @@ export function useKeplrConnection(
       return client;
     } catch (error) {
       console.error('Error connecting to Keplr:', error);
-      toastManager.connectionError();
+      showToastOnce('keplr-connection-error', 'Connection error', 'error', {
+        message: 'Failed to connect to Keplr wallet. Please refresh the page and try again.',
+      });
       return null;
     }
   }, [chainId, rpcUrl]);

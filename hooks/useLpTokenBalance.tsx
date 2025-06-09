@@ -1,10 +1,9 @@
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { SecretString } from '@/types';
 import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
-import { toastManager } from '@/utils/toast/toastManager';
+import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'react-toastify';
 import { useSecretNetwork } from './useSecretNetwork';
 
 export enum LpTokenBalanceError {
@@ -64,14 +63,16 @@ export function useLpTokenBalance(
       }
 
       await keplr.suggestToken('secret-4', lpTokenAddress);
-      toast.success('LP token suggested to Keplr successfully');
+      showToastOnce('lp-token-suggested', 'LP token suggested to Keplr successfully', 'success');
     } catch (error) {
       if (error instanceof Error && error.message.includes('rejected')) {
         setError(LpTokenBalanceError.VIEWING_KEY_REJECTED);
-        toast.error('Token suggestion was rejected');
+        showToastOnce('token-suggestion-rejected', 'Token suggestion was rejected', 'error');
       } else {
         setError(LpTokenBalanceError.UNKNOWN_ERROR);
-        toastManager.connectionError();
+        showToastOnce('lp-token-connection-error', 'Connection error', 'error', {
+          message: 'Failed to suggest LP token. Please refresh the page and try again.',
+        });
       }
     }
   }, [lpTokenAddress, lpTokenInfo]);
