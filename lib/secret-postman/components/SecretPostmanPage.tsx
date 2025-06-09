@@ -583,6 +583,7 @@ export default function SecretPostmanPage({ className }: SecretPostmanPageProps)
             <div className="flex items-center justify-between">
               <div className="text-sm text-adamant-text-box-secondary">Ready to execute query</div>
               <button
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
                 onClick={handleExecuteQuery}
                 disabled={isExecuting || !currentQuery.contractAddress.trim()}
                 className="flex items-center gap-2 bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark text-black font-bold hover:from-adamant-gradientDark hover:to-adamant-gradientBright transition-all duration-300 px-6 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_-4px_rgba(167,142,90,0.3)]"
