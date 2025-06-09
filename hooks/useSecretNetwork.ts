@@ -1,8 +1,8 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
 import isNotNullish from '@/utils/isNotNullish';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import { Window as KeplrWindow } from '@keplr-wallet/types';
 import { useEffect, useState } from 'react';
-import { toast, ToastOptions } from 'react-toastify';
 import { SecretNetworkClient } from 'secretjs';
 
 enum SecretNetworkError {
@@ -208,30 +208,23 @@ function updateGlobalState(updates: Partial<SecretNetworkState>) {
 }
 
 // Helper function to show toasts only once
-function showToastOnce(
+function showToastOnceLocal(
   type: keyof ToastShownState,
   toastId: string,
   message: string,
   options?: { onClick?: () => void }
 ) {
   if (!globalState.toastsShown[type]) {
-    // Dismiss any existing toast with this ID first
-    toast.dismiss(toastId);
-
-    // Create toast options with proper type handling
-    const toastOptions: ToastOptions = {
-      position: 'bottom-right',
-      toastId,
-    };
-
-    // Only add onClick if it exists
+    // Use the new Radix toast system - it handles duplicates automatically
     if (options?.onClick) {
-      toastOptions.onClick = () => {
-        options.onClick?.();
-      };
+      showToastOnce(toastId, message, 'success', {
+        actionLabel: 'Open',
+        onAction: options.onClick,
+      });
+    } else {
+      showToastOnce(toastId, message, 'success');
     }
 
-    toast.success(message, toastOptions);
     updateGlobalState({
       toastsShown: {
         ...globalState.toastsShown,
@@ -288,8 +281,11 @@ async function connectKeplr(): Promise<void> {
     if (!isNotNullish(keplrInstance)) {
       console.error('Keplr not found');
       updateGlobalState({ error: SecretNetworkError.NO_KEPLR });
-      showToastOnce('noKeplr', TOAST_IDS.NO_KEPLR, 'Please install Keplr extension', {
-        onClick: () => window.open('https://www.keplr.app/download', '_blank'),
+      showToastOnce(TOAST_IDS.NO_KEPLR, 'Please install Keplr extension', 'error', {
+        message: 'Keplr wallet extension is required to use this application.',
+        actionLabel: 'Install Keplr',
+        onAction: () => window.open('https://www.keplr.app/download', '_blank'),
+        autoClose: false,
       });
       return;
     }
@@ -312,7 +308,9 @@ async function connectKeplr(): Promise<void> {
     if (typeof offlineSigner === 'undefined' || offlineSigner === null) {
       console.error('No offline signer found');
       updateGlobalState({ error: SecretNetworkError.NO_SIGNER });
-      showToastOnce('noSigner', TOAST_IDS.NO_SIGNER, 'Failed to get Keplr signer');
+      showToastOnce(TOAST_IDS.NO_SIGNER, 'Failed to get Keplr signer', 'error', {
+        message: 'Unable to access Keplr wallet signer',
+      });
       return;
     }
 
@@ -323,7 +321,9 @@ async function connectKeplr(): Promise<void> {
     if (typeof firstAccount === 'undefined' || accounts.length === 0) {
       console.error('No accounts found');
       updateGlobalState({ error: SecretNetworkError.NO_ACCOUNTS });
-      showToastOnce('noAccounts', TOAST_IDS.NO_ACCOUNTS, 'No Keplr accounts found');
+      showToastOnce(TOAST_IDS.NO_ACCOUNTS, 'No Keplr accounts found', 'error', {
+        message: 'Please check your Keplr wallet and try again',
+      });
       return;
     }
 
@@ -342,7 +342,9 @@ async function connectKeplr(): Promise<void> {
       secretjs: client,
     });
 
-    showToastOnce('success', TOAST_IDS.SUCCESS, 'Connected to Secret Network');
+    showToastOnce(TOAST_IDS.SUCCESS, 'Connected to Secret Network', 'success', {
+      message: 'Balances are automatically refreshed every 10 seconds',
+    });
   } catch (error) {
     console.error('Error connecting to Secret Network:', error);
     // Check for network-related errors specifically
@@ -354,18 +356,14 @@ async function connectKeplr(): Promise<void> {
       errorString.includes('timeout')
     ) {
       updateGlobalState({ error: SecretNetworkError.NETWORK_ERROR });
-      showToastOnce(
-        'networkError',
-        TOAST_IDS.NETWORK_ERROR,
-        'Network error connecting to Secret Network. Check your internet connection.'
-      );
+      showToastOnce(TOAST_IDS.NETWORK_ERROR, 'Network error', 'error', {
+        message: 'Network error connecting to Secret Network. Check your internet connection.',
+      });
     } else {
       updateGlobalState({ error: SecretNetworkError.CONNECTION_FAILED });
-      showToastOnce(
-        'connectionFailed',
-        TOAST_IDS.CONNECTION_FAILED,
-        'Failed to connect to Secret Network'
-      );
+      showToastOnce(TOAST_IDS.CONNECTION_FAILED, 'Failed to connect to Secret Network', 'error', {
+        message: 'Please refresh the page and try again.',
+      });
     }
   } finally {
     updateGlobalState({ isConnecting: false });

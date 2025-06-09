@@ -1,7 +1,6 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
-import { toastManager } from '@/utils/toast/toastManager';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
 
 interface ChainInfo {
   chainId: string;
@@ -126,12 +125,19 @@ export default function NetworkSwitcher() {
   // Function to switch to chain without token suggestion
   const switchToChain = async () => {
     if (!chainDetails) {
-      toast.error('Chain details not available. Please check your environment variables.');
+      showToastOnce('chain-details-missing', 'Chain details not available', 'error', {
+        message: 'Please check your environment variables.',
+      });
       return;
     }
 
     if (!window.keplr) {
-      toastManager.keplrNotInstalled();
+      showToastOnce('keplr-not-installed', 'Please install Keplr extension', 'error', {
+        message: 'Keplr wallet extension is required to use this application.',
+        actionLabel: 'Install Keplr',
+        onAction: () => window.open('https://www.keplr.app/download', '_blank'),
+        autoClose: false,
+      });
       return;
     }
 
@@ -140,7 +146,7 @@ export default function NetworkSwitcher() {
     try {
       const chainInfo = getChainInfo();
       if (!chainInfo) {
-        toast.error('Failed to create chain configuration.');
+        showToastOnce('chain-config-failed', 'Failed to create chain configuration', 'error');
         return;
       }
 
@@ -164,16 +170,21 @@ export default function NetworkSwitcher() {
         await window.keplr.enable(chainDetails.chainId);
         console.log('Re-enabled Keplr connection');
 
-        toast.success(`Network connection refreshed with LCD URL: ${chainDetails.lcdUrl}`, {
+        showToastOnce('network-refreshed', 'Network connection refreshed', 'success', {
+          message: `LCD URL: ${chainDetails.lcdUrl}`,
           autoClose: 5000,
         });
       } catch (error) {
         console.error('Error reconnecting to Keplr:', error);
-        toastManager.connectionError();
+        showToastOnce('reconnection-error', 'Connection error', 'error', {
+          message: 'Failed to reconnect to Keplr. Please refresh the page and try again.',
+        });
       }
     } catch (error) {
       console.error('Failed to suggest chain to Keplr:', error);
-      toastManager.connectionError();
+      showToastOnce('chain-suggestion-error', 'Connection error', 'error', {
+        message: 'Failed to connect to the service. Please refresh the page and try again.',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -182,12 +193,19 @@ export default function NetworkSwitcher() {
   // Function to re-suggest both chain and token
   const resuggestChainAndToken = async () => {
     if (!chainDetails) {
-      toast.error('Chain details not available. Please check your environment variables.');
+      showToastOnce('chain-details-missing-2', 'Chain details not available', 'error', {
+        message: 'Please check your environment variables.',
+      });
       return;
     }
 
     if (!window.keplr) {
-      toastManager.keplrNotInstalled();
+      showToastOnce('keplr-not-installed-2', 'Please install Keplr extension', 'error', {
+        message: 'Keplr wallet extension is required to use this application.',
+        actionLabel: 'Install Keplr',
+        onAction: () => window.open('https://www.keplr.app/download', '_blank'),
+        autoClose: false,
+      });
       return;
     }
 
@@ -196,7 +214,7 @@ export default function NetworkSwitcher() {
     try {
       const chainInfo = getChainInfo();
       if (!chainInfo) {
-        toast.error('Failed to create chain configuration.');
+        showToastOnce('chain-config-failed-2', 'Failed to create chain configuration', 'error');
         return;
       }
 
@@ -237,7 +255,8 @@ export default function NetworkSwitcher() {
           console.error('Error suggesting token with code hash:', tokenError);
         }
 
-        toast.success(`Network connection refreshed with LCD URL: ${chainDetails.lcdUrl}`, {
+        showToastOnce('network-and-token-refreshed', 'Network connection refreshed', 'success', {
+          message: `LCD URL: ${chainDetails.lcdUrl}`,
           autoClose: 5000,
         });
       } catch (error) {
@@ -245,7 +264,9 @@ export default function NetworkSwitcher() {
       }
     } catch (error) {
       console.error('Failed to suggest chain to Keplr:', error);
-      toastManager.connectionError();
+      showToastOnce('chain-and-token-error', 'Connection error', 'error', {
+        message: 'Failed to connect to the service. Please refresh the page and try again.',
+      });
     } finally {
       setIsProcessing(false);
     }
