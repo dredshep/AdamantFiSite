@@ -1,8 +1,9 @@
+import { useBalance } from '@/hooks/useBalance';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
-import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { balanceService } from '@/services/balanceService';
 import { PoolTokenInputs, SecretString, SwapTokenInputs } from '@/types';
 import * as Dialog from '@radix-ui/react-dialog';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { PiApproximateEquals } from 'react-icons/pi';
 import TokenImageWithFallback from '../../TokenImageWithFallback';
 import TopRightBalance from '../../TopRightBalance';
@@ -41,7 +42,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   showEstimatedPrice = false,
 }) => {
   const { secretjs, connect } = useSecretNetwork();
-  const tokenData = useTokenBalance(tokenAddress, false);
+  const tokenData = useBalance(tokenAddress);
 
   // Attempt to connect if not connected
   useEffect(() => {
@@ -49,6 +50,14 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
       void connect();
     }
   }, [secretjs, connect]);
+
+  const suggestToken = useCallback(async () => {
+    if (tokenAddress) {
+      await balanceService.requestTokenSuggestion(tokenAddress);
+      // After suggesting, we should probably trigger a refetch
+      tokenData.refetch();
+    }
+  }, [tokenAddress, tokenData]);
 
   // Don't convert null to 0 - pass it through as null
   const balance = tokenData.amount !== null ? Number(tokenData.amount) : null;
@@ -66,7 +75,8 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           inputIdentifier={inputIdentifier}
           loading={tokenData.loading}
           error={tokenData.error}
-          onFetchBalance={() => void tokenData.refetch()}
+          onFetchBalance={tokenData.refetch}
+          onSuggestToken={suggestToken}
         />
       </div>
       <div className={INPUT_STYLES.inputRow}>

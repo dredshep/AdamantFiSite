@@ -1,4 +1,3 @@
-import { TokenBalanceError } from '@/hooks/useTokenBalance';
 import React from 'react';
 import FetchButton from './Forms/Input/TokenInput/FetchButton';
 import SwapMaxButton from './Forms/Input/TokenInput/MaxButton';
@@ -15,8 +14,9 @@ interface TopRightBalanceProps {
   tokenSymbol: string;
   inputIdentifier?: InputIdentifier;
   loading?: boolean;
-  error?: TokenBalanceError | null;
+  error?: string | null;
   onFetchBalance?: () => void;
+  onSuggestToken?: () => void;
   withLabel?: boolean;
 }
 
@@ -28,6 +28,7 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   loading = false,
   error = null,
   onFetchBalance,
+  onSuggestToken,
   withLabel = true,
 }) => {
   const handleFetchClick = () => {
@@ -36,8 +37,17 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
     }
   };
 
+  const handleSuggestClick = () => {
+    if (onSuggestToken) {
+      onSuggestToken();
+    }
+  };
+
   const isSwapInput = typeof inputIdentifier === 'string' && inputIdentifier.startsWith('swap.');
   const showMaxButton = hasMax && inputIdentifier;
+  const shouldShowAddToken =
+    error &&
+    (error.toLowerCase().includes('viewing key') || error.toLowerCase().includes('not found'));
 
   return (
     <div className="flex items-center gap-2">
@@ -52,6 +62,9 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
               error={!!error}
               hasBalance={balance !== null}
               onFetch={handleFetchClick}
+              errorMessage={error ?? 'Error'}
+              showAddToken={!!shouldShowAddToken}
+              onAddToken={handleSuggestClick}
             />
           </div>
         )}

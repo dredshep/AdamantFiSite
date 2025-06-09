@@ -1,10 +1,8 @@
 import { TOKENS } from '@/config/tokens';
+import { useBalance } from '@/hooks/useBalance';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
-import {
-  TokenService,
-  TokenServiceError,
-  TokenServiceErrorType,
-} from '@/services/secret/TokenService';
+import { balanceService } from '@/services/balanceService';
+import { SecretString } from '@/types';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   CheckCircledIcon,
@@ -14,44 +12,42 @@ import {
   CrossCircledIcon,
   ExclamationTriangleIcon,
   GearIcon,
-  InfoCircledIcon,
   LightningBoltIcon,
-  PlusIcon,
   ReloadIcon,
   RocketIcon,
 } from '@radix-ui/react-icons';
 import * as Select from '@radix-ui/react-select';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Toast from '@radix-ui/react-toast';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
-interface ViewingKeyInfo {
+// Simplified Info structure, as balance/error comes from useBalance
+interface DebugTokenInfo {
   address: string;
   symbol: string;
   name: string;
   codeHash: string;
   hasViewingKey: boolean;
-  viewingKeyPreview?: string | undefined;
-  balance?: string | undefined;
-  error?: string | undefined;
-  errorType?: TokenServiceErrorType;
-  suggestedAction?: string;
-  isLoadingKey?: boolean;
-  isLoadingBalance?: boolean;
+  viewingKeyPreview?: string;
+  isLoadingKey: boolean;
 }
 
 export const ViewingKeyDebugger: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<string>(TOKENS[0]?.address ?? '');
-  const [tokenInfo, setTokenInfo] = useState<ViewingKeyInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [tokenInfo, setTokenInfo] = useState<DebugTokenInfo | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState(false);
-  const [suggestedTokens, setSuggestedTokens] = useState<Set<string>>(new Set());
 
   const { walletAddress } = useSecretNetwork();
-  const tokenService = new TokenService();
+  // Get balance data from our new centralized hook
+  const {
+    amount: balance,
+    loading: isLoadingBalance,
+    error: balanceError,
+    refetch: refetchBalance,
+  } = useBalance(selectedToken as SecretString);
 
   // Add staking contracts manually for debugging
   const stakingContracts = [
@@ -60,15 +56,16 @@ export const ViewingKeyDebugger: React.FC = () => {
       symbol: 'bADMT Staking',
       name: 'Staking Contract for bADMT',
       codeHash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a',
+      decimals: 6, // Assuming decimals for display
     },
   ];
 
   const allTokens = [...TOKENS, ...stakingContracts];
 
-  const addLog = (message: string) => {
+  const addLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs((prev) => [`[${timestamp}] ${message}`, ...prev.slice(0, 49)]); // Keep last 50 logs
-  };
+  }, []);
 
   const showToastMessage = (message: string) => {
     setToastMessage(message);
@@ -79,303 +76,101 @@ export const ViewingKeyDebugger: React.FC = () => {
     return allTokens.find((token) => token.address === address);
   };
 
-  const checkViewingKey = async (tokenAddress: string) => {
-    if (!window.keplr) {
-      addLog('Keplr not found');
-      return null;
-    }
-
-    try {
-      addLog(`Checking viewing key for ${tokenAddress}`);
-
-      // Update loading state
-      if (tokenInfo && tokenInfo.address === tokenAddress) {
-        setTokenInfo((prev) => (prev ? { ...prev, isLoadingKey: true } : null));
-      }
-
-      const viewingKey = await window.keplr
-        .getSecret20ViewingKey('secret-4', tokenAddress)
-        .catch(() => null);
-
-      if (viewingKey && viewingKey.length > 0) {
-        addLog(`Viewing key found: ${viewingKey.substring(0, 8)}...`);
-        return viewingKey;
-      } else {
-        addLog('No viewing key found');
-        return null;
-      }
-    } catch (error) {
-      addLog(`Error checking viewing key: ${String(error)}`);
-      return null;
-    } finally {
-      // Clear loading state
-      if (tokenInfo && tokenInfo.address === tokenAddress) {
-        setTokenInfo((prev) => (prev ? { ...prev, isLoadingKey: false } : null));
-      }
-    }
-  };
-
-  const fetchTokenInfo = async (tokenAddress: string, retryBalance = false) => {
-    const token = getTokenByAddress(tokenAddress);
-    if (!token) return;
-
-    setIsLoading(true);
-    addLog(`Starting analysis for ${token.symbol} (${token.name})`);
-
-    try {
-      // Check viewing key
-      const viewingKey = await checkViewingKey(tokenAddress);
-
-      const info: ViewingKeyInfo = {
-        address: tokenAddress,
-        symbol: token.symbol,
-        name: token.name,
-        codeHash: token.codeHash,
-        hasViewingKey: !!viewingKey,
-        viewingKeyPreview: viewingKey ? `${viewingKey.substring(0, 8)}...` : undefined,
-        isLoadingKey: false,
-        isLoadingBalance: false,
-      };
-
-      // Set initial info without balance
-      setTokenInfo(info);
-
-      if (viewingKey && walletAddress) {
-        // Try to fetch balance with retry logic
-        addLog('Attempting to fetch balance...');
-        info.isLoadingBalance = true;
-        setTokenInfo({ ...info }); // Update UI to show loading
-
-        try {
-          const balance = await tokenService.getBalance(tokenAddress, token.codeHash);
-          info.balance = balance;
-          info.isLoadingBalance = false;
-          delete info.error; // Clear any previous errors
-          delete info.errorType;
-          delete info.suggestedAction;
-          addLog(`Balance fetched successfully: ${balance}`);
-        } catch (error) {
-          info.isLoadingBalance = false;
-
-          // Handle TokenServiceError with better categorization
-          if (error instanceof TokenServiceError) {
-            info.error = error.message;
-            info.errorType = error.type;
-            if (error.suggestedAction) {
-              info.suggestedAction = error.suggestedAction;
-            }
-
-            // Different handling based on error type
-            switch (error.type) {
-              case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
-                addLog(`Viewing key required: ${error.message}`);
-                if (!retryBalance && !info.hasViewingKey && !suggestedTokens.has(tokenAddress)) {
-                  addLog('Will attempt to suggest token to set viewing key...');
-                  // Auto-suggest token to help user set viewing key - only if no viewing key exists and not already suggested
-                  setSuggestedTokens((prev) => new Set(prev).add(tokenAddress));
-                  setTimeout(() => {
-                    void suggestToken(tokenAddress);
-                  }, 1000);
-                } else if (info.hasViewingKey) {
-                  addLog('Viewing key exists but is invalid - manual intervention required');
-                } else if (suggestedTokens.has(tokenAddress)) {
-                  addLog('Token already suggested - manual intervention required');
-                } else {
-                  addLog('Retry failed - viewing key still required');
-                }
-                break;
-
-              case TokenServiceErrorType.VIEWING_KEY_INVALID:
-                addLog(`Invalid viewing key: ${error.message}`);
-                if (!retryBalance) {
-                  addLog('Viewing key appears to be corrupted - manual reset may be required');
-                } else {
-                  addLog('Retry failed - viewing key is still invalid');
-                }
-                break;
-
-              case TokenServiceErrorType.VIEWING_KEY_REJECTED:
-                addLog(`Viewing key rejected: ${error.message}`);
-                addLog('User rejected the viewing key request');
-                break;
-
-              case TokenServiceErrorType.NETWORK_ERROR:
-                addLog(`Network error: ${error.message}`);
-                if (!retryBalance) {
-                  addLog('Will retry automatically in a few seconds...');
-                  setTimeout(() => {
-                    if (tokenInfo?.address === tokenAddress) {
-                      void fetchTokenInfo(tokenAddress, true);
-                    }
-                  }, 5000);
-                } else {
-                  addLog('Network retry failed');
-                }
-                break;
-
-              case TokenServiceErrorType.CONTRACT_ERROR:
-                addLog(`Contract error: ${error.message}`);
-                addLog('There may be an issue with the token contract');
-                break;
-
-              default:
-                addLog(`Unknown error: ${error.message}`);
-                if (!retryBalance) {
-                  addLog('Will retry once...');
-                  setTimeout(() => {
-                    if (tokenInfo?.address === tokenAddress) {
-                      void fetchTokenInfo(tokenAddress, true);
-                    }
-                  }, 3000);
-                }
-                break;
-            }
-          } else {
-            // Fallback for non-TokenServiceError
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            info.error = errorMessage;
-            addLog(`Balance fetch failed: ${errorMessage}`);
-
-            if (!retryBalance) {
-              addLog('Will retry automatically...');
-              setTimeout(() => {
-                if (tokenInfo?.address === tokenAddress && tokenInfo?.hasViewingKey) {
-                  void fetchTokenInfo(tokenAddress, true);
-                }
-              }, 3000);
-            } else {
-              addLog(`Balance fetch failed on retry: ${errorMessage}`);
-            }
-          }
-        }
-      } else if (!walletAddress) {
-        addLog('No wallet connected');
-        info.error = 'No wallet connected';
-        info.errorType = TokenServiceErrorType.WALLET_ERROR;
-        info.suggestedAction = 'Connect your wallet';
-      }
-
-      setTokenInfo(info);
-    } catch (error) {
-      addLog(`Analysis failed: ${String(error)}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const suggestToken = async (tokenAddress: string) => {
-    if (!window.keplr) {
-      showToastMessage('Keplr not found');
-      return;
-    }
-
-    setIsLoading(true);
-    addLog(`Suggesting token to Keplr: ${tokenAddress}`);
-
-    try {
-      await window.keplr.suggestToken('secret-4', tokenAddress);
-      addLog('Token suggested successfully');
-      showToastMessage(
-        'Token suggested to Keplr. Please check your wallet and manually refresh token info if needed.'
-      );
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(`Failed to suggest token: ${errorMessage}`);
-      showToastMessage(`Failed to suggest token: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addTokenToWallet = async (tokenAddress: string) => {
-    if (!window.keplr) {
-      showToastMessage('Keplr not found');
-      return;
-    }
-
-    const token = getTokenByAddress(tokenAddress);
-    if (!token) {
-      showToastMessage('Token configuration not found');
-      return;
-    }
-
-    setIsLoading(true);
-    addLog(`Adding token to Keplr wallet: ${token.symbol} (${token.name})`);
-
-    try {
-      await window.keplr.suggestToken('secret-4', tokenAddress, token.codeHash);
-      addLog('Token added to wallet successfully');
-      showToastMessage(`${token.symbol} added to Keplr wallet successfully!`);
-
-      setTimeout(() => {
-        void fetchTokenInfo(tokenAddress);
-      }, 2000);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(`Failed to add token to wallet: ${errorMessage}`);
-      showToastMessage(`Failed to add token to wallet: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetViewingKey = async (tokenAddress: string) => {
-    setIsLoading(true);
-    addLog(`Attempting to reset viewing key for ${tokenAddress}`);
-
-    try {
-      const existingKey = await checkViewingKey(tokenAddress);
-
-      if (existingKey) {
-        addLog(`Existing viewing key detected: ${existingKey.substring(0, 8)}...`);
-        addLog('Note: Keplr cannot override existing viewing keys via suggestToken()');
-        addLog(
-          'Manual removal required: Open Keplr → Settings → Manage Tokens → Remove this token'
-        );
-        showToastMessage('Manual action required: Remove token from Keplr settings first');
+  const checkViewingKey = useCallback(
+    async (tokenAddress: string) => {
+      if (!window.keplr) {
+        addLog('Keplr not found');
         return;
       }
+      addLog(`Checking viewing key for ${tokenAddress}`);
+      setTokenInfo((prev) => (prev ? { ...prev, isLoadingKey: true } : null));
+      try {
+        const viewingKey = await window.keplr
+          .getSecret20ViewingKey('secret-4', tokenAddress)
+          .catch(() => null);
 
-      await tokenService.resetViewingKey(tokenAddress);
-      addLog('Viewing key reset initiated');
-      showToastMessage('Viewing key reset initiated. Please check Keplr.');
+        setTokenInfo((prev) => {
+          if (!prev) return null;
+          const newInfo: DebugTokenInfo = {
+            ...prev,
+            hasViewingKey: !!viewingKey,
+            isLoadingKey: false,
+          };
+          if (viewingKey) {
+            newInfo.viewingKeyPreview = `${viewingKey.substring(0, 8)}...`;
+          }
+          return newInfo;
+        });
+        if (viewingKey) {
+          addLog(`Viewing key found: ${viewingKey.substring(0, 8)}...`);
+        } else {
+          addLog('No viewing key found');
+        }
+      } catch (error) {
+        addLog(`Error checking viewing key: ${String(error)}`);
+        setTokenInfo((prev) => (prev ? { ...prev, isLoadingKey: false } : null));
+      }
+    },
+    [addLog]
+  );
 
-      setTimeout(() => {
-        void fetchTokenInfo(tokenAddress);
-      }, 2000);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      addLog(`Failed to reset viewing key: ${errorMessage}`);
-      showToastMessage(`Failed to reset viewing key: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
+  // This effect runs when the selected token changes, to update all info.
+  useEffect(() => {
+    const token = getTokenByAddress(selectedToken);
+    if (!token) return;
+
+    addLog(`Starting analysis for ${token.symbol} (${token.name})`);
+
+    // Set basic info immediately
+    setTokenInfo({
+      address: selectedToken,
+      symbol: token.symbol,
+      name: token.name,
+      codeHash: token.codeHash,
+      hasViewingKey: false, // Default state, will be updated
+      isLoadingKey: true,
+    });
+
+    // Check for the viewing key
+    void checkViewingKey(selectedToken);
+
+    // Balance is handled by the useBalance hook automatically
+  }, [selectedToken, walletAddress, checkViewingKey, addLog]);
+
+  const handleRefresh = useCallback(() => {
+    addLog('Manual refresh triggered.');
+    if (selectedToken) {
+      void checkViewingKey(selectedToken);
+      refetchBalance();
     }
-  };
+  }, [selectedToken, checkViewingKey, refetchBalance, addLog]);
 
-  const clearCachedError = () => {
-    tokenService.clearCachedError();
-    addLog('Cleared cached error state');
-    showToastMessage('Cached error state cleared');
-  };
+  // Actions now use the centralized balanceService
+  const handleSuggestToken = useCallback(async () => {
+    addLog(`Suggesting token to Keplr: ${selectedToken}`);
+    await balanceService.requestTokenSuggestion(selectedToken);
+    showToastMessage('Token suggestion sent to Keplr.');
+    handleRefresh(); // Refresh info after action
+  }, [selectedToken, addLog, handleRefresh]);
+
+  const handleResetViewingKey = useCallback(async () => {
+    addLog(`Attempting to reset viewing key for ${selectedToken}`);
+    await balanceService.resetViewingKey(selectedToken);
+    showToastMessage('Viewing key reset initiated. Please check Keplr.');
+    handleRefresh(); // Refresh info after action
+  }, [selectedToken, addLog, handleRefresh]);
 
   const clearLogs = () => {
     setLogs([]);
     addLog('Logs cleared');
   };
-  const clearTokenError = () => {
-    if (tokenInfo) {
-      setTokenInfo({ ...tokenInfo, error: undefined, balance: undefined });
-      setSuggestedTokens(new Set()); // Reset suggested tokens tracking
-      addLog('Cleared token error state and reset suggestion tracking');
-      showToastMessage('Token error cleared. You can try fetching balance again.');
-    }
-  };
 
-  useEffect(() => {
-    if (selectedToken) {
-      void fetchTokenInfo(selectedToken);
-    }
-  }, [selectedToken, walletAddress]);
+  const formatBalance = (bal: string | null, decimals: number): string => {
+    if (bal === null || bal === undefined) return 'N/A';
+    const num = parseFloat(bal);
+    if (isNaN(num)) return 'N/A';
+    return (num / Math.pow(1, decimals)).toFixed(6);
+  };
 
   return (
     <Toast.Provider swipeDirection="right">
@@ -401,7 +196,6 @@ export const ViewingKeyDebugger: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Token Selection */}
               <div>
                 <label className="block text-sm font-medium text-adamant-text-form-main mb-3">
                   Select Token
@@ -543,75 +337,40 @@ export const ViewingKeyDebugger: React.FC = () => {
                             )}
                             <div className="flex items-center justify-between">
                               <span className="text-adamant-text-box-secondary">Balance:</span>
-                              {tokenInfo.isLoadingBalance ? (
+                              {isLoadingBalance ? (
                                 <div className="flex items-center">
                                   <ReloadIcon className="w-4 h-4 animate-spin text-adamant-gradientBright mr-2" />
                                   <span className="text-adamant-text-box-secondary">
                                     Loading...
                                   </span>
                                 </div>
-                              ) : tokenInfo.balance ? (
+                              ) : balance ? (
                                 <span className="text-green-400 font-medium flex items-center">
                                   <CheckIcon className="w-4 h-4 mr-1" />
-                                  {tokenInfo.balance}
+                                  {formatBalance(
+                                    balance,
+                                    getTokenByAddress(selectedToken)?.decimals ?? 6
+                                  )}
                                 </span>
-                              ) : tokenInfo.hasViewingKey && walletAddress ? (
-                                <button
-                                  onClick={() => {
-                                    setSuggestedTokens(new Set()); // Reset suggested tokens tracking
-                                    void fetchTokenInfo(selectedToken);
-                                  }}
-                                  className="text-adamant-gradientBright hover:text-adamant-gradientDark text-xs flex items-center transition-colors duration-150"
-                                >
-                                  <ReloadIcon className="w-3 h-3 mr-1" />
-                                  Retry
-                                </button>
                               ) : (
                                 <span className="text-adamant-text-box-secondary">
                                   Not available
                                 </span>
                               )}
                             </div>
-                            {tokenInfo.error && (
+                            {balanceError && (
                               <div className="text-red-400 text-xs mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-start">
-                                    <ExclamationTriangleIcon className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                                    <div className="space-y-2">
-                                      <div>
-                                        <strong>Error:</strong> {tokenInfo.error}
-                                      </div>
-                                      {tokenInfo.suggestedAction && (
-                                        <div className="text-yellow-400 text-xs">
-                                          <strong>Suggestion:</strong> {tokenInfo.suggestedAction}
-                                        </div>
-                                      )}
-                                      {tokenInfo.errorType ===
-                                        TokenServiceErrorType.VIEWING_KEY_INVALID && (
-                                        <button
-                                          onClick={() => void resetViewingKey(tokenInfo.address)}
-                                          className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-1 rounded text-xs font-medium transition-colors"
-                                        >
-                                          Reset Viewing Key
-                                        </button>
-                                      )}
-                                      {tokenInfo.errorType ===
-                                        TokenServiceErrorType.VIEWING_KEY_REQUIRED && (
-                                        <button
-                                          onClick={() => void suggestToken(tokenInfo.address)}
-                                          className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
-                                        >
-                                          Set Viewing Key
-                                        </button>
-                                      )}
+                                <div className="flex items-start">
+                                  <ExclamationTriangleIcon className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                                  <div className="space-y-2">
+                                    <div>
+                                      <strong>Error:</strong> {balanceError}
+                                    </div>
+                                    <div className="text-yellow-400 text-xs">
+                                      <strong>Suggestion:</strong> Try adding the token to your
+                                      wallet or resetting the viewing key.
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={clearTokenError}
-                                    className="ml-2 text-xs bg-red-700 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
-                                  >
-                                    Clear
-                                  </button>
                                 </div>
                               </div>
                             )}
@@ -662,14 +421,11 @@ export const ViewingKeyDebugger: React.FC = () => {
                 <Tabs.Content value="actions" className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button
-                      onClick={() => {
-                        setSuggestedTokens(new Set()); // Reset suggested tokens tracking
-                        void fetchTokenInfo(selectedToken);
-                      }}
-                      disabled={isLoading}
+                      onClick={handleRefresh}
+                      disabled={isLoadingBalance}
                       className="bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark hover:from-adamant-dark hover:to-adamant-dark disabled:from-adamant-app-buttonDisabled disabled:to-adamant-app-buttonDisabled text-white p-4 rounded-lg transition-all duration-200 flex items-center justify-center font-medium transform hover:scale-105 disabled:hover:scale-100"
                     >
-                      {isLoading ? (
+                      {isLoadingBalance ? (
                         <ReloadIcon className="w-4 h-4 animate-spin mr-2" />
                       ) : (
                         <RocketIcon className="w-4 h-4 mr-2" />
@@ -677,81 +433,28 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Refresh Analysis
                     </button>
                     <button
-                      onClick={() => void addTokenToWallet(selectedToken)}
-                      disabled={isLoading}
-                      className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
-                    >
-                      <PlusIcon className="w-4 h-4 mr-2" />
-                      Add Token to Wallet
-                    </button>
-                    <button
-                      onClick={() => void suggestToken(selectedToken)}
-                      disabled={isLoading}
+                      onClick={handleSuggestToken}
+                      disabled={isLoadingBalance}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
                       <LightningBoltIcon className="w-4 h-4 mr-2" />
                       Suggest Token to Keplr
                     </button>
                     <button
-                      onClick={() => void resetViewingKey(selectedToken)}
-                      disabled={isLoading}
+                      onClick={handleResetViewingKey}
+                      disabled={isLoadingBalance}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
                       <ReloadIcon className="w-4 h-4 mr-2" />
                       Reset Viewing Key
                     </button>
                     <button
-                      onClick={clearCachedError}
-                      disabled={isLoading}
-                      className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
-                    >
-                      <Cross2Icon className="w-4 h-4 mr-2" />
-                      Clear Cached Errors
-                    </button>
-                    <button
-                      onClick={clearTokenError}
-                      disabled={isLoading || !tokenInfo?.error}
+                      onClick={clearLogs}
                       className="bg-red-600 hover:bg-red-700 disabled:bg-adamant-app-buttonDisabled text-white p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
-                      <ExclamationTriangleIcon className="w-4 h-4 mr-2" />
-                      Clear Token Error
+                      <Cross2Icon className="w-4 h-4 mr-2" />
+                      Clear Logs
                     </button>
-                  </div>
-                  <div className="mt-6 p-6 bg-adamant-box-dark border border-adamant-gradientBright/30 rounded-lg">
-                    <h4 className="text-adamant-gradientBright font-semibold mb-4 flex items-center">
-                      <InfoCircledIcon className="w-5 h-5 mr-3 text-adamant-gradientBright" />
-                      Troubleshooting Guide
-                    </h4>
-                    <ul className="text-sm text-adamant-text-box-secondary space-y-2">
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        If token is not in wallet, use "Add Token to Wallet"
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        If viewing key exists but balance fails, try "Reset Viewing Key"
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        If no viewing key exists, use "Suggest Token to Keplr"
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        If Keplr shows a warning about viewing key, click it to set a new one
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        Clear cached errors if you're seeing stale error messages
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        Check debug logs tab for detailed information
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-adamant-gradientBright mr-2">•</span>
-                        Manual removal from Keplr settings is rarely needed
-                      </li>
-                    </ul>
                   </div>
                 </Tabs.Content>
 

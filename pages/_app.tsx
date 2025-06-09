@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 // import inter font
 import { RadixToastProvider } from '@/components/app/Shared/Toasts/RadixToastProvider';
 import { ViewingKeyDebugger } from '@/components/ViewingKeyDebugger';
+import { useBalanceServiceInitializer } from '@/hooks/useBalanceServiceInitializer';
 import { TokenServiceError, TokenServiceErrorType } from '@/services/secret/TokenService';
 import { getSwappableTokens } from '@/utils/apis/getSwappableTokens';
 import { toastManager } from '@/utils/toast/toastManager';
@@ -19,6 +20,9 @@ const inter = Inter({ subsets: ['latin'] });
 export default function App({ Component, pageProps }: AppProps) {
   const setSwappableTokens = useSwapStore((state) => state.setSwappableTokens);
   const initializeTokens = useTokenStore((state) => state.initializeTokens);
+
+  // Initialize the balance service when wallet connects
+  useBalanceServiceInitializer();
 
   const [queryClient] = useState(
     () =>

@@ -1,4 +1,3 @@
-import { LpTokenBalanceError } from '@/hooks/useLpTokenBalance';
 import React from 'react';
 import FetchButton from './Forms/Input/TokenInput/FetchButton';
 import PoolMaxButton from './Forms/Input/TokenInput/PoolMaxButton';
@@ -7,7 +6,7 @@ import { PoolInputIdentifier } from './Forms/Input/TokenInputBase';
 interface TopRightBalanceLpProps {
   balance: string | null;
   loading: boolean;
-  error: LpTokenBalanceError | null;
+  error: string | null;
   tokenSymbol: string;
   hasMax?: boolean;
   inputIdentifier?: PoolInputIdentifier;
@@ -34,23 +33,6 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
     return num.toFixed(6);
   };
 
-  const getErrorMessage = (errorType: LpTokenBalanceError): string => {
-    switch (errorType) {
-      case LpTokenBalanceError.NO_KEPLR:
-        return 'Keplr not found';
-      case LpTokenBalanceError.NO_VIEWING_KEY:
-        return 'No viewing key';
-      case LpTokenBalanceError.VIEWING_KEY_REJECTED:
-        return 'Key rejected';
-      case LpTokenBalanceError.LP_TOKEN_NOT_FOUND:
-        return 'LP token not found';
-      case LpTokenBalanceError.NETWORK_ERROR:
-        return 'Network error';
-      default:
-        return 'Error';
-    }
-  };
-
   const handleFetchClick = () => {
     if (onFetchBalance) {
       onFetchBalance();
@@ -65,8 +47,7 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
 
   const shouldShowAddToken =
     error &&
-    (error === LpTokenBalanceError.NO_VIEWING_KEY ||
-      error === LpTokenBalanceError.LP_TOKEN_NOT_FOUND);
+    (error.toLowerCase().includes('viewing key') || error.toLowerCase().includes('not found'));
 
   return (
     <div className="flex items-center gap-2">
@@ -80,7 +61,7 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
               loading={loading}
               error={!!error}
               hasBalance={balance !== null}
-              errorMessage={error ? getErrorMessage(error) : 'Error'}
+              errorMessage={error ?? 'Error'}
               showAddToken={!!shouldShowAddToken}
               onFetch={handleFetchClick}
               onAddToken={handleSuggestClick}
