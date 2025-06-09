@@ -13,6 +13,29 @@ interface QueryParams {
   };
 }
 
+// Add error types for better error handling
+export enum TokenServiceErrorType {
+  VIEWING_KEY_REQUIRED = 'VIEWING_KEY_REQUIRED',
+  VIEWING_KEY_INVALID = 'VIEWING_KEY_INVALID',
+  VIEWING_KEY_REJECTED = 'VIEWING_KEY_REJECTED',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  CONTRACT_ERROR = 'CONTRACT_ERROR',
+  WALLET_ERROR = 'WALLET_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}
+
+export class TokenServiceError extends Error {
+  constructor(
+    message: string,
+    public type: TokenServiceErrorType,
+    public isRecoverable: boolean = true,
+    public suggestedAction?: string
+  ) {
+    super(message);
+    this.name = 'TokenServiceError';
+  }
+}
+
 export class TokenService {
   private lastError: Error | null = null;
   private errorTimestamp = 0;
@@ -116,9 +139,19 @@ export class TokenService {
         } catch (error) {
           if (error instanceof Error) {
             this.rejectedViewingKeys.add(tokenAddress);
-            throw new Error('Viewing key request rejected');
+            throw new TokenServiceError(
+              'Viewing key request was rejected by user',
+              TokenServiceErrorType.VIEWING_KEY_REJECTED,
+              true,
+              'Try again and approve the viewing key request'
+            );
           } else {
-            throw new Error('Unknown error');
+            throw new TokenServiceError(
+              'Unknown error during viewing key setup',
+              TokenServiceErrorType.UNKNOWN_ERROR,
+              true,
+              'Try refreshing and attempting again'
+            );
           }
         }
       }
@@ -156,7 +189,26 @@ export class TokenService {
             ? errorResponse.viewing_key_error.msg
             : 'Viewing key error';
         console.log('TokenService.getBalance - Viewing key error detected:', errorMsg);
-        throw new Error(`Invalid viewing key: ${errorMsg}`);
+
+        // Determine if this is a missing or invalid viewing key
+        if (
+          errorMsg.toLowerCase().includes('not set') ||
+          errorMsg.toLowerCase().includes('viewing key not set')
+        ) {
+          throw new TokenServiceError(
+            'Viewing key not set for this token',
+            TokenServiceErrorType.VIEWING_KEY_REQUIRED,
+            true,
+            'Set a viewing key for this token'
+          );
+        } else {
+          throw new TokenServiceError(
+            `Invalid viewing key: ${errorMsg}`,
+            TokenServiceErrorType.VIEWING_KEY_INVALID,
+            true,
+            'Reset the viewing key for this token'
+          );
+        }
       }
 
       // Response is now properly typed from the generic parameters
@@ -177,7 +229,16 @@ export class TokenService {
       console.error('Error type:', typeof error);
       console.error('Error structure:', JSON.stringify(error, null, 2));
 
+      // If it's already a TokenServiceError, just re-throw it
+      if (error instanceof TokenServiceError) {
+        this.lastError = error;
+        this.errorTimestamp = Date.now();
+        throw error;
+      }
+
       let errorMessage = 'Unknown error';
+      let errorType = TokenServiceErrorType.UNKNOWN_ERROR;
+      let suggestedAction = 'Try again later';
 
       // Handle different error object structures
       if (error instanceof Error) {
@@ -192,6 +253,8 @@ export class TokenService {
             // This specific error often indicates a node/network issue, not a viewing key issue
             errorMessage =
               'Network error: The Secret Network node is experiencing issues. Please try again in a few moments.';
+            errorType = TokenServiceErrorType.NETWORK_ERROR;
+            suggestedAction = 'Wait a few moments and try again';
           } else {
             errorMessage = originalMessage;
           }
@@ -208,16 +271,24 @@ export class TokenService {
               ) {
                 errorMessage =
                   'Network error: The Secret Network node is experiencing issues. Please try again in a few moments.';
+                errorType = TokenServiceErrorType.NETWORK_ERROR;
+                suggestedAction = 'Wait a few moments and try again';
               } else {
                 errorMessage = 'Invalid viewing key. Please reset your viewing key and try again.';
+                errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
+                suggestedAction = 'Reset your viewing key';
               }
               break;
             case 5:
               errorMessage =
                 'Token contract not found. Please check if the token address is correct.';
+              errorType = TokenServiceErrorType.CONTRACT_ERROR;
+              suggestedAction = 'Verify the token address is correct';
               break;
             default:
               errorMessage = `Network error (code ${error.code}): The Secret Network is experiencing issues. Please try again later.`;
+              errorType = TokenServiceErrorType.NETWORK_ERROR;
+              suggestedAction = 'Try again later';
           }
         }
       }
@@ -227,34 +298,48 @@ export class TokenService {
         if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
           errorMessage =
             'Invalid viewing key. The viewing key for this token appears to be corrupted or invalid. Please reset your viewing key and try again.';
+          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
+          suggestedAction = 'Reset your viewing key';
         } else if (
           errorMessage.includes('unauthorized') ||
           errorMessage.includes('viewing key') ||
           errorMessage.includes('Invalid viewing key')
         ) {
           errorMessage = 'Invalid viewing key. Please reset your viewing key and try again.';
+          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
+          suggestedAction = 'Reset your viewing key';
         } else if (
           errorMessage.includes('contract: not found') ||
           errorMessage.includes('unknown request')
         ) {
           errorMessage =
             'Invalid viewing key. The viewing key for this token appears to be corrupted or invalid. Please reset your viewing key and try again.';
+          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
+          suggestedAction = 'Reset your viewing key';
         } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
           errorMessage =
             'Network error: Unable to connect to Secret Network. Please check your connection.';
+          errorType = TokenServiceErrorType.NETWORK_ERROR;
+          suggestedAction = 'Check your internet connection';
         } else if (errorMessage.includes('timeout')) {
           errorMessage = 'Request timeout: The network is slow. Please try again.';
+          errorType = TokenServiceErrorType.NETWORK_ERROR;
+          suggestedAction = 'Wait and try again';
         } else if (errorMessage.includes('query failed') || errorMessage.includes('contract')) {
           errorMessage =
             'Contract query failed. The viewing key might be invalid or the token contract is experiencing issues.';
+          errorType = TokenServiceErrorType.CONTRACT_ERROR;
+          suggestedAction = 'Check viewing key or try again later';
         } else if (errorMessage === 'Unknown error') {
           // Fallback for truly unknown errors - assume it's a viewing key issue since that's the most common cause
           errorMessage =
             'Unable to fetch balance. This is likely due to an invalid viewing key. Please reset your viewing key and try again.';
+          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
+          suggestedAction = 'Reset your viewing key';
         }
       }
 
-      this.lastError = new Error(errorMessage);
+      this.lastError = new TokenServiceError(errorMessage, errorType, true, suggestedAction);
       this.errorTimestamp = Date.now();
       throw this.lastError;
     }

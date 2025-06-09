@@ -1,4 +1,8 @@
-import { TokenService } from '@/services/secret/TokenService';
+import {
+  TokenService,
+  TokenServiceError,
+  TokenServiceErrorType,
+} from '@/services/secret/TokenService';
 import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
@@ -159,7 +163,49 @@ export function useTokenBalance(
         error: null,
       });
     } catch (err) {
-      if (err instanceof Error) {
+      if (err instanceof TokenServiceError) {
+        console.log('TokenServiceError caught in useTokenBalance:', err.message, err.type);
+
+        switch (err.type) {
+          case TokenServiceErrorType.VIEWING_KEY_REJECTED:
+            toastManager.viewingKeyRejected(() => {
+              setIsRejected(false);
+              void fetchBalance();
+            });
+            setBalance(tokenAddress, {
+              amount: null,
+              loading: false,
+              lastUpdated: 0,
+              error: null,
+            });
+            return;
+
+          case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
+            setError(tokenAddress, TokenBalanceError.NO_VIEWING_KEY);
+            toastManager.viewingKeyRequired();
+            break;
+
+          case TokenServiceErrorType.VIEWING_KEY_INVALID:
+            setError(tokenAddress, TokenBalanceError.NO_VIEWING_KEY);
+            toastManager.viewingKeyRequired();
+            break;
+
+          case TokenServiceErrorType.NETWORK_ERROR:
+            setError(tokenAddress, TokenBalanceError.NETWORK_ERROR);
+            toastManager.networkError();
+            break;
+
+          case TokenServiceErrorType.WALLET_ERROR:
+            setError(tokenAddress, TokenBalanceError.NO_KEPLR);
+            toastManager.keplrNotInstalled();
+            break;
+
+          default:
+            setError(tokenAddress, TokenBalanceError.UNKNOWN_ERROR);
+            toastManager.balanceFetchError();
+            break;
+        }
+      } else if (err instanceof Error) {
         console.log('Error caught in useTokenBalance:', err.message);
 
         if (err.message.includes('Viewing key request rejected')) {

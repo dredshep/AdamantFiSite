@@ -1,6 +1,10 @@
 import { TOKENS } from '@/config/tokens';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
-import { TokenService } from '@/services/secret/TokenService';
+import {
+  TokenService,
+  TokenServiceError,
+  TokenServiceErrorType,
+} from '@/services/secret/TokenService';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   CheckCircledIcon,
@@ -30,6 +34,8 @@ interface ViewingKeyInfo {
   viewingKeyPreview?: string | undefined;
   balance?: string | undefined;
   error?: string | undefined;
+  errorType?: TokenServiceErrorType;
+  suggestedAction?: string;
   isLoadingKey?: boolean;
   isLoadingBalance?: boolean;
 }
@@ -42,6 +48,7 @@ export const ViewingKeyDebugger: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState(false);
+  const [suggestedTokens, setSuggestedTokens] = useState<Set<string>>(new Set());
 
   const { walletAddress } = useSecretNetwork();
   const tokenService = new TokenService();
@@ -143,29 +150,109 @@ export const ViewingKeyDebugger: React.FC = () => {
           const balance = await tokenService.getBalance(tokenAddress, token.codeHash);
           info.balance = balance;
           info.isLoadingBalance = false;
-          info.error = undefined; // Clear any previous errors
+          delete info.error; // Clear any previous errors
+          delete info.errorType;
+          delete info.suggestedAction;
           addLog(`Balance fetched successfully: ${balance}`);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
           info.isLoadingBalance = false;
 
-          // Only show error if this isn't a retry and the viewing key was just set
-          if (!retryBalance) {
-            addLog(`Balance fetch failed: ${errorMessage} - Will retry automatically`);
-            // Auto-retry after a short delay for newly set viewing keys
-            setTimeout(() => {
-              if (tokenInfo?.address === tokenAddress && tokenInfo?.hasViewingKey) {
-                void fetchTokenInfo(tokenAddress, true);
-              }
-            }, 3000);
+          // Handle TokenServiceError with better categorization
+          if (error instanceof TokenServiceError) {
+            info.error = error.message;
+            info.errorType = error.type;
+            if (error.suggestedAction) {
+              info.suggestedAction = error.suggestedAction;
+            }
+
+            // Different handling based on error type
+            switch (error.type) {
+              case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
+                addLog(`Viewing key required: ${error.message}`);
+                if (!retryBalance && !info.hasViewingKey && !suggestedTokens.has(tokenAddress)) {
+                  addLog('Will attempt to suggest token to set viewing key...');
+                  // Auto-suggest token to help user set viewing key - only if no viewing key exists and not already suggested
+                  setSuggestedTokens((prev) => new Set(prev).add(tokenAddress));
+                  setTimeout(() => {
+                    void suggestToken(tokenAddress);
+                  }, 1000);
+                } else if (info.hasViewingKey) {
+                  addLog('Viewing key exists but is invalid - manual intervention required');
+                } else if (suggestedTokens.has(tokenAddress)) {
+                  addLog('Token already suggested - manual intervention required');
+                } else {
+                  addLog('Retry failed - viewing key still required');
+                }
+                break;
+
+              case TokenServiceErrorType.VIEWING_KEY_INVALID:
+                addLog(`Invalid viewing key: ${error.message}`);
+                if (!retryBalance) {
+                  addLog('Viewing key appears to be corrupted - manual reset may be required');
+                } else {
+                  addLog('Retry failed - viewing key is still invalid');
+                }
+                break;
+
+              case TokenServiceErrorType.VIEWING_KEY_REJECTED:
+                addLog(`Viewing key rejected: ${error.message}`);
+                addLog('User rejected the viewing key request');
+                break;
+
+              case TokenServiceErrorType.NETWORK_ERROR:
+                addLog(`Network error: ${error.message}`);
+                if (!retryBalance) {
+                  addLog('Will retry automatically in a few seconds...');
+                  setTimeout(() => {
+                    if (tokenInfo?.address === tokenAddress) {
+                      void fetchTokenInfo(tokenAddress, true);
+                    }
+                  }, 5000);
+                } else {
+                  addLog('Network retry failed');
+                }
+                break;
+
+              case TokenServiceErrorType.CONTRACT_ERROR:
+                addLog(`Contract error: ${error.message}`);
+                addLog('There may be an issue with the token contract');
+                break;
+
+              default:
+                addLog(`Unknown error: ${error.message}`);
+                if (!retryBalance) {
+                  addLog('Will retry once...');
+                  setTimeout(() => {
+                    if (tokenInfo?.address === tokenAddress) {
+                      void fetchTokenInfo(tokenAddress, true);
+                    }
+                  }, 3000);
+                }
+                break;
+            }
           } else {
+            // Fallback for non-TokenServiceError
+            const errorMessage = error instanceof Error ? error.message : String(error);
             info.error = errorMessage;
-            addLog(`Balance fetch failed on retry: ${errorMessage}`);
+            addLog(`Balance fetch failed: ${errorMessage}`);
+
+            if (!retryBalance) {
+              addLog('Will retry automatically...');
+              setTimeout(() => {
+                if (tokenInfo?.address === tokenAddress && tokenInfo?.hasViewingKey) {
+                  void fetchTokenInfo(tokenAddress, true);
+                }
+              }, 3000);
+            } else {
+              addLog(`Balance fetch failed on retry: ${errorMessage}`);
+            }
           }
         }
       } else if (!walletAddress) {
         addLog('No wallet connected');
         info.error = 'No wallet connected';
+        info.errorType = TokenServiceErrorType.WALLET_ERROR;
+        info.suggestedAction = 'Connect your wallet';
       }
 
       setTokenInfo(info);
@@ -188,11 +275,9 @@ export const ViewingKeyDebugger: React.FC = () => {
     try {
       await window.keplr.suggestToken('secret-4', tokenAddress);
       addLog('Token suggested successfully');
-      showToastMessage('Token suggested to Keplr. Please check your wallet.');
-
-      setTimeout(() => {
-        void fetchTokenInfo(tokenAddress);
-      }, 2000);
+      showToastMessage(
+        'Token suggested to Keplr. Please check your wallet and manually refresh token info if needed.'
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       addLog(`Failed to suggest token: ${errorMessage}`);
@@ -280,7 +365,8 @@ export const ViewingKeyDebugger: React.FC = () => {
   const clearTokenError = () => {
     if (tokenInfo) {
       setTokenInfo({ ...tokenInfo, error: undefined, balance: undefined });
-      addLog('Cleared token error state');
+      setSuggestedTokens(new Set()); // Reset suggested tokens tracking
+      addLog('Cleared token error state and reset suggestion tracking');
       showToastMessage('Token error cleared. You can try fetching balance again.');
     }
   };
@@ -471,7 +557,10 @@ export const ViewingKeyDebugger: React.FC = () => {
                                 </span>
                               ) : tokenInfo.hasViewingKey && walletAddress ? (
                                 <button
-                                  onClick={() => void fetchTokenInfo(selectedToken)}
+                                  onClick={() => {
+                                    setSuggestedTokens(new Set()); // Reset suggested tokens tracking
+                                    void fetchTokenInfo(selectedToken);
+                                  }}
                                   className="text-adamant-gradientBright hover:text-adamant-gradientDark text-xs flex items-center transition-colors duration-150"
                                 >
                                   <ReloadIcon className="w-3 h-3 mr-1" />
@@ -488,8 +577,33 @@ export const ViewingKeyDebugger: React.FC = () => {
                                 <div className="flex justify-between items-start">
                                   <div className="flex items-start">
                                     <ExclamationTriangleIcon className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                      <strong>Error:</strong> {tokenInfo.error}
+                                    <div className="space-y-2">
+                                      <div>
+                                        <strong>Error:</strong> {tokenInfo.error}
+                                      </div>
+                                      {tokenInfo.suggestedAction && (
+                                        <div className="text-yellow-400 text-xs">
+                                          <strong>Suggestion:</strong> {tokenInfo.suggestedAction}
+                                        </div>
+                                      )}
+                                      {tokenInfo.errorType ===
+                                        TokenServiceErrorType.VIEWING_KEY_INVALID && (
+                                        <button
+                                          onClick={() => void resetViewingKey(tokenInfo.address)}
+                                          className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-1 rounded text-xs font-medium transition-colors"
+                                        >
+                                          Reset Viewing Key
+                                        </button>
+                                      )}
+                                      {tokenInfo.errorType ===
+                                        TokenServiceErrorType.VIEWING_KEY_REQUIRED && (
+                                        <button
+                                          onClick={() => void suggestToken(tokenInfo.address)}
+                                          className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                                        >
+                                          Set Viewing Key
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                   <button
@@ -548,7 +662,10 @@ export const ViewingKeyDebugger: React.FC = () => {
                 <Tabs.Content value="actions" className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button
-                      onClick={() => void fetchTokenInfo(selectedToken)}
+                      onClick={() => {
+                        setSuggestedTokens(new Set()); // Reset suggested tokens tracking
+                        void fetchTokenInfo(selectedToken);
+                      }}
                       disabled={isLoading}
                       className="bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark hover:from-adamant-dark hover:to-adamant-dark disabled:from-adamant-app-buttonDisabled disabled:to-adamant-app-buttonDisabled text-white p-4 rounded-lg transition-all duration-200 flex items-center justify-center font-medium transform hover:scale-105 disabled:hover:scale-100"
                     >
