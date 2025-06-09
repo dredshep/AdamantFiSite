@@ -4,10 +4,17 @@ import { useModalStore } from '@/store/modalStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import React, { useState } from 'react';
 import { HiQrCode } from 'react-icons/hi2';
-import { RiArrowUpSLine, RiFileCopyLine, RiRefreshLine, RiSettings3Line } from 'react-icons/ri';
-import { toast } from 'react-toastify';
+import {
+  RiArrowUpSLine,
+  RiFileCopyLine,
+  RiRefreshLine,
+  RiSendPlaneLine,
+  RiSettings3Line,
+  RiWalletLine,
+} from 'react-icons/ri';
 import { ReceivePanel } from './ReceivePanel';
 import { SendTokensPanel } from './SendTokensPanel';
 import { SettingsPanel } from './SettingsPanel';
@@ -29,7 +36,7 @@ const WalletSidebar: React.FC = () => {
   const copyAddressToClipboard = () => {
     if (address === null) return;
     void navigator.clipboard.writeText(address).then(() => {
-      toast.success('Address copied to clipboard!');
+      showToastOnce('address-copied', 'Address copied to clipboard!', 'success');
     });
   };
 
@@ -59,15 +66,23 @@ const WalletSidebar: React.FC = () => {
       ).length;
 
       if (successful === tokens.length) {
-        toast.success(`All ${tokens.length} token balances refreshed`);
+        showToastOnce(
+          'refresh-success',
+          `All ${tokens.length} token balances refreshed`,
+          'success'
+        );
       } else if (successful > 0) {
-        toast.success(`${successful}/${tokens.length} token balances refreshed`);
+        showToastOnce(
+          'refresh-partial',
+          `${successful}/${tokens.length} token balances refreshed`,
+          'success'
+        );
       } else {
-        toast.error('Failed to refresh token balances');
+        showToastOnce('refresh-failed', 'Failed to refresh token balances', 'error');
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);
-      toast.error('Failed to refresh balances');
+      showToastOnce('refresh-error', 'Failed to refresh balances', 'error');
     } finally {
       setIsRefreshing(false);
     }
@@ -86,122 +101,187 @@ const WalletSidebar: React.FC = () => {
   return (
     <aside
       className={`
-        fixed top-0 right-0 bottom-0 w-[312px] z-50
-        bg-adamant-box-veryDark bg-opacity-90
-        backdrop-blur-sm
-        transition-transform duration-300
-        shadow-xl
+        fixed top-0 right-0 bottom-0 w-[380px] z-50
+        bg-gradient-to-b from-adamant-box-veryDark/95 via-adamant-box-veryDark/98 to-black/95
+        backdrop-blur-lg
+        transition-transform duration-300 ease-out
+        shadow-2xl border-l border-adamant-gradientBright/10
         ${isWalletModalOpen ? 'translate-x-0' : 'translate-x-full'}
       `}
     >
       {/* Header */}
-      <div className="p-4 border-b border-adamant-box-border">
-        {currentView === 'main' && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <TokenImageWithFallback
-                tokenAddress={(address as SecretString) ?? 'secret1defaultaddress'}
-                size={48}
-                alt="Wallet"
-                className="rounded-full"
-              />
-              <div className="flex flex-col">
-                <div className="font-semibold text-adamant-text-box-main">
-                  {truncatedAddress || 'Not connected'}
+      <div className="relative">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-adamant-gradientBright/5 via-adamant-gradientDim/5 to-transparent" />
+
+        <div className="relative p-6 border-b border-adamant-box-border/30">
+          {currentView === 'main' && (
+            <div className="space-y-4">
+              {/* Close button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCloseSidebar}
+                  className="p-2 rounded-xl hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
+                  title="Close wallet"
+                >
+                  <RiArrowUpSLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
+
+              {/* Wallet info */}
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <TokenImageWithFallback
+                    tokenAddress={(address as SecretString) ?? 'secret1defaultaddress'}
+                    size={56}
+                    alt="Wallet"
+                    className="rounded-2xl ring-2 ring-adamant-gradientBright/20"
+                  />
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-adamant-box-veryDark"></div>
                 </div>
-                <div className="text-xs text-adamant-text-box-secondary">Secret Network</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <RiWalletLine className="w-4 h-4 text-adamant-gradientBright" />
+                    <span className="text-xs font-medium text-adamant-gradientBright uppercase tracking-wide">
+                      Secret Network
+                    </span>
+                  </div>
+                  <div
+                    onClick={copyAddressToClipboard}
+                    className="font-mono text-lg font-semibold text-white cursor-pointer hover:text-adamant-gradientBright transition-colors duration-200 group flex items-center gap-2"
+                    title="Click to copy address"
+                  >
+                    {truncatedAddress || 'Not connected'}
+                    <RiFileCopyLine className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCurrentView('send')}
+                  className="flex-1 group relative bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <RiSendPlaneLine className="w-5 h-5 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+                    <span className="text-sm uppercase tracking-wide font-black">Send</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setCurrentView('receive')}
+                  className="flex-1 group bg-adamant-box-dark hover:bg-adamant-box-regular text-white font-bold py-4 px-6 rounded-2xl border border-adamant-gradientBright/30 hover:border-adamant-gradientBright/60 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <HiQrCode className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                    <span className="text-sm uppercase tracking-wide">Receive</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Settings button */}
+              <div className="flex justify-center pt-2">
+                <button
+                  onClick={openSettings}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-adamant-text-box-secondary hover:text-white bg-adamant-box-dark/50 hover:bg-adamant-box-dark rounded-xl transition-all duration-200"
+                >
+                  <RiSettings3Line className="w-4 h-4" />
+                  Settings
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={copyAddressToClipboard}
-                className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-colors text-adamant-text-box-secondary hover:text-adamant-text-box-main"
-                title="Copy address"
-              >
-                <RiFileCopyLine className="w-4 h-4" />
-              </button>
-              <button
-                onClick={openSettings}
-                className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-colors text-adamant-text-box-secondary hover:text-adamant-text-box-main"
-                title="Settings"
-              >
-                <RiSettings3Line className="w-4 h-4" />
-              </button>
+          )}
+
+          {(currentView === 'send' || currentView === 'receive' || currentView === 'settings') && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                {currentView === 'send' && (
+                  <>
+                    <RiSendPlaneLine className="w-6 h-6 text-adamant-gradientBright" />
+                    Send Tokens
+                  </>
+                )}
+                {currentView === 'receive' && (
+                  <>
+                    <HiQrCode className="w-6 h-6 text-adamant-gradientBright" />
+                    Receive Tokens
+                  </>
+                )}
+                {currentView === 'settings' && (
+                  <>
+                    <RiSettings3Line className="w-6 h-6 text-adamant-gradientBright" />
+                    Settings
+                  </>
+                )}
+              </h2>
               <button
                 onClick={handleCloseSidebar}
-                className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-colors text-adamant-text-box-secondary hover:text-adamant-text-box-main"
+                className="p-2 rounded-xl hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
                 title="Close"
               >
-                <RiArrowUpSLine className="w-4 h-4" />
+                <RiArrowUpSLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
               </button>
             </div>
-          </div>
-        )}
-
-        {(currentView === 'send' || currentView === 'receive' || currentView === 'settings') && (
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-adamant-text-box-main">
-              {currentView === 'send' && 'Send Tokens'}
-              {currentView === 'receive' && 'Receive Tokens'}
-              {currentView === 'settings' && 'Settings'}
-            </h2>
-            <button
-              onClick={handleCloseSidebar}
-              className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-colors text-adamant-text-box-secondary hover:text-adamant-text-box-main"
-              title="Close"
-            >
-              <RiArrowUpSLine className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Main Wallet View */}
       {currentView === 'main' && (
-        <div className="p-4">
-          {/* Buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentView('send')}
-              className="flex-1 py-3 rounded-xl bg-adamant-accentBg text-black font-bold uppercase hover:bg-opacity-90 transition-all"
-            >
-              Send
-            </button>
-            <button
-              onClick={() => setCurrentView('receive')}
-              className="flex-1 py-3 rounded-xl bg-adamant-box-dark text-white font-bold uppercase border border-adamant-accentBg hover:bg-adamant-box-light transition-all flex items-center justify-center gap-2"
-            >
-              <span>Receive</span>
-              <HiQrCode className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Tokens List */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-adamant-text-box-main">Tokens</h3>
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Tokens Section */}
+          <div className="p-6 flex-1 overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="w-2 h-2 bg-adamant-gradientBright rounded-full"></div>
+                Portfolio
+                <span className="text-sm font-normal text-adamant-text-box-secondary ml-1">
+                  ({tokens.length} {tokens.length === 1 ? 'token' : 'tokens'})
+                </span>
+              </h3>
               {loadBalanceConfig.shouldShowFetchButton && (
                 <button
                   onClick={() => void refreshAllBalances()}
                   disabled={isRefreshing}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs bg-adamant-box-dark hover:bg-adamant-box-regular border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-lg transition-all duration-200 text-adamant-text-box-secondary hover:text-adamant-text-box-main disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-adamant-box-dark hover:bg-adamant-box-regular border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-xl transition-all duration-200 text-adamant-text-box-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
-                  <RiRefreshLine className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? 'Loading...' : 'Refresh All'}
+                  <RiRefreshLine
+                    className={`w-4 h-4 ${
+                      isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'
+                    } transition-transform duration-300`}
+                  />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
               )}
             </div>
+
             {tokens.length > 0 ? (
-              <div className="space-y-2">
+              <div
+                className="space-y-3 overflow-y-auto h-full pr-2"
+                style={{ scrollbarWidth: 'thin', scrollbarColor: '#8A754A #1a1a2e' }}
+              >
                 {tokens.map((token, index) => (
-                  <TokenListItem key={index} token={token} />
+                  <div
+                    key={index}
+                    className="transform hover:scale-[1.01] transition-transform duration-200"
+                  >
+                    <TokenListItem token={token} />
+                  </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="text-adamant-text-box-secondary text-sm">No tokens found</div>
-                <div className="text-xs text-adamant-text-box-secondary mt-1">
-                  Add tokens to your wallet to see them here
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center space-y-4 max-w-xs">
+                  <div className="w-16 h-16 bg-adamant-box-dark rounded-2xl flex items-center justify-center mx-auto">
+                    <RiWalletLine className="w-8 h-8 text-adamant-text-box-secondary" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-adamant-text-box-main font-medium">No tokens found</div>
+                    <div className="text-sm text-adamant-text-box-secondary leading-relaxed">
+                      Your tokens will appear here once you add them to your wallet or receive
+                      transfers.
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

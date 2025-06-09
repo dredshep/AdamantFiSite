@@ -88,14 +88,28 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
 
   return debugKeplrQuery(
     async () => {
+      // Ensure height is definitely a number before creating the query
+      // Blockchain dev suggested this might fix the 0 rewards issue
+      const numericHeight = Number(height);
+      if (!Number.isInteger(numericHeight) || numericHeight <= 0) {
+        throw new Error(`Invalid block height: ${height} (converted to: ${numericHeight})`);
+      }
+
       const rewardsQuery: LPStakingQueryMsg = {
         rewards: {
           address: address,
           key: viewingKey,
-          height: height,
+          height: numericHeight, // Explicitly ensure this is a number, not a string
         },
       };
+
       // console.log('🎁 Rewards query:', rewardsQuery);
+      // console.log('🔢 Height type verification:', {
+      //   originalHeight: height,
+      //   numericHeight,
+      //   heightType: typeof numericHeight,
+      //   isInteger: Number.isInteger(numericHeight)
+      // });
 
       // console.log('Querying rewards with viewing key:', {
       //   contract_address: lpStakingContractAddress,
@@ -117,6 +131,9 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
         // Handle different possible response formats
         if (isRewardsResponse(parsedResult)) {
           const rawRewards = parsedResult.rewards.rewards;
+          // log query
+          // console.log('🎁 Rewards query:', rewardsQuery);
+          // // log response
           // console.log('🎁 Raw rewards from contract:', {
           //   rawRewards,
           //   type: typeof rawRewards,

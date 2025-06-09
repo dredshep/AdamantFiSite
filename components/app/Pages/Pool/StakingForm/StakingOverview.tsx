@@ -1,9 +1,11 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
+import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { SecretString } from '@/types';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { RefreshCw } from 'lucide-react';
-import React from 'react';
+import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
+import { RefreshCw, Settings, Zap } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface StakingOverviewProps {
   stakedBalance: string | null;
@@ -30,6 +32,9 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   pairSymbol = 'LP',
   lpTokenAddress,
 }) => {
+  const [isUpdatingAllocation, setIsUpdatingAllocation] = useState(false);
+  const { secretjs } = useKeplrConnection();
+
   // Get LP token address from staking contract if not provided
   const stakingInfo = stakingContractAddress
     ? getStakingContractInfo(stakingContractAddress)
@@ -91,6 +96,81 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
       ? (parseFloat(stakedBalance || '0') / 1_000_000) * rewardEstimates.poolData.lpTokenPrice
       : undefined;
 
+  // Update allocation function to trigger reward initialization
+  const handleUpdateAllocation = async () => {
+    if (!secretjs) {
+      toastManager.keplrNotInstalled();
+      return;
+    }
+
+    try {
+      setIsUpdatingAllocation(true);
+
+      // Bulk distributor contract details
+      const bulkDistributorAddress = 'secret1s563hkkrzjzx9q8qcx3r47h7s0hn5kfgy9t62r';
+      const bulkDistributorCodeHash =
+        '89083455710f42520356d0fbaa2d3a6f8e1362e1b67040cd59d365d02378fad5'; // From docs
+
+      // Execute update_allocation message
+      const executeMsg = {
+        update_allocation: {
+          spy_addr: stakingContractAddress, // LP staking contract address
+          spy_hash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a', // LP staking contract code hash
+          hook: null, // Optional hook, using null as per docs
+        },
+      };
+
+      console.log('🚀 Triggering update_allocation on bulk distributor:', {
+        bulkDistributorAddress,
+        executeMsg,
+      });
+
+      const tx = await secretjs.tx.compute.executeContract(
+        {
+          sender: secretjs.address,
+          contract_address: bulkDistributorAddress,
+          code_hash: bulkDistributorCodeHash,
+          msg: executeMsg,
+          sent_funds: [],
+        },
+        {
+          gasLimit: 200000,
+          gasPriceInFeeDenom: 0.1,
+        }
+      );
+
+      console.log('✅ Update allocation transaction successful:', tx);
+
+      // Show success toast
+      showToastOnce('update-allocation-success', 'Update allocation triggered', 'success', {
+        message:
+          'Successfully triggered reward allocation update. Balances are automatically refreshed every 10 seconds.',
+        autoClose: 8000,
+      });
+
+      // Refresh data after successful update
+      if (onRefresh) {
+        setTimeout(() => {
+          onRefresh();
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('❌ Failed to update allocation:', error);
+
+      let errorMessage = 'Failed to trigger update allocation';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      showToastOnce('update-allocation-error', 'Update allocation failed', 'error', {
+        message: errorMessage,
+        autoClose: 8000,
+      });
+    } finally {
+      setIsUpdatingAllocation(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Pool Statistics - New section */}
@@ -145,6 +225,41 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
               {hasStakedTokens ? formatPercentage(userSharePercentage) : '0%'}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Debug Section - Update Allocation Button */}
+      <div className="bg-adamant-box-dark/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-500/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-yellow-400" />
+            <div>
+              <p className="text-xs font-medium text-yellow-400">Debug Tools</p>
+              <p className="text-xs text-adamant-text-box-secondary">
+                Initialize reward allocation
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleUpdateAllocation}
+            disabled={isUpdatingAllocation || !secretjs}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg
+                     bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30
+                     text-yellow-400 transition-all duration-200 disabled:opacity-50
+                     hover:scale-105 active:scale-95 disabled:hover:scale-100"
+          >
+            {isUpdatingAllocation ? (
+              <>
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              <>
+                <Zap className="h-3 w-3" />
+                Update Allocation
+              </>
+            )}
+          </button>
         </div>
       </div>
 

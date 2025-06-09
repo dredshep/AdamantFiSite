@@ -6,10 +6,10 @@ import '@radix-ui/themes/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 // import inter font
+import { RadixToastProvider } from '@/components/app/Shared/Toasts/RadixToastProvider';
 import { ViewingKeyDebugger } from '@/components/ViewingKeyDebugger';
+import { TokenServiceError, TokenServiceErrorType } from '@/services/secret/TokenService';
 import { getSwappableTokens } from '@/utils/apis/getSwappableTokens';
 import { toastManager } from '@/utils/toast/toastManager';
 import { Inter } from 'next/font/google';
@@ -32,6 +32,48 @@ export default function App({ Component, pageProps }: AppProps) {
         },
       })
   );
+
+  // Global error handler for unhandled promise rejections
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const error = event.reason as unknown;
+
+      // Handle TokenServiceError specifically
+      if (error instanceof TokenServiceError) {
+        event.preventDefault(); // Prevent the error from being logged to console as unhandled
+
+        console.log('Caught unhandled TokenServiceError:', error.message, error.type);
+
+        // Show appropriate toast based on error type
+        switch (error.type) {
+          case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
+            toastManager.viewingKeyRequired();
+            break;
+          case TokenServiceErrorType.VIEWING_KEY_INVALID:
+            toastManager.viewingKeyRequired();
+            break;
+          case TokenServiceErrorType.VIEWING_KEY_REJECTED:
+            toastManager.viewingKeyRejected();
+            break;
+          case TokenServiceErrorType.NETWORK_ERROR:
+            toastManager.networkError();
+            break;
+          case TokenServiceErrorType.WALLET_ERROR:
+            toastManager.keplrNotInstalled();
+            break;
+          default:
+            toastManager.balanceFetchError();
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
 
   useEffect(() => {
     // Initialize only swappable tokens (tokens that have liquidity pairs)
@@ -68,18 +110,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <div className={`${inter.className} bg-[#151321] min-h-screen text-white font-sans`}>
         <Component {...pageProps} />
         <ViewingKeyDebugger />
-        <ToastContainer
-          position="top-right"
-          autoClose={6000}
-          hideProgressBar={true}
-          newestOnTop
-          closeOnClick={false}
-          rtl={false}
-          pauseOnFocusLoss
-          draggable={false}
-          pauseOnHover
-          toastClassName="custom-toast-container"
-        />
+        <RadixToastProvider />
       </div>
     </QueryClientProvider>
   );

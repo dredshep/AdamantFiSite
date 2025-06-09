@@ -1,7 +1,3 @@
-import CustomToast from '@/components/app/Shared/Toasts/CustomToast';
-import React from 'react';
-import { toast, ToastOptions } from 'react-toastify';
-
 // Toast ID references to prevent duplicates
 export const GLOBAL_TOAST_IDS = {
   KEPLR_NOT_INSTALLED: 'global-keplr-not-installed',
@@ -12,19 +8,58 @@ export const GLOBAL_TOAST_IDS = {
   CONNECTION_ERROR: 'global-connection-error',
 } as const;
 
-// Global state to track which toasts have been shown
+// Global state to track toasts
+interface ToastItem {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  autoClose?: number | false;
+  createdAt: number;
+}
+
 interface ToastState {
+  toasts: ToastItem[];
   shownToasts: Set<string>;
   lastShownTime: Map<string, number>;
 }
 
 const globalToastState: ToastState = {
+  toasts: [],
   shownToasts: new Set(),
   lastShownTime: new Map(),
 };
 
 // Minimum time between showing the same toast (in milliseconds)
 const TOAST_COOLDOWN = 10000; // 10 seconds
+
+// Event system for toast management
+type ToastListener = (toasts: ToastItem[]) => void;
+const toastListeners = new Set<ToastListener>();
+
+function notifyListeners() {
+  toastListeners.forEach((listener) => listener([...globalToastState.toasts]));
+}
+
+export function subscribeToToasts(listener: ToastListener): () => void {
+  toastListeners.add(listener);
+  // Immediately call with current state
+  listener([...globalToastState.toasts]);
+
+  return () => {
+    toastListeners.delete(listener);
+  };
+}
+
+export function removeToast(id: string): void {
+  const index = globalToastState.toasts.findIndex((toast) => toast.id === id);
+  if (index !== -1) {
+    globalToastState.toasts.splice(index, 1);
+    notifyListeners();
+  }
+}
 
 /**
  * Show a toast only once or after a cooldown period to prevent spam
@@ -48,33 +83,37 @@ export function showToastOnce(
     return;
   }
 
-  // Dismiss any existing toast with this ID first
-  toast.dismiss(toastId);
+  // Remove any existing toast with this ID
+  removeToast(toastId);
 
-  // Create toast options
-  const toastOptions: ToastOptions = {
-    position: 'top-right',
-    toastId,
-    autoClose: options?.autoClose !== undefined ? options.autoClose : 6000,
-    hideProgressBar: true,
-    closeButton: false,
-    className: 'custom-toast-container',
-  };
-
-  // Show the custom toast
-  const toastProps = {
+  // Create new toast
+  const newToast: ToastItem = {
+    id: toastId,
     type,
     title,
     ...(options?.message && { message: options.message }),
     ...(options?.actionLabel && { actionLabel: options.actionLabel }),
     ...(options?.onAction && { onAction: options.onAction }),
+    autoClose: options?.autoClose !== undefined ? options.autoClose : 6000,
+    createdAt: now,
   };
 
-  toast(React.createElement(CustomToast, toastProps), toastOptions);
+  // Add to toasts array
+  globalToastState.toasts.push(newToast);
 
   // Update tracking
   globalToastState.shownToasts.add(toastId);
   globalToastState.lastShownTime.set(toastId, now);
+
+  // Notify listeners
+  notifyListeners();
+
+  // Set up auto-remove if autoClose is enabled
+  if (newToast.autoClose !== false && typeof newToast.autoClose === 'number') {
+    setTimeout(() => {
+      removeToast(toastId);
+    }, newToast.autoClose);
+  }
 }
 
 /**

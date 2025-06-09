@@ -1,9 +1,14 @@
 import { useSwapStore } from '@/store/swapStore';
 import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
+import { GLOBAL_TOAST_IDS, resetToastCooldown, toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 
 const keplrConnect = async () => {
+  // Reset the cooldown for Keplr not installed toast to allow it to show again
+  // This is important for manual connect attempts after the user has seen and closed the toast
+  resetToastCooldown(GLOBAL_TOAST_IDS.KEPLR_NOT_INSTALLED);
+
   const { keplr } = window as unknown as Window;
   if (keplr) {
     try {
@@ -23,6 +28,8 @@ const keplrConnect = async () => {
     }
   } else {
     console.log('Keplr extension not found.');
+    // Show toast when Keplr is not installed
+    toastManager.keplrNotInstalled();
   }
 };
 
