@@ -1,5 +1,6 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
+import VoiceSwapInterface from '@/components/app/Pages/Swap/VoiceSwapInterface';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
 // import { validateIncentives } from '@/lib/keplr/incentives/__tests__/validateIncentives';
 import { Roboto } from 'next/font/google';
@@ -39,31 +40,12 @@ export default function Swap() {
   return (
     <div className={roboto.className + ' bg-adamant-background bg-cover min-h-screen text-white'}>
       <AppLayout>
-        <div className="max-w-xl mx-auto mt-28">
-          {/* <div className="flex gap-4 justify-between leading-6 px-5">
-            <div className="flex gap-4">
-              <div className="font-bold flex flex-col relative">
-                SWAP
-                <div className="relative">
-                  <div
-                    className="w-0 h-0 absolute left-3
-  border-l-[8px] border-l-transparent
-  border-b-[8px] border-b-[#30364E]
-  border-r-[8px] border-r-transparent"
-                  ></div>
-                </div>
-              </div>
-              <div className="brightness-50 font-medium">SEND</div>
-            </div>
-            {payToken && receiveToken ? (
-              <div key={payToken.address + receiveToken.address}>
-                + Add liquidity for {payToken.symbol} and {receiveToken.symbol}
-              </div>
-            ) : (
-              <div>Loading tokens...</div>
-            )}
-          </div> */}
-          <div className="bg-adamant-app-box bg-opacity-55 leading-none rounded-xl text-xl mt-2">
+        <div className="max-w-xl mx-auto mt-28 space-y-6">
+          {/* Voice Swap Interface */}
+          <VoiceSwapInterface />
+
+          {/* Regular Swap Form */}
+          <div className="bg-adamant-app-box bg-opacity-55 leading-none rounded-xl text-xl">
             <SwapForm />
           </div>
         </div>
