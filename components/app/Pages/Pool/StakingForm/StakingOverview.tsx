@@ -1,3 +1,4 @@
+import { LoadingPlaceholder } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
@@ -193,7 +194,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             <p className="text-adamant-text-box-secondary">Total Staked</p>
             <div className="font-medium text-adamant-text-box-main">
               {rewardEstimates.poolData.isLoading ? (
-                <div className="h-4 w-16 bg-adamant-app-input/30 animate-pulse rounded"></div>
+                <LoadingPlaceholder size="small" />
               ) : (
                 `${formatBalance(
                   rewardEstimates.poolData.totalLockedFormatted.toString()
@@ -205,7 +206,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             <p className="text-adamant-text-box-secondary">TVL</p>
             <div className="font-medium text-adamant-text-box-main">
               {rewardEstimates.poolData.isLoading ? (
-                <div className="h-4 w-16 bg-adamant-app-input/30 animate-pulse rounded"></div>
+                <LoadingPlaceholder size="small" />
               ) : (
                 formatUsd(rewardEstimates.poolData.tvlUsd)
               )}
@@ -288,7 +289,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
 
           <div className="text-right">
             {isLoading ? (
-              <div className="h-6 w-20 bg-adamant-app-input/30 animate-pulse rounded"></div>
+              <LoadingPlaceholder size="medium" />
             ) : (
               <div className="text-xl font-semibold text-adamant-text-box-main">
                 {formatBalance(stakedBalance)}
@@ -322,7 +323,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
 
             <div className="text-right flex items-center gap-2">
               {isLoading ? (
-                <div className="h-6 w-16 bg-adamant-app-input/30 animate-pulse rounded"></div>
+                <LoadingPlaceholder size="small" />
               ) : (
                 <>
                   <div className="text-xl font-semibold text-adamant-accentText">

@@ -1,6 +1,5 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
-import VoiceSwapInterface from '@/components/app/Pages/Swap/VoiceSwapInterface';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
 // import { validateIncentives } from '@/lib/keplr/incentives/__tests__/validateIncentives';
 import { Roboto } from 'next/font/google';
@@ -42,10 +41,10 @@ export default function Swap() {
       <AppLayout>
         <div className="max-w-xl mx-auto mt-28 space-y-6">
           {/* Voice Swap Interface */}
-          <VoiceSwapInterface />
+          {/* <VoiceSwapInterface /> */}
 
           {/* Regular Swap Form */}
-          <div className="bg-adamant-app-box bg-opacity-55 leading-none rounded-xl text-xl">
+          <div className="bg-adamant-app-box leading-none rounded-xl text-xl">
             <SwapForm />
           </div>
         </div>

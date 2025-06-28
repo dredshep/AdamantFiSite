@@ -28,7 +28,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   isLoading = false,
 }) => {
   return (
-    <div className="relative flex flex-col gap-2.5 bg-adamant-app-input/30 backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40">
+    <div className="relative flex flex-col gap-2.5 bg-adamant-app-input backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40">
       <div className="flex justify-between items-center">
         <label htmlFor={inputIdentifier} className="text-sm text-gray-400">
           {label}

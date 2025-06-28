@@ -1,4 +1,9 @@
 import FormButton from '@/components/app/Shared/Forms/FormButton';
+import {
+  ButtonContainer,
+  InfoContainer,
+  SmallInput,
+} from '@/components/app/Shared/Forms/Input/InputWrappers';
 import TokenInput from '@/components/app/Shared/Forms/Input/TokenInput';
 import { useSwapFormLean as useSwapForm } from '@/hooks/useSwapFormLean';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -118,9 +123,9 @@ const SwapForm: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 py-2.5 px-2.5">
       {/* Header with Reset Button */}
-      <div className="flex justify-between items-center px-2">
-        <h2 className="text-lg font-semibold text-gray-300">Swap Tokens</h2>
-        {/* <button
+      {/* <div className="flex justify-between items-center px-2">
+        <h2 className="text-lg font-semibold text-gray-300">Swap Tokens</h2> */}
+      {/* <button
           onClick={resetTokenSelections}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors duration-200 bg-adamant-app-input/30 hover:bg-adamant-app-input/50 px-3 py-1.5 rounded-lg"
           title="Reset token selections"
@@ -128,7 +133,7 @@ const SwapForm: React.FC = () => {
           <MdClear className="w-4 h-4" />
           Reset
         </button> */}
-      </div>
+      {/* </div> */}
 
       <div className="flex flex-col gap-6 relative">
         {/* <div className="flex flex-col gap-2.5 bg-adamant-app-input bg-opacity-50 rounded-lg p-4"> */}
@@ -145,7 +150,7 @@ const SwapForm: React.FC = () => {
         <div className="flex justify-center relative -my-3 z-10">
           <button
             onClick={swapTokens}
-            className="bg-adamant-app-input/50 hover:bg-adamant-app-input/70 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-all duration-200 group"
+            className="bg-adamant-app-input hover:bg-adamant-app-input/90 border border-adamant-box-inputBorder hover:border-white/20 rounded-xl p-3 transition-all duration-200 group"
             title="Swap token positions"
           >
             <HiArrowsUpDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors duration-200" />
@@ -168,19 +173,17 @@ const SwapForm: React.FC = () => {
         {/* </div> */}
       </div>
       {payToken !== undefined && receiveToken !== undefined && (
-        <div className="flex flex-col gap-3 px-2.5 text-gray-400 text-sm backdrop-blur-sm bg-adamant-app-input/30 rounded-lg p-4">
+        <InfoContainer className="flex flex-col gap-3 px-2.5 text-gray-400 text-sm">
           {/* Header with refresh button */}
           <div className="flex justify-between items-center -mt-1 mb-1">
             <span className="text-xs font-medium text-gray-300">Swap Details</span>
-            <button
+            <ButtonContainer
               onClick={refreshEstimation}
-              disabled={isEstimating}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors duration-200 bg-adamant-app-input/30 hover:bg-adamant-app-input/50 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refresh pool data and recalculate estimates"
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors duration-200 px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ReloadIcon className={`w-3 h-3 ${isEstimating ? 'animate-spin' : ''}`} />
               Refresh
-            </button>
+            </ButtonContainer>
           </div>
           <div className="flex justify-between">
             <div className="flex items-center">
@@ -316,7 +319,7 @@ const SwapForm: React.FC = () => {
           <div className="flex justify-between items-center">
             <span>Slippage</span>
             <div className="flex items-center gap-2">
-              <input
+              <SmallInput
                 type="number"
                 value={tempSlippage}
                 onChange={(e) => {
@@ -325,7 +328,7 @@ const SwapForm: React.FC = () => {
                     handleSlippageChange(value);
                   }
                 }}
-                className="w-20 bg-adamant-app-input/30 backdrop-blur-sm border border-white/5 rounded-lg px-2.5 py-1 text-right outline-none transition-all duration-200 hover:bg-adamant-app-input/40 focus:bg-adamant-app-input/50 focus:border-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <span>%</span>
               {hasSlippageChanges && (
@@ -352,7 +355,7 @@ const SwapForm: React.FC = () => {
               <span>{receiveToken.symbol}</span>
             </div>
           </div>
-        </div>
+        </InfoContainer>
       )}
       {/* <BestRouteEstimator
         // amountIn={payDetails.amount}

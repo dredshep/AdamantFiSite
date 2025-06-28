@@ -45,9 +45,10 @@ const config = {
             buttonDark: '#100F20',
             buttonLight: '#151426',
             border: '#313131',
+            inputBorder: '#404040',
           },
           app: {
-            box: '#272632',
+            box: '#2a2835',
             boxHighlight: '#444a5f',
             input: '#10131f',
             selectTrigger: '#232631',

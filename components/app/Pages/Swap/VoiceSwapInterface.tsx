@@ -1,3 +1,4 @@
+import { InfoContainer } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import { ConfigToken, TOKENS } from '@/config/tokens';
 import { useSwapFormLean } from '@/hooks/useSwapFormLean';
 import { useSwapStore } from '@/store/swapStore';
@@ -501,13 +502,13 @@ export const VoiceSwapInterface: React.FC = () => {
 
         {/* Transcript Display */}
         {transcript && (
-          <div className="bg-adamant-app-input/30 rounded-lg p-3 border border-white/5">
+          <InfoContainer>
             <div className="flex items-center gap-2 text-sm">
               <Volume2 className="w-4 h-4 text-adamant-accentText flex-shrink-0" />
               <span className="text-adamant-text-box-secondary">Heard:</span>
               <span className="text-adamant-text-box-main font-medium">{transcript}</span>
             </div>
-          </div>
+          </InfoContainer>
         )}
 
         {/* Debug Information */}
@@ -587,7 +588,7 @@ export const VoiceSwapInterface: React.FC = () => {
 
         {/* Keywords Panel */}
         {showKeywords && (
-          <div className="bg-adamant-app-input/20 rounded-lg p-4 border border-white/5">
+          <InfoContainer>
             <h4 className="text-sm font-medium text-adamant-text-box-main mb-3">
               Voice Keywords Reference
             </h4>
@@ -621,7 +622,7 @@ export const VoiceSwapInterface: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </InfoContainer>
         )}
       </div>
     </div>

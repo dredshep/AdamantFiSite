@@ -41,7 +41,7 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-1">
         {withLabel && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">

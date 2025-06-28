@@ -64,128 +64,194 @@ export const useSwapFormLean = () => {
     setIsEstimating(isEstimating);
   }
 
-  // Update the estimation effect
+  // Update the estimation effect with debouncing and race condition protection
   useEffect(() => {
-    const runEstimate = async () => {
-      console.log('=== Starting Estimation Process ===');
-      console.log('Current conditions:', {
-        hasSecretJs: !!secretjs,
-        payAmount: payDetails.amount,
-        payTokenSymbol: payToken?.symbol,
-        receiveTokenSymbol: receiveToken?.symbol,
-      });
+    // Debounce the estimation - wait 300ms after user stops typing
+    const debounceTimer = setTimeout(() => {
+      const runEstimate = async () => {
+        // Capture the current amount at the start of estimation
+        const estimationAmount = payDetails.amount;
+        const estimationPayToken = payToken?.symbol;
+        const estimationReceiveToken = receiveToken?.symbol;
 
-      // Set default "0" when conditions aren't met
-      if (!secretjs) {
-        console.log('❌ Estimation failed: secretjs not initialized');
-        resetAndSetIsEstimating(false);
-        return;
-      }
+        console.log('=== Starting Estimation Process ===', {
+          amount: estimationAmount,
+          payToken: estimationPayToken,
+          receiveToken: estimationReceiveToken,
+        });
+        console.log('Current conditions:', {
+          hasSecretJs: !!secretjs,
+          payAmount: payDetails.amount,
+          payTokenSymbol: payToken?.symbol,
+          receiveTokenSymbol: receiveToken?.symbol,
+        });
 
-      if (
-        typeof payDetails.amount !== 'string' ||
-        payDetails.amount === '' ||
-        payDetails.amount === '0'
-      ) {
-        console.log('❌ Estimation failed: no pay amount or amount is zero');
-        resetAndSetIsEstimating(false);
-        return;
-      }
-
-      const amount = parseFloat(payDetails.amount);
-      if (isNaN(amount) || amount <= 0) {
-        console.log('❌ Estimation failed: pay amount is invalid or less than or equal to zero');
-        resetAndSetIsEstimating(false);
-        return;
-      }
-
-      if (payToken == null || receiveToken == null) {
-        console.log('❌ Estimation failed: tokens not properly initialized');
-        resetAndSetIsEstimating(false);
-        return;
-      }
-
-      setIsEstimating(true);
-
-      try {
-        // Find the matching liquidity pair from config
-        const liquidityPair = findLiquidityPair(payToken.symbol, receiveToken.symbol);
-
-        if (!liquidityPair) {
-          console.log('❌ Estimation failed: No liquidity pair found for these tokens', {
-            payToken,
-            receiveToken,
-          });
+        // Set default "0" when conditions aren't met
+        if (!secretjs) {
+          console.log('❌ Estimation failed: secretjs not initialized');
           resetAndSetIsEstimating(false);
           return;
         }
 
-        const poolAddress = liquidityPair.pairContract;
-        const codeHash = liquidityPair.pairContractCodeHash;
-
-        console.log(`🔗 Using liquidity pair:`, {
-          payTokenSymbol: payToken.symbol,
-          receiveTokenSymbol: receiveToken.symbol,
-          poolAddress,
-          codeHash,
-          liquidityPair,
-        });
-
-        // Get the actual pool data from the blockchain
-        const poolData = await getPoolData(secretjs, poolAddress, codeHash);
-
-        // Calculate the swap output using the actual pool data
-        const amountInDecimal = new Decimal(payDetails.amount);
-        const {
-          output,
-          priceImpact: impact,
-          lpFee,
-        } = calculateSingleHopOutput(
-          amountInDecimal,
-          poolData,
-          payToken.address,
-          receiveToken.address
-        );
-
-        // Set the calculated values
-        setEstimatedOutput(output.toFixed(6));
-        setPriceImpact(impact);
-        setPoolFee(lpFee.toFixed(6));
-
-        // Calculate transaction fee based on gas settings
-        // Default gas price if not set or if gas is 0
-        const gasPrice = gas;
-        const gasLimit = 500_000; // Standard gas limit for swaps
-        const txFeeInUscrt = gasPrice * gasLimit;
-        const txFeeInScrt = txFeeInUscrt / 1_000_000; // Convert from uscrt to SCRT
-        setTxFee(txFeeInScrt.toFixed(6));
-
-        // Calculate min receive based on output and slippage
-        const minReceiveAmount = output.mul(new Decimal(1).sub(slippage / 100)).toFixed(6);
-        setMinReceive(minReceiveAmount);
-
-        // Need to add an await to satisfy the linter
-        await Promise.resolve();
-      } catch (error) {
-        console.error('❌ Error during estimation:', error);
-
-        // Check if it's a no liquidity error and provide specific feedback
-        if (error instanceof Error && error.message.includes('no liquidity')) {
-          console.log('💧 Pool has no liquidity - setting appropriate values');
-          setEstimatedOutput('0');
-          setPriceImpact('N/A');
-          setPoolFee('0');
-          setTxFee('0');
-          setMinReceive('0');
-        } else {
-          resetEstimationValues();
+        if (
+          typeof payDetails.amount !== 'string' ||
+          payDetails.amount === '' ||
+          payDetails.amount === '0'
+        ) {
+          console.log('❌ Estimation failed: no pay amount or amount is zero');
+          resetAndSetIsEstimating(false);
+          return;
         }
-      } finally {
-        setIsEstimating(false);
-      }
-    };
 
-    void runEstimate();
+        const amount = parseFloat(payDetails.amount);
+        if (isNaN(amount) || amount <= 0) {
+          console.log('❌ Estimation failed: pay amount is invalid or less than or equal to zero');
+          resetAndSetIsEstimating(false);
+          return;
+        }
+
+        if (payToken == null || receiveToken == null) {
+          console.log('❌ Estimation failed: tokens not properly initialized');
+          resetAndSetIsEstimating(false);
+          return;
+        }
+
+        setIsEstimating(true);
+
+        try {
+          // Find the matching liquidity pair from config
+          const liquidityPair = findLiquidityPair(payToken.symbol, receiveToken.symbol);
+
+          if (!liquidityPair) {
+            console.log('❌ Estimation failed: No liquidity pair found for these tokens', {
+              payToken,
+              receiveToken,
+            });
+            resetAndSetIsEstimating(false);
+            return;
+          }
+
+          const poolAddress = liquidityPair.pairContract;
+          const codeHash = liquidityPair.pairContractCodeHash;
+
+          console.log(`🔗 Using liquidity pair:`, {
+            payTokenSymbol: payToken.symbol,
+            receiveTokenSymbol: receiveToken.symbol,
+            poolAddress,
+            codeHash,
+            liquidityPair,
+            estimationAmount,
+          });
+
+          // Get the actual pool data from the blockchain
+          const poolData = await getPoolData(secretjs, poolAddress, codeHash);
+
+          // Calculate the swap output using the actual pool data
+          const amountInDecimal = new Decimal(estimationAmount);
+          const {
+            output,
+            priceImpact: impact,
+            lpFee,
+          } = calculateSingleHopOutput(
+            amountInDecimal,
+            poolData,
+            payToken.address,
+            receiveToken.address
+          );
+
+          // CRITICAL: Only update state if the form values haven't changed since we started
+          const currentAmount = payDetails.amount;
+          const currentPayToken = payToken?.symbol;
+          const currentReceiveToken = receiveToken?.symbol;
+
+          if (
+            currentAmount === estimationAmount &&
+            currentPayToken === estimationPayToken &&
+            currentReceiveToken === estimationReceiveToken
+          ) {
+            console.log('✅ Estimation complete and still current:', {
+              estimationAmount,
+              currentAmount,
+              output: output.toFixed(6),
+            });
+
+            // Set the calculated values
+            setEstimatedOutput(output.toFixed(6));
+            setPriceImpact(impact);
+            setPoolFee(lpFee.toFixed(6));
+
+            // Calculate transaction fee based on gas settings
+            // Default gas price if not set or if gas is 0
+            const gasPrice = gas;
+            const gasLimit = 500_000; // Standard gas limit for swaps
+            const txFeeInUscrt = gasPrice * gasLimit;
+            const txFeeInScrt = txFeeInUscrt / 1_000_000; // Convert from uscrt to SCRT
+            setTxFee(txFeeInScrt.toFixed(6));
+
+            // Calculate min receive based on output and slippage
+            const minReceiveAmount = output.mul(new Decimal(1).sub(slippage / 100)).toFixed(6);
+            setMinReceive(minReceiveAmount);
+          } else {
+            console.log('🚫 Estimation outdated, ignoring result:', {
+              estimationAmount,
+              currentAmount,
+              estimationPayToken,
+              currentPayToken,
+              estimationReceiveToken,
+              currentReceiveToken,
+            });
+          }
+
+          // Need to add an await to satisfy the linter
+          await Promise.resolve();
+        } catch (error) {
+          console.error('❌ Error during estimation:', error);
+
+          // Only update state if the form values haven't changed since we started
+          const currentAmount = payDetails.amount;
+          const currentPayToken = payToken?.symbol;
+          const currentReceiveToken = receiveToken?.symbol;
+
+          if (
+            currentAmount === estimationAmount &&
+            currentPayToken === estimationPayToken &&
+            currentReceiveToken === estimationReceiveToken
+          ) {
+            // Check if it's a no liquidity error and provide specific feedback
+            if (error instanceof Error && error.message.includes('no liquidity')) {
+              console.log('💧 Pool has no liquidity - setting appropriate values');
+              setEstimatedOutput('0');
+              setPriceImpact('N/A');
+              setPoolFee('0');
+              setTxFee('0');
+              setMinReceive('0');
+            } else {
+              resetEstimationValues();
+            }
+          }
+        } finally {
+          // Only reset isEstimating if this is still the latest request
+          const currentAmount = payDetails.amount;
+          const currentPayToken = payToken?.symbol;
+          const currentReceiveToken = receiveToken?.symbol;
+
+          if (
+            currentAmount === estimationAmount &&
+            currentPayToken === estimationPayToken &&
+            currentReceiveToken === estimationReceiveToken
+          ) {
+            setIsEstimating(false);
+          }
+        }
+      };
+
+      void runEstimate();
+    }, 300); // 300ms debounce delay
+
+    // Cleanup function to cancel the timer if dependencies change
+    return () => {
+      clearTimeout(debounceTimer);
+    };
   }, [payDetails.amount, payToken, receiveToken, secretjs, slippage, gas, refreshTrigger]);
 
   const handleSwapClick = async () => {
@@ -360,12 +426,26 @@ export const useSwapFormLean = () => {
     const currentPayAddress = payDetails.tokenAddress;
     const currentReceiveAddress = receiveDetails.tokenAddress;
 
+    // Get the current estimated output to use as the new input amount
+    const currentEstimatedOutput = estimatedOutput;
+
     // Swap the token addresses
     setTokenInputProperty('swap.pay', 'tokenAddress', currentReceiveAddress);
     setTokenInputProperty('swap.receive', 'tokenAddress', currentPayAddress);
 
-    // Clear the amounts when swapping
-    setTokenInputProperty('swap.pay', 'amount', '');
+    // Set the estimated output as the new input amount (if we have a valid estimation)
+    if (
+      currentEstimatedOutput &&
+      currentEstimatedOutput !== '0' &&
+      !isNaN(parseFloat(currentEstimatedOutput))
+    ) {
+      setTokenInputProperty('swap.pay', 'amount', currentEstimatedOutput);
+    } else {
+      // Fallback to clearing if no valid estimation
+      setTokenInputProperty('swap.pay', 'amount', '');
+    }
+
+    // Clear the receive amount - it will be recalculated by the estimation effect
     setTokenInputProperty('swap.receive', 'amount', '');
   };
 

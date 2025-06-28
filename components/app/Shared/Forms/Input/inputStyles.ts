@@ -1,8 +1,8 @@
 // Shared styling constants for input components
 export const INPUT_STYLES = {
-  // Main container for input components
+  // Main container for input components - Updated with new border and full opacity
   container:
-    'flex flex-col gap-2.5 bg-adamant-app-input/30 backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40',
+    'flex flex-col gap-2.5 bg-adamant-app-input backdrop-blur-sm rounded-lg p-4 border border-adamant-box-inputBorder transition-all duration-200 hover:bg-adamant-app-input/90',
 
   // Header row with label and balance
   header: 'flex justify-between items-center',
@@ -25,6 +25,29 @@ export const INPUT_STYLES = {
   // Loading overlay
   loadingOverlay: 'absolute inset-0 flex items-center',
   loadingPlaceholder: 'h-8 w-32 bg-white/5 animate-pulse rounded',
+
+  // Additional utility styles for common patterns
+
+  // Info/details containers (like swap details, voice transcript, etc.)
+  infoContainer:
+    'bg-adamant-app-input backdrop-blur-sm rounded-lg p-4 border border-adamant-box-inputBorder transition-all duration-200 hover:bg-adamant-app-input/90',
+
+  // Small input fields (like slippage input)
+  smallInput:
+    'bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg px-2.5 py-1 text-right outline-none transition-all duration-200 hover:bg-adamant-app-input/90 focus:bg-adamant-app-input/90 focus:border-white/10',
+
+  // Button containers with input styling
+  buttonContainer:
+    'bg-adamant-app-input backdrop-blur-sm rounded-lg border border-adamant-box-inputBorder transition-all duration-200 hover:bg-adamant-app-input/90',
+
+  // Loading placeholders for different sizes
+  loadingPlaceholderSmall: 'h-4 w-16 bg-adamant-app-input backdrop-blur-sm animate-pulse rounded',
+  loadingPlaceholderMedium: 'h-6 w-20 bg-adamant-app-input backdrop-blur-sm animate-pulse rounded',
+  loadingPlaceholderLarge: 'h-8 w-32 bg-adamant-app-input backdrop-blur-sm animate-pulse rounded',
+
+  // Form button styling (for FormButton component)
+  formButton:
+    'w-full py-3 px-4 bg-adamant-app-input backdrop-blur-sm rounded-lg border border-adamant-box-inputBorder text-white font-medium transition-all duration-200 hover:enabled:bg-adamant-app-input/90 hover:enabled:border-white/10 disabled:opacity-50 disabled:cursor-not-allowed',
 } as const;
 
 // Validation regex for amount inputs

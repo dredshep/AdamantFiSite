@@ -1,6 +1,7 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import FilterButton from '@/components/app/Pages/Pools/FilterButton';
 import SparklyButton from '@/components/app/Pages/Pools/SparklyButton';
+import { LoadingPlaceholder } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import {
   FinancialDataRow,
   FinancialTableSearchBar,
@@ -859,9 +860,7 @@ export default function PoolsPage() {
                                   }
 
                                   if (poolData?.isLoading) {
-                                    return (
-                                      <div className="h-4 w-16 bg-adamant-app-input/30 animate-pulse rounded"></div>
-                                    );
+                                    return <LoadingPlaceholder size="small" />;
                                   } else if (!poolData || poolData.tvlUsd === null) {
                                     return (
                                       <span className="font-medium text-adamant-text-box-secondary">
@@ -923,9 +922,7 @@ export default function PoolsPage() {
                                   }
 
                                   if (poolData?.isLoading) {
-                                    return (
-                                      <div className="h-4 w-20 bg-adamant-app-input/30 animate-pulse rounded"></div>
-                                    );
+                                    return <LoadingPlaceholder size="medium" />;
                                   } else if (
                                     poolData &&
                                     ((poolData.userLpBalance || 0) > 0 ||

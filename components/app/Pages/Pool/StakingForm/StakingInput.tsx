@@ -69,6 +69,7 @@
  * RECOMMENDATION: Use StakingInput2 approach for production
  */
 
+import { InfoContainer } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import StakingPoolSelectionModal from '@/components/app/Shared/Forms/Select/StakingPoolSelectionModal';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { getActiveStakingPools } from '@/config/staking';
@@ -151,7 +152,7 @@ const StakingInput: React.FC<StakingInputProps> = ({
   };
 
   return (
-    <div className="bg-adamant-app-input/20 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border space-y-4">
+    <InfoContainer className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-adamant-text-box-main">{operationLabel}</h3>
@@ -243,7 +244,7 @@ const StakingInput: React.FC<StakingInputProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </InfoContainer>
   );
 };
 
