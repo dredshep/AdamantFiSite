@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1077" height="1077"><svg width="1077" height="1077" viewBox="0 0 1077 1077" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="SvgjsClipPath1080">
+      <path d="M995.39 570.02V830.34H1076.65V570.02H995.39Z"></path>
+      <path d="M823.14 830.34H724.4L667.27 749.08L484.26 488.77H484.21L427.14 407.51H427.08L411.57 385.41L362.22 455.61L155.87 749.08H568.53L625.66 830.34H0L312.83 385.41L362.22 315.2L411.57 245L468.7 326.26L510.31 385.41L525.82 407.51H525.88L582.95 488.77H583L823.14 830.34Z"></path>
+      <path d="M1076.65 245V326.26H567.43L510.3 245H1076.65Z"></path>
+      <path d="M975.43 407.51V488.77H681.68L624.55 407.51H975.43Z"></path>
+    </clipPath>
+  </defs>
+  <!-- Single rectangle clipped to the union of the shapes -->
+  <rect width="1077" height="1077" fill="#A78E5A" clip-path="url(#iconShape)" style="--darkreader-inline-fill: var(--darkreader-background-a78e5a, #635435);" data-darkreader-inline-fill=""></rect>
+</svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>
