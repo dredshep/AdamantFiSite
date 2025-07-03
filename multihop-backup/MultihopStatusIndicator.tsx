@@ -18,11 +18,7 @@ interface MultihopStatusIndicatorProps {
  *
  * Can be easily commented out to hide multihop status from users
  */
-const MultihopStatusIndicator: React.FC<MultihopStatusIndicatorProps> = ({
-  swapPath,
-  payTokenSymbol,
-  receiveTokenSymbol,
-}) => {
+const MultihopStatusIndicator: React.FC<MultihopStatusIndicatorProps> = ({ swapPath }) => {
   // Validate multihop configuration
   const multihopConfig = validateMultihopConfig();
 

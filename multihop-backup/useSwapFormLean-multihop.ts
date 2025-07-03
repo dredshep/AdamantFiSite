@@ -36,7 +36,7 @@ export const useSwapFormLean = () => {
 
   const { secretjs, walletAddress } = useKeplrConnection();
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0');
-  const { setPending, setResult } = useTxStore.getState();
+  const { setPending } = useTxStore.getState();
   const [isEstimating, setIsEstimating] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -317,24 +317,6 @@ export const useSwapFormLean = () => {
 
     try {
       setPending(true);
-
-      // Get account info and setup transaction options
-      const accountInfo = await secretjs.query.auth.account({
-        address: walletAddress!,
-      });
-
-      const baseAccount = accountInfo as {
-        '@type': '/cosmos.auth.v1beta1.BaseAccount';
-        sequence?: string;
-        account_number?: string;
-      };
-
-      const sequence = isNotNullish(baseAccount.sequence)
-        ? parseInt(baseAccount.sequence, 10)
-        : null;
-      const accountNumber = isNotNullish(baseAccount.account_number)
-        ? parseInt(baseAccount.account_number, 10)
-        : null;
 
       // Use token decimals from the static config
       const decimalsIn = payToken.symbol === 'ETH.axl' ? 18 : 6;
