@@ -145,14 +145,8 @@ export const toastManager = {
     }),
 
   viewingKeyRequired: () =>
-    showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_REQUIRED, 'Viewing key required', 'warning', {
-      message: 'A viewing key is needed to see your balance for this token.',
-      actionLabel: 'Learn More',
-      onAction: () =>
-        window.open(
-          'https://docs.scrt.network/secret-network-documentation/development/development-concepts/viewing-keys',
-          '_blank'
-        ),
+    showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_REQUIRED, 'Viewing Key Required', 'warning', {
+      message: 'Please open the Keplr extension to set or fix the viewing key for this token.',
       autoClose: 8000,
     }),
 

@@ -1,21 +1,8 @@
-import {
-  TokenService,
-  TokenServiceError,
-  TokenServiceErrorType,
-} from '@/services/secret/TokenService';
-import { useTokenBalanceStore } from '@/store/tokenBalanceStore';
-import { useTokenStore } from '@/store/tokenStore';
+import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { SecretString } from '@/types';
-import { getSecretNetworkEnvVars, LoadBalancePreference } from '@/utils/env';
-import { toastManager } from '@/utils/toast/toastManager';
-import { getTokenDecimals } from '@/utils/token/tokenInfo';
-import { Keplr, Window } from '@keplr-wallet/types';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'react-toastify';
-import { useSecretNetwork } from './useSecretNetwork';
+import { useCallback, useEffect } from 'react';
 
-const REFRESH_INTERVAL = 30000; // 30 seconds
-
+// Keep the error enum for backward compatibility
 export enum TokenBalanceError {
   NO_KEPLR = 'NO_KEPLR',
   NO_VIEWING_KEY = 'NO_VIEWING_KEY',
@@ -25,361 +12,192 @@ export enum TokenBalanceError {
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
-// interface ErrorConfig {
-//   title: string;
-//   message: string;
-//   actionLabel?: string;
-//   onAction?: () => void;
-// }
+// Helper function to convert string errors to TokenBalanceError enum
+function mapStringToTokenBalanceError(errorString: string | null): TokenBalanceError | null {
+  if (!errorString) return null;
 
-interface TokenBalanceHookReturn {
-  amount: string | null;
-  loading: boolean;
-  error: TokenBalanceError | null;
-  lastUpdated: number | null;
-  refetch: () => Promise<void>;
-  isRejected: boolean;
+  const lowerError = errorString.toLowerCase();
+
+  if (lowerError.includes('keplr') || lowerError.includes('wallet not connected')) {
+    return TokenBalanceError.NO_KEPLR;
+  }
+  if (lowerError.includes('viewing key') || lowerError.includes('set viewing key')) {
+    return TokenBalanceError.NO_VIEWING_KEY;
+  }
+  if (lowerError.includes('rejected')) {
+    return TokenBalanceError.VIEWING_KEY_REJECTED;
+  }
+  if (lowerError.includes('network')) {
+    return TokenBalanceError.NETWORK_ERROR;
+  }
+
+  return TokenBalanceError.UNKNOWN_ERROR;
 }
 
-// const ERROR_MESSAGES: Record<TokenBalanceError, ErrorConfig> = {
-//   [TokenBalanceError.NO_KEPLR]: {
-//     title: 'Keplr Not Found',
-//     message: 'Please install Keplr wallet to view your balance',
-//     actionLabel: 'Install Keplr',
-//     onAction: () => window.open('https://www.keplr.app/download', '_blank'),
-//   },
-//   [TokenBalanceError.NO_VIEWING_KEY]: {
-//     title: 'Viewing Key Required',
-//     message: 'A viewing key is needed to see your balance',
-//     actionLabel: 'Learn More',
-//     onAction: () =>
-//       window.open(
-//         'https://docs.scrt.network/secret-network-documentation/development/development-concepts/viewing-keys',
-//         '_blank'
-//       ),
-//   },
-//   [TokenBalanceError.VIEWING_KEY_REJECTED]: {
-//     title: 'Viewing Key Rejected',
-//     message: 'You rejected the viewing key request. Click to try again.',
-//     actionLabel: 'Try Again',
-//     onAction: () => {},
-//   },
-//   [TokenBalanceError.NO_SECRET_JS]: {
-//     title: 'Connection Error',
-//     message: 'Not connected to Secret Network. Please refresh the page.',
-//   },
-//   [TokenBalanceError.NETWORK_ERROR]: {
-//     title: 'Network Error',
-//     message: 'Unable to fetch your balance. Please check your connection',
-//   },
-//   [TokenBalanceError.UNKNOWN_ERROR]: {
-//     title: 'Unknown Error',
-//     message: 'An unexpected error occurred while fetching your balance',
-//   },
-// };
+interface UseTokenBalanceReturn {
+  amount: string | null; // Keep "amount" for backward compatibility, "-" becomes null, "0" stays "0"
+  balance: string; // "-" for unfetched, "0" for actual zero balance, actual balance otherwise
+  loading: boolean;
+  error: TokenBalanceError | null; // Convert string errors back to enum for compatibility
+  needsViewingKey: boolean;
+  refetch: () => void;
+  suggestToken: () => void;
+  retryWithViewingKey: () => void;
+}
 
+/**
+ * Centralized token balance hook that uses the balance fetcher store
+ * Supports both regular tokens and LP tokens
+ *
+ * @param tokenAddress - The token address to fetch balance for
+ * @param caller - The caller string for tracing purposes
+ * @param autoFetch - Whether to automatically fetch balance when hook mounts (default: true)
+ */
 export function useTokenBalance(
   tokenAddress: SecretString | undefined,
-  autoFetch: boolean = false
-): TokenBalanceHookReturn {
-  const { secretjs } = useSecretNetwork();
-  const { setBalance, getBalance, setLoading, setError } = useTokenBalanceStore();
-  const [isRejected, setIsRejected] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
-  const lastFetchTime = useRef<number>(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  caller: string,
+  autoFetch: boolean = true
+): UseTokenBalanceReturn {
+  const {
+    addToQueue,
+    suggestToken: suggestTokenAction,
+    retryWithViewingKey: retryWithViewingKeyAction,
+  } = useBalanceFetcherStore.getState();
 
-  // Rate limiting: minimum 2 seconds between calls for the same token
-  const RATE_LIMIT_MS = 2000;
-
-  const tokenService = useMemo(() => (secretjs ? new TokenService() : null), [secretjs]);
-
-  useEffect(() => {
-    const handleKeplrReady = () => {
-      if (isRejected) {
-        setIsRejected(false);
-        toast.info('Keplr is ready. You can try fetching balance again.', {
-          autoClose: 3000,
-          toastId: 'keplr-ready',
-        });
-      }
-    };
-
-    window.addEventListener('keplr_keystorechange', handleKeplrReady);
-    return () => window.removeEventListener('keplr_keystorechange', handleKeplrReady);
-  }, [isRejected]);
-
-  const fetchBalance = useCallback(async () => {
-    if (
-      typeof tokenAddress !== 'string' ||
-      tokenAddress.length === 0 ||
-      !secretjs ||
-      !tokenService
-    ) {
-      return;
-    }
-
-    // Rate limiting check
-    const now = Date.now();
-    if (now - lastFetchTime.current < RATE_LIMIT_MS) {
-      return; // Skip if called too recently
-    }
-
-    // Prevent concurrent calls
-    if (isFetching) {
-      return;
-    }
-
-    if (isRejected) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    }
-
-    setIsFetching(true);
-    lastFetchTime.current = now;
-    setIsRejected(false);
-    setLoading(tokenAddress, true);
-
-    try {
-      tokenService.clearRejectedViewingKey(tokenAddress);
-
-      // Get token from token store
-      const token = useTokenStore.getState().getTokenByAddress(tokenAddress);
-
-      if (!token || !token.codeHash) {
-        console.error(`Code hash not found for token: ${tokenAddress}`);
-        setError(tokenAddress, TokenBalanceError.UNKNOWN_ERROR);
-        return;
-      }
-
-      const tokenCodeHash = token.codeHash;
-      const rawAmount = await tokenService.getBalance(tokenAddress, tokenCodeHash);
-      const decimals = getTokenDecimals(tokenAddress);
-      const value = Number(rawAmount) / Math.pow(10, decimals);
-
-      setBalance(tokenAddress, {
-        amount: value.toString(),
+  const balanceState = useBalanceFetcherStore((state) => {
+    if (!tokenAddress) {
+      return {
+        balance: '-',
         loading: false,
-        lastUpdated: Date.now(),
         error: null,
-      });
-    } catch (err) {
-      if (err instanceof TokenServiceError) {
-        console.log('TokenServiceError caught in useTokenBalance:', err.message, err.type);
-
-        switch (err.type) {
-          case TokenServiceErrorType.VIEWING_KEY_REJECTED:
-            toastManager.viewingKeyRejected(() => {
-              setIsRejected(false);
-              void fetchBalance();
-            });
-            setBalance(tokenAddress, {
-              amount: null,
-              loading: false,
-              lastUpdated: 0,
-              error: null,
-            });
-            return;
-
-          case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
-            setError(tokenAddress, TokenBalanceError.NO_VIEWING_KEY);
-            toastManager.viewingKeyRequired();
-            break;
-
-          case TokenServiceErrorType.VIEWING_KEY_INVALID:
-            setError(tokenAddress, TokenBalanceError.NO_VIEWING_KEY);
-            toastManager.viewingKeyRequired();
-            break;
-
-          case TokenServiceErrorType.NETWORK_ERROR:
-            setError(tokenAddress, TokenBalanceError.NETWORK_ERROR);
-            toastManager.networkError();
-            break;
-
-          case TokenServiceErrorType.WALLET_ERROR:
-            setError(tokenAddress, TokenBalanceError.NO_KEPLR);
-            toastManager.keplrNotInstalled();
-            break;
-
-          default:
-            setError(tokenAddress, TokenBalanceError.UNKNOWN_ERROR);
-            toastManager.balanceFetchError();
-            break;
-        }
-      } else if (err instanceof Error) {
-        console.log('Error caught in useTokenBalance:', err.message);
-
-        if (err.message.includes('Viewing key request rejected')) {
-          toastManager.viewingKeyRejected(() => {
-            setIsRejected(false);
-            void fetchBalance();
-          });
-          setBalance(tokenAddress, {
-            amount: null,
-            loading: false,
-            lastUpdated: 0,
-            error: null,
-          });
-          return;
-        }
-
-        let errorType = TokenBalanceError.UNKNOWN_ERROR;
-        if (err.message.includes('Keplr not installed')) {
-          errorType = TokenBalanceError.NO_KEPLR;
-          toastManager.keplrNotInstalled();
-        } else if (err.message.includes('Viewing key required')) {
-          errorType = TokenBalanceError.NO_VIEWING_KEY;
-          toastManager.viewingKeyRequired();
-        } else if (err.message.includes('network')) {
-          errorType = TokenBalanceError.NETWORK_ERROR;
-          toastManager.networkError();
-        } else {
-          toastManager.balanceFetchError();
-        }
-
-        setError(tokenAddress, errorType);
-      }
-    } finally {
-      setIsFetching(false);
+        lastUpdated: 0,
+        needsViewingKey: false,
+      };
     }
-  }, [tokenService, tokenAddress, secretjs, setBalance, setLoading, setError, isRejected]);
-
-  // const showErrorToast = useCallback(
-  //   (errorType: TokenBalanceError, details?: string) => {
-  //     const errorKey = `${errorType}-${details ?? ''}`;
-  //     console.log('Toast state:', { errorType, errorKey, toastShown });
-  //     if (toastShown === errorKey) return;
-
-  //     const errorConfig = { ...ERROR_MESSAGES[errorType] };
-
-  //     if (
-  //       errorType === TokenBalanceError.VIEWING_KEY_REJECTED &&
-  //       tokenService &&
-  //       typeof tokenAddress === 'string' &&
-  //       tokenAddress.length > 0
-  //     ) {
-  //       errorConfig.onAction = () => {
-  //         tokenService.clearRejectedViewingKey(tokenAddress);
-  //         setToastShown(null);
-  //         void fetchBalance();
-  //       };
-  //     }
-
-  //     toast.error(
-  //       <ErrorToast
-  //         title={errorConfig.title}
-  //         message={errorConfig.message}
-  //         details={details}
-  //         actionLabel={errorConfig.actionLabel}
-  //         onActionClick={errorConfig.onAction}
-  //       />,
-  //       {
-  //         autoClose: errorType === TokenBalanceError.VIEWING_KEY_REJECTED ? false : 6000,
-  //         toastId: errorKey,
-  //       }
-  //     );
-  //     setToastShown(errorKey);
-  //   },
-  //   [toastShown, tokenService, tokenAddress, fetchBalance]
-  // );
-
-  const checkViewingKey = useCallback(async () => {
-    if (
-      typeof tokenAddress !== 'string' ||
-      tokenAddress.length === 0 ||
-      !secretjs ||
-      !tokenService
-    ) {
-      return;
-    }
-
-    try {
-      const keplr: Keplr | undefined = (window as unknown as Window).keplr;
-
-      if (!keplr) {
-        toastManager.keplrNotInstalled();
-        return;
+    return (
+      state.balances[tokenAddress] ?? {
+        balance: '-',
+        loading: false,
+        error: null,
+        lastUpdated: 0,
+        needsViewingKey: false,
       }
+    );
+  });
 
-      try {
-        const viewingKey = await keplr
-          .getSecret20ViewingKey('secret-4', tokenAddress)
-          .catch(() => null);
-
-        if (typeof viewingKey === 'string' && viewingKey.length > 0) {
-          // Just verify we have a viewing key, don't automatically fetch balance
-          // The regular polling will handle balance fetching
-          return true;
-        }
-      } catch (error) {
-        console.log('Viewing key check failed:', error);
-      }
-    } catch (error) {
-      console.log('Keplr check failed:', error);
+  // Memoized refetch function
+  const refetch = useCallback(() => {
+    if (tokenAddress) {
+      addToQueue(tokenAddress, caller);
     }
-    return false;
-  }, [tokenAddress, secretjs, tokenService]);
+  }, [tokenAddress, addToQueue, caller]);
 
+  // Memoized suggest token function
+  const suggestToken = useCallback(() => {
+    if (tokenAddress) {
+      void suggestTokenAction(tokenAddress);
+    }
+  }, [tokenAddress, suggestTokenAction]);
+
+  // Memoized retry with viewing key function
+  const retryWithViewingKey = useCallback(() => {
+    if (tokenAddress) {
+      void retryWithViewingKeyAction(tokenAddress);
+    }
+  }, [tokenAddress, retryWithViewingKeyAction]);
+
+  // Auto-fetch balance when component mounts (if enabled)
   useEffect(() => {
-    // Only check viewing key if load balance preference allows it
-    try {
-      const envVars = getSecretNetworkEnvVars();
-      if (envVars.LOAD_BALANCE_PREFERENCE !== LoadBalancePreference.None) {
-        void checkViewingKey();
-      }
-    } catch (error) {
-      // If env vars are not set, don't check viewing key
-      console.warn('Environment variables not set, skipping viewing key check:', error);
+    if (autoFetch && tokenAddress) {
+      addToQueue(tokenAddress, caller);
     }
-  }, [checkViewingKey]);
+  }, [autoFetch, tokenAddress, addToQueue, caller]);
 
-  useEffect(() => {
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Check environment preference first
-    try {
-      const envVars = getSecretNetworkEnvVars();
-      const shouldFetch =
-        autoFetch && envVars.LOAD_BALANCE_PREFERENCE !== LoadBalancePreference.None;
-
-      if (!shouldFetch) return;
-    } catch (error) {
-      // If env vars are not set, default to not fetching
-      console.warn('Environment variables not set, disabling auto-fetch:', error);
-      return;
-    }
-
-    if (typeof tokenAddress !== 'string' || tokenAddress.length === 0) return;
-
-    // Initial fetch
-    void fetchBalance();
-
-    // Set up interval
-    intervalRef.current = setInterval(() => {
-      if (!isRejected && !isFetching) {
-        void fetchBalance();
-      }
-    }, REFRESH_INTERVAL);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [tokenAddress, autoFetch, isRejected, isFetching]);
-
-  const currentBalance = getBalance(tokenAddress ?? '');
+  // Convert balance format for backward compatibility
+  const amount = balanceState.balance === '-' ? null : balanceState.balance;
+  const error = mapStringToTokenBalanceError(balanceState.error);
 
   return {
-    amount: currentBalance?.amount ?? null,
-    loading: currentBalance?.loading ?? false,
-    error: currentBalance?.error ?? null,
-    lastUpdated: currentBalance?.lastUpdated ?? null,
-    refetch: fetchBalance,
-    isRejected,
+    amount, // For backward compatibility
+    balance: balanceState.balance, // New format
+    loading: balanceState.loading,
+    error, // Converted to enum for backward compatibility
+    needsViewingKey: balanceState.needsViewingKey,
+    refetch,
+    suggestToken,
+    retryWithViewingKey,
   };
+}
+
+/**
+ * Hook for fetching multiple token balances at once
+ * Returns a map of token addresses to their balance states
+ *
+ * @param tokenAddresses - Array of token addresses to fetch balances for
+ * @param caller - The caller string for tracing purposes
+ * @param autoFetch - Whether to automatically fetch balances when hook mounts (default: true)
+ */
+export function useMultipleTokenBalances(
+  tokenAddresses: (SecretString | undefined)[],
+  caller: string,
+  autoFetch: boolean = true
+): Record<string, UseTokenBalanceReturn> {
+  const {
+    addToQueue,
+    suggestToken: suggestTokenAction,
+    retryWithViewingKey: retryWithViewingKeyAction,
+  } = useBalanceFetcherStore.getState();
+
+  // Filter out undefined addresses
+  const validAddresses = tokenAddresses.filter((addr): addr is SecretString => !!addr);
+
+  // Use a selector to get all relevant balance states at once
+  const balanceStates = useBalanceFetcherStore((state) => {
+    const states: Record<string, (typeof state.balances)[string]> = {};
+    validAddresses.forEach((address) => {
+      states[address] = state.balances[address] ?? {
+        balance: '-',
+        loading: false,
+        error: null,
+        lastUpdated: 0,
+        needsViewingKey: false,
+      };
+    });
+    return states;
+  });
+
+  // Auto-fetch balances when component mounts (if enabled)
+  useEffect(() => {
+    if (autoFetch && validAddresses.length > 0) {
+      validAddresses.forEach((address) => addToQueue(address, `${caller}:${address.slice(-6)}`));
+    }
+  }, [autoFetch, validAddresses, addToQueue, caller]);
+
+  // Create the return object with balance states for each token
+  const result: Record<string, UseTokenBalanceReturn> = {};
+
+  validAddresses.forEach((tokenAddress) => {
+    const balanceState = balanceStates[tokenAddress] ?? {
+      balance: '-',
+      loading: false,
+      error: null,
+      lastUpdated: 0,
+      needsViewingKey: false,
+    };
+    const amount = balanceState.balance === '-' ? null : balanceState.balance;
+    const error = mapStringToTokenBalanceError(balanceState.error);
+
+    result[tokenAddress] = {
+      amount, // For backward compatibility
+      balance: balanceState.balance,
+      loading: balanceState.loading,
+      error, // Converted to enum for backward compatibility
+      needsViewingKey: balanceState.needsViewingKey,
+      refetch: () => addToQueue(tokenAddress, `${caller}:${tokenAddress.slice(-6)}`),
+      suggestToken: () => void suggestTokenAction(tokenAddress),
+      retryWithViewingKey: () => void retryWithViewingKeyAction(tokenAddress),
+    };
+  });
+
+  return result;
 }

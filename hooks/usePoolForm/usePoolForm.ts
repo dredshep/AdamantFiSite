@@ -211,7 +211,8 @@ export function usePoolForm(
 
         return balance;
       } catch (error) {
-        console.error('Error getting token balance:', error);
+        console.warn('Token balance query failed:', error);
+        // Return null to indicate failure rather than crashing
         return null;
       } finally {
         // Remove from pending requests

@@ -28,9 +28,10 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
   withLabel = true,
 }) => {
   const formatBalance = (bal: string | null): string => {
-    if (bal === null || bal === undefined) return '0';
+    if (bal === null || bal === undefined) return '-';
+    if (bal === '-') return '-'; // Handle unfetched state from centralized store
     const num = parseFloat(bal);
-    if (isNaN(num)) return '0';
+    if (isNaN(num)) return '-';
     return num.toFixed(6);
   };
 

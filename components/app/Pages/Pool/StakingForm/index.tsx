@@ -1,13 +1,12 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import ViewingKeyStatusComponent from '@/components/common/ViewingKeyStatus';
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
-import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
+import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { ViewingKeyStatus } from '@/types/staking';
 // import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
-import { Window } from '@keplr-wallet/types';
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import StakingActions from './StakingActions';
 import StakingInput from './StakingInput';
 import StakingOverview from './StakingOverview';
@@ -15,10 +14,19 @@ import StakingPoolSelector from './StakingPoolSelector';
 
 const StakingForm: React.FC = () => {
   const { selectedPool } = usePoolStore();
-  const { secretjs } = useKeplrConnection();
   const poolStaking = usePoolStaking(selectedPool?.address ?? null);
-  const [lpTokenBalance, setLpTokenBalance] = useState<string>('0');
-  const [isLpBalanceLoading, setIsLpBalanceLoading] = useState<boolean>(false);
+
+  // Get LP token address for this pool
+  const pairInfo = selectedPool?.address
+    ? LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address)
+    : null;
+
+  // Use centralized balance fetcher for LP token
+  const lpTokenBalance = useTokenBalance(
+    pairInfo?.lpToken,
+    `StakingForm:${pairInfo?.symbol ?? 'unknown'}`,
+    true
+  );
 
   const {
     hasStakingRewards,
@@ -32,86 +40,6 @@ const StakingForm: React.FC = () => {
     refreshBalances,
     loadBalanceConfig,
   } = poolStaking;
-
-  // Helper function to fetch LP token balance
-  const fetchLpTokenBalance = useCallback(async () => {
-    if (
-      !viewingKeyStatus ||
-      viewingKeyStatus !== ViewingKeyStatus.CREATED ||
-      !selectedPool?.address ||
-      !secretjs
-    ) {
-      return;
-    }
-
-    try {
-      setIsLpBalanceLoading(true);
-      const keplr = (window as unknown as Window).keplr;
-      if (!keplr) return;
-
-      const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
-      if (!pairInfo) {
-        console.error('Could not find LP token info for pool:', selectedPool.address);
-        return;
-      }
-
-      const lpTokenAddress = pairInfo.lpToken;
-      let viewingKey = await keplr
-        .getSecret20ViewingKey('secret-4', lpTokenAddress)
-        .catch(() => null);
-
-      if (viewingKey === null) {
-        try {
-          await keplr.suggestToken('secret-4', lpTokenAddress);
-          viewingKey = await keplr
-            .getSecret20ViewingKey('secret-4', lpTokenAddress)
-            .catch(() => null);
-        } catch (error) {
-          console.error('Error suggesting LP token:', error);
-          return;
-        }
-      }
-
-      if (viewingKey === null) {
-        console.error('No viewing key available for LP token');
-        return;
-      }
-
-      const balance = await secretjs.query.snip20.getBalance({
-        contract: {
-          address: lpTokenAddress,
-          code_hash: pairInfo.lpTokenCodeHash,
-        },
-        address: secretjs.address,
-        auth: { key: viewingKey },
-      });
-
-      if (
-        balance !== undefined &&
-        balance !== null &&
-        typeof balance === 'object' &&
-        'balance' in balance &&
-        balance.balance !== undefined &&
-        balance.balance !== null &&
-        typeof balance.balance === 'object' &&
-        'amount' in balance.balance &&
-        typeof balance.balance.amount === 'string'
-      ) {
-        const rawAmount = parseInt(balance.balance.amount);
-        const displayAmount = (rawAmount / 1_000_000).toString();
-        setLpTokenBalance(displayAmount);
-      }
-    } catch (error) {
-      console.error('Error fetching LP token balance:', error);
-    } finally {
-      setIsLpBalanceLoading(false);
-    }
-  }, [viewingKeyStatus, selectedPool, secretjs]);
-
-  // Fetch LP token balance when viewing key is created
-  useEffect(() => {
-    void fetchLpTokenBalance();
-  }, [fetchLpTokenBalance]);
 
   // If staking is not available for this pool
   if (!selectedPool || !hasStakingRewards || stakingInfo === null) {
@@ -162,7 +90,7 @@ const StakingForm: React.FC = () => {
   const isBalanceLoading =
     (staking?.isOperationLoading('fetchBalance') ?? false) ||
     (staking?.isOperationLoading('fetchRewards') ?? false) ||
-    isLpBalanceLoading;
+    lpTokenBalance.loading;
 
   // Check if stakingInputs has a valid amount
   const hasStakeAmount = poolStaking.stakingInputs.stakeAmount.amount !== '';
@@ -180,7 +108,7 @@ const StakingForm: React.FC = () => {
 
     // Refresh LP token balance after successful staking
     if (success) {
-      void fetchLpTokenBalance();
+      lpTokenBalance.refetch();
     }
   };
 
@@ -189,7 +117,7 @@ const StakingForm: React.FC = () => {
 
     // Refresh LP token balance after successful unstaking
     if (success) {
-      void fetchLpTokenBalance();
+      lpTokenBalance.refetch();
     }
   };
 
@@ -239,11 +167,11 @@ const StakingForm: React.FC = () => {
         <StakingInput
           inputIdentifier="stakeAmount"
           operation="stake"
-          balance={lpTokenBalance}
+          balance={lpTokenBalance.balance}
           balanceLabel="Available LP Balance"
           tokenSymbol={lpPairName}
           stakingContractAddress={stakingInfo?.stakingAddress}
-          isLoading={(staking?.isOperationLoading('stake') ?? false) || isLpBalanceLoading}
+          isLoading={(staking?.isOperationLoading('stake') ?? false) || lpTokenBalance.loading}
         />
 
         {/* Unstaking Section - Only show if user has staked tokens */}

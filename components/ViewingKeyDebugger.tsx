@@ -116,11 +116,12 @@ export const ViewingKeyDebugger: React.FC = () => {
   };
 
   const fetchTokenInfo = async (tokenAddress: string, retryBalance = false) => {
+    const traceId = `trace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const token = getTokenByAddress(tokenAddress);
     if (!token) return;
 
     setIsLoading(true);
-    addLog(`Starting analysis for ${token.symbol} (${token.name})`);
+    addLog(`[${traceId}] Starting analysis for ${token.symbol} (${token.name})`);
 
     try {
       // Check viewing key
@@ -142,23 +143,30 @@ export const ViewingKeyDebugger: React.FC = () => {
 
       if (viewingKey && walletAddress) {
         // Try to fetch balance with retry logic
-        addLog('Attempting to fetch balance...');
+        addLog(`[${traceId}] Attempting to fetch balance...`);
         info.isLoadingBalance = true;
         setTokenInfo({ ...info }); // Update UI to show loading
 
         try {
-          const balance = await tokenService.getBalance(tokenAddress, token.codeHash);
+          addLog(`[${traceId}] Calling getBalance...`);
+          const balance = await tokenService.getBalance(
+            tokenAddress,
+            token.codeHash,
+            'ViewingKeyDebugger.fetchTokenInfo',
+            traceId
+          );
           info.balance = balance;
           info.isLoadingBalance = false;
           delete info.error; // Clear any previous errors
           delete info.errorType;
           delete info.suggestedAction;
-          addLog(`Balance fetched successfully: ${balance}`);
+          addLog(`[${traceId}] Balance fetched successfully: ${balance}`);
         } catch (error) {
           info.isLoadingBalance = false;
 
           // Handle TokenServiceError with better categorization
           if (error instanceof TokenServiceError) {
+            addLog(`[${error.traceId || traceId}] Caught TokenServiceError: ${error.message}`);
             info.error = error.message;
             info.errorType = error.type;
             if (error.suggestedAction) {
@@ -168,63 +176,88 @@ export const ViewingKeyDebugger: React.FC = () => {
             // Different handling based on error type
             switch (error.type) {
               case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
-                addLog(`Viewing key required: ${error.message}`);
+                addLog(`[${traceId}] Viewing key required: ${error.message}`);
                 if (!retryBalance && !info.hasViewingKey && !suggestedTokens.has(tokenAddress)) {
-                  addLog('Will attempt to suggest token to set viewing key...');
+                  addLog(`[${traceId}] Will attempt to suggest token to set viewing key...`);
                   // Auto-suggest token to help user set viewing key - only if no viewing key exists and not already suggested
                   setSuggestedTokens((prev) => new Set(prev).add(tokenAddress));
                   setTimeout(() => {
-                    void suggestToken(tokenAddress);
+                    suggestToken(tokenAddress).catch((error) => {
+                      console.error('ViewingKeyDebugger - Error in auto-suggest:', error);
+                      addLog(
+                        `[${traceId}] Auto-suggest failed: ${
+                          error instanceof Error ? error.message : String(error)
+                        }`
+                      );
+                    });
                   }, 1000);
                 } else if (info.hasViewingKey) {
-                  addLog('Viewing key exists but is invalid - manual intervention required');
+                  addLog(
+                    `[${traceId}] Viewing key exists but is invalid - manual intervention required`
+                  );
                 } else if (suggestedTokens.has(tokenAddress)) {
-                  addLog('Token already suggested - manual intervention required');
+                  addLog(`[${traceId}] Token already suggested - manual intervention required`);
                 } else {
-                  addLog('Retry failed - viewing key still required');
+                  addLog(`[${traceId}] Retry failed - viewing key still required`);
                 }
                 break;
 
               case TokenServiceErrorType.VIEWING_KEY_INVALID:
-                addLog(`Invalid viewing key: ${error.message}`);
+                addLog(`[${traceId}] Invalid viewing key: ${error.message}`);
                 if (!retryBalance) {
-                  addLog('Viewing key appears to be corrupted - manual reset may be required');
+                  addLog(
+                    `[${traceId}] Viewing key appears to be corrupted - manual reset may be required`
+                  );
                 } else {
-                  addLog('Retry failed - viewing key is still invalid');
+                  addLog(`[${traceId}] Retry failed - viewing key is still invalid`);
                 }
                 break;
 
               case TokenServiceErrorType.VIEWING_KEY_REJECTED:
-                addLog(`Viewing key rejected: ${error.message}`);
-                addLog('User rejected the viewing key request');
+                addLog(`[${traceId}] Viewing key rejected: ${error.message}`);
+                addLog(`[${traceId}] User rejected the viewing key request`);
                 break;
 
               case TokenServiceErrorType.NETWORK_ERROR:
-                addLog(`Network error: ${error.message}`);
+                addLog(`[${traceId}] Network error: ${error.message}`);
                 if (!retryBalance) {
-                  addLog('Will retry automatically in a few seconds...');
+                  addLog(`[${traceId}] Will retry automatically in a few seconds...`);
                   setTimeout(() => {
                     if (tokenInfo?.address === tokenAddress) {
-                      void fetchTokenInfo(tokenAddress, true);
+                      fetchTokenInfo(tokenAddress, true).catch((error) => {
+                        console.error('ViewingKeyDebugger - Error in retry:', error);
+                        addLog(
+                          `[${traceId}] Retry failed: ${
+                            error instanceof Error ? error.message : String(error)
+                          }`
+                        );
+                      });
                     }
                   }, 5000);
                 } else {
-                  addLog('Network retry failed');
+                  addLog(`[${traceId}] Network retry failed`);
                 }
                 break;
 
               case TokenServiceErrorType.CONTRACT_ERROR:
-                addLog(`Contract error: ${error.message}`);
-                addLog('There may be an issue with the token contract');
+                addLog(`[${traceId}] Contract error: ${error.message}`);
+                addLog(`[${traceId}] There may be an issue with the token contract`);
                 break;
 
               default:
-                addLog(`Unknown error: ${error.message}`);
+                addLog(`[${traceId}] Unknown error: ${error.message}`);
                 if (!retryBalance) {
-                  addLog('Will retry once...');
+                  addLog(`[${traceId}] Will retry once...`);
                   setTimeout(() => {
                     if (tokenInfo?.address === tokenAddress) {
-                      void fetchTokenInfo(tokenAddress, true);
+                      fetchTokenInfo(tokenAddress, true).catch((error) => {
+                        console.error('ViewingKeyDebugger - Error in retry:', error);
+                        addLog(
+                          `[${traceId}] Retry failed: ${
+                            error instanceof Error ? error.message : String(error)
+                          }`
+                        );
+                      });
                     }
                   }, 3000);
                 }
@@ -232,24 +265,32 @@ export const ViewingKeyDebugger: React.FC = () => {
             }
           } else {
             // Fallback for non-TokenServiceError
+            addLog(`[${traceId}] Caught generic error: ${String(error)}`);
             const errorMessage = error instanceof Error ? error.message : String(error);
             info.error = errorMessage;
-            addLog(`Balance fetch failed: ${errorMessage}`);
+            addLog(`[${traceId}] Balance fetch failed: ${errorMessage}`);
 
             if (!retryBalance) {
-              addLog('Will retry automatically...');
+              addLog(`[${traceId}] Will retry automatically...`);
               setTimeout(() => {
                 if (tokenInfo?.address === tokenAddress && tokenInfo?.hasViewingKey) {
-                  void fetchTokenInfo(tokenAddress, true);
+                  fetchTokenInfo(tokenAddress, true).catch((error) => {
+                    console.error('ViewingKeyDebugger - Error in retry:', error);
+                    addLog(
+                      `[${traceId}] Retry failed: ${
+                        error instanceof Error ? error.message : String(error)
+                      }`
+                    );
+                  });
                 }
               }, 3000);
             } else {
-              addLog(`Balance fetch failed on retry: ${errorMessage}`);
+              addLog(`[${traceId}] Balance fetch failed on retry: ${errorMessage}`);
             }
           }
         }
       } else if (!walletAddress) {
-        addLog('No wallet connected');
+        addLog(`[${traceId}] No wallet connected`);
         info.error = 'No wallet connected';
         info.errorType = TokenServiceErrorType.WALLET_ERROR;
         info.suggestedAction = 'Connect your wallet';
@@ -257,6 +298,7 @@ export const ViewingKeyDebugger: React.FC = () => {
 
       setTokenInfo(info);
     } catch (error) {
+      addLog(`[${traceId}] Caught fatal analysis error: ${String(error)}`);
       addLog(`Analysis failed: ${String(error)}`);
     } finally {
       setIsLoading(false);
@@ -273,7 +315,7 @@ export const ViewingKeyDebugger: React.FC = () => {
     addLog(`Suggesting token to Keplr: ${tokenAddress}`);
 
     try {
-      await window.keplr.suggestToken('secret-4', tokenAddress);
+      await tokenService.suggestToken(tokenAddress, 'ViewingKeyDebugger.suggestToken');
       addLog('Token suggested successfully');
       showToastMessage(
         'Token suggested to Keplr. Please check your wallet and manually refresh token info if needed.'
@@ -303,12 +345,15 @@ export const ViewingKeyDebugger: React.FC = () => {
     addLog(`Adding token to Keplr wallet: ${token.symbol} (${token.name})`);
 
     try {
-      await window.keplr.suggestToken('secret-4', tokenAddress, token.codeHash);
+      await tokenService.suggestToken(tokenAddress, 'ViewingKeyDebugger.addTokenToWallet');
       addLog('Token added to wallet successfully');
       showToastMessage(`${token.symbol} added to Keplr wallet successfully!`);
 
       setTimeout(() => {
-        void fetchTokenInfo(tokenAddress);
+        fetchTokenInfo(tokenAddress).catch((error) => {
+          console.error('ViewingKeyDebugger - Error in refresh after add token:', error);
+          addLog(`Refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+        });
       }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -336,12 +381,15 @@ export const ViewingKeyDebugger: React.FC = () => {
         return;
       }
 
-      await tokenService.resetViewingKey(tokenAddress);
+      await tokenService.resetViewingKey(tokenAddress, 'ViewingKeyDebugger.resetViewingKey');
       addLog('Viewing key reset initiated');
       showToastMessage('Viewing key reset initiated. Please check Keplr.');
 
       setTimeout(() => {
-        void fetchTokenInfo(tokenAddress);
+        fetchTokenInfo(tokenAddress).catch((error) => {
+          console.error('ViewingKeyDebugger - Error in refresh after reset:', error);
+          addLog(`Refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+        });
       }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -373,7 +421,12 @@ export const ViewingKeyDebugger: React.FC = () => {
 
   useEffect(() => {
     if (selectedToken) {
-      void fetchTokenInfo(selectedToken);
+      fetchTokenInfo(selectedToken).catch((error) => {
+        console.error('ViewingKeyDebugger - Error in fetchTokenInfo:', error);
+        addLog(
+          `Error fetching token info: ${error instanceof Error ? error.message : String(error)}`
+        );
+      });
     }
   }, [selectedToken, walletAddress]);
 
@@ -664,7 +717,14 @@ export const ViewingKeyDebugger: React.FC = () => {
                     <button
                       onClick={() => {
                         setSuggestedTokens(new Set()); // Reset suggested tokens tracking
-                        void fetchTokenInfo(selectedToken);
+                        fetchTokenInfo(selectedToken).catch((error) => {
+                          console.error('ViewingKeyDebugger - Error in manual refresh:', error);
+                          addLog(
+                            `Manual refresh failed: ${
+                              error instanceof Error ? error.message : String(error)
+                            }`
+                          );
+                        });
                       }}
                       disabled={isLoading}
                       className="bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark hover:from-adamant-dark hover:to-adamant-dark disabled:from-adamant-app-buttonDisabled disabled:to-adamant-app-buttonDisabled text-white p-4 rounded-lg transition-all duration-200 flex items-center justify-center font-medium transform hover:scale-105 disabled:hover:scale-100"
@@ -677,7 +737,16 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Refresh Analysis
                     </button>
                     <button
-                      onClick={() => void addTokenToWallet(selectedToken)}
+                      onClick={() => {
+                        addTokenToWallet(selectedToken).catch((error) => {
+                          console.error('ViewingKeyDebugger - Error in add token button:', error);
+                          addLog(
+                            `Add token failed: ${
+                              error instanceof Error ? error.message : String(error)
+                            }`
+                          );
+                        });
+                      }}
                       disabled={isLoading}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
@@ -685,7 +754,19 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Add Token to Wallet
                     </button>
                     <button
-                      onClick={() => void suggestToken(selectedToken)}
+                      onClick={() => {
+                        suggestToken(selectedToken).catch((error) => {
+                          console.error(
+                            'ViewingKeyDebugger - Error in suggest token button:',
+                            error
+                          );
+                          addLog(
+                            `Suggest token failed: ${
+                              error instanceof Error ? error.message : String(error)
+                            }`
+                          );
+                        });
+                      }}
                       disabled={isLoading}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >
@@ -693,7 +774,19 @@ export const ViewingKeyDebugger: React.FC = () => {
                       Suggest Token to Keplr
                     </button>
                     <button
-                      onClick={() => void resetViewingKey(selectedToken)}
+                      onClick={() => {
+                        resetViewingKey(selectedToken).catch((error) => {
+                          console.error(
+                            'ViewingKeyDebugger - Error in reset viewing key button:',
+                            error
+                          );
+                          addLog(
+                            `Reset viewing key failed: ${
+                              error instanceof Error ? error.message : String(error)
+                            }`
+                          );
+                        });
+                      }}
                       disabled={isLoading}
                       className="bg-adamant-button-form-main hover:bg-adamant-button-form-main/80 disabled:bg-adamant-app-buttonDisabled text-adamant-button-form-secondary p-4 rounded-lg transition-all duration-200 font-medium transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
                     >

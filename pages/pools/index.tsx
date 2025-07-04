@@ -203,7 +203,8 @@ export default function PoolsPage() {
 
         return 0;
       } catch (error) {
-        // Silently fail for balance queries to avoid spam
+        // Log errors but don't crash the app or show toasts for balance queries
+        console.warn('LP balance query failed:', error);
         return 0;
       }
     },
@@ -245,7 +246,8 @@ export default function PoolsPage() {
         // Convert from raw amount (6 decimals) to display amount
         return parseFloat(rawBalance) / 1_000_000;
       } catch (error) {
-        // Silently fail for balance queries to avoid spam
+        // Log errors but don't crash the app or show toasts for balance queries
+        console.warn('Staked balance query failed:', error);
         return 0;
       }
     },

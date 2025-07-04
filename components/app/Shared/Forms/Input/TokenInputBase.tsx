@@ -41,7 +41,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   showEstimatedPrice = false,
 }) => {
   const { secretjs, connect } = useSecretNetwork();
-  const tokenData = useTokenBalance(tokenAddress, false);
+  const tokenData = useTokenBalance(tokenAddress, `TokenInputBase:${label}`, true);
 
   // Attempt to connect if not connected
   useEffect(() => {

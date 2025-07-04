@@ -29,7 +29,9 @@ export class TokenServiceError extends Error {
     message: string,
     public type: TokenServiceErrorType,
     public isRecoverable: boolean = true,
-    public suggestedAction?: string
+    public suggestedAction?: string,
+    public caller?: string,
+    public traceId?: string
   ) {
     super(message);
     this.name = 'TokenServiceError';
@@ -70,17 +72,36 @@ export class TokenService {
     });
   });
 
-  async getBalance(tokenAddress: string, codeHash: string): Promise<string> {
+  async getBalance(
+    tokenAddress: string,
+    codeHash: string,
+    caller: string,
+    traceId?: string
+  ): Promise<string> {
     // Get wallet address from Keplr
     const keplr = (window as unknown as Window).keplr;
     if (!keplr) {
-      throw new Error('Keplr not installed');
+      throw new TokenServiceError(
+        `Keplr not installed (called from: ${caller})`,
+        TokenServiceErrorType.WALLET_ERROR,
+        false,
+        'Install Keplr wallet extension',
+        caller,
+        traceId
+      );
     }
 
     const accounts = await keplr.getOfflineSignerOnlyAmino('secret-4').getAccounts();
     const walletAddress = accounts[0]?.address;
     if (typeof walletAddress !== 'string' || walletAddress.length === 0) {
-      throw new Error('No wallet address found');
+      throw new TokenServiceError(
+        `No wallet address found (called from: ${caller})`,
+        TokenServiceErrorType.WALLET_ERROR,
+        true,
+        'Connect your wallet',
+        caller,
+        traceId
+      );
     }
 
     console.log('TokenService.getBalance - Starting balance fetch:', {
@@ -91,7 +112,14 @@ export class TokenService {
     });
 
     if (this.rejectedViewingKeys.has(tokenAddress)) {
-      throw new Error('Viewing key request was rejected');
+      throw new TokenServiceError(
+        `Viewing key request for token ${tokenAddress} was rejected (called from: ${caller})`,
+        TokenServiceErrorType.VIEWING_KEY_REJECTED,
+        true,
+        'Try again and approve the viewing key request',
+        caller,
+        traceId
+      );
     }
 
     if (this.lastError && Date.now() - this.errorTimestamp < this.ERROR_THRESHOLD) {
@@ -103,59 +131,63 @@ export class TokenService {
       throw this.lastError;
     }
 
+    // Step 1: Get the viewing key. This can throw an error if the user rejects it or
+    // if a key is required but not found after attempting to set it.
+    let viewingKey: string | null = null;
     try {
       console.log('TokenService.getBalance - About to get viewing key from Keplr');
-      let viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress).catch((err) => {
-        console.log('TokenService.getBalance - Error getting viewing key:', err);
-        return null;
-      });
+      viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress).catch(() => null);
       console.log('TokenService.getBalance - Got viewing key from Keplr');
 
-      console.log('TokenService.getBalance - Retrieved viewing key:', {
-        tokenAddress,
-        hasViewingKey: viewingKey !== null,
-        viewingKeyLength: typeof viewingKey === 'string' ? viewingKey.length : 0,
-        viewingKeyPreview:
-          typeof viewingKey === 'string' && viewingKey.length > 0
-            ? `${viewingKey.substring(0, 8)}...`
-            : 'null',
-      });
-
       if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
-        try {
-          await keplr.suggestToken('secret-4', tokenAddress);
+        await keplr.suggestToken('secret-4', tokenAddress);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress).catch(() => null);
 
-          // Add delay to allow Keplr to process the viewing key
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          // After suggesting token, try to get the viewing key again
-          viewingKey = await keplr
-            .getSecret20ViewingKey('secret-4', tokenAddress)
-            .catch(() => null);
-
-          if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
-            throw new Error('Viewing key required. Please set a viewing key and try again.');
-          }
-        } catch (error) {
-          if (error instanceof Error) {
-            this.rejectedViewingKeys.add(tokenAddress);
-            throw new TokenServiceError(
-              'Viewing key request was rejected by user',
-              TokenServiceErrorType.VIEWING_KEY_REJECTED,
-              true,
-              'Try again and approve the viewing key request'
-            );
-          } else {
-            throw new TokenServiceError(
-              'Unknown error during viewing key setup',
-              TokenServiceErrorType.UNKNOWN_ERROR,
-              true,
-              'Try refreshing and attempting again'
-            );
-          }
+        if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
+          throw new TokenServiceError(
+            `Viewing key required for token ${tokenAddress} (called from: ${caller}). Please set a viewing key and try again.`,
+            TokenServiceErrorType.VIEWING_KEY_REQUIRED,
+            true,
+            'Set a viewing key for this token',
+            caller,
+            traceId
+          );
         }
       }
+    } catch (error) {
+      // If we already have a TokenServiceError, just re-throw it.
+      if (error instanceof TokenServiceError) {
+        throw error;
+      }
 
+      // Otherwise, assume the user rejected the Keplr prompt.
+      if (error instanceof Error) {
+        this.rejectedViewingKeys.add(tokenAddress);
+        throw new TokenServiceError(
+          `Viewing key request for token ${tokenAddress} was rejected by user`,
+          TokenServiceErrorType.VIEWING_KEY_REJECTED,
+          true,
+          'Try again and approve the viewing key request',
+          caller,
+          traceId
+        );
+      } else {
+        throw new TokenServiceError(
+          `Unknown error during viewing key setup for token ${tokenAddress}`,
+          TokenServiceErrorType.UNKNOWN_ERROR,
+          true,
+          'Try refreshing and attempting again',
+          caller,
+          traceId
+        );
+      }
+    }
+
+    // Step 2: Query the contract.
+    // This is the only section that needs a deep try-catch for unexpected network/query errors.
+    let response;
+    try {
       const queryParams = {
         contract: {
           address: tokenAddress,
@@ -167,188 +199,94 @@ export class TokenService {
 
       console.log('TokenService.getBalance - Query parameters:', {
         tokenAddress: queryParams.contract.address,
-        codeHash: queryParams.contract.code_hash,
         walletAddress: queryParams.address,
-        viewingKeyPreview:
-          typeof queryParams.auth.key === 'string' && queryParams.auth.key.length > 0
-            ? `${queryParams.auth.key.substring(0, 8)}...`
-            : 'null',
       });
 
-      console.log('TokenService.getBalance - About to execute query');
-      const response = await this.throttledQuery(queryParams);
-      console.log('TokenService.getBalance - Query completed successfully');
+      response = await this.throttledQuery(queryParams);
       console.log('TokenService.getBalance - Raw response:', response);
-
-      // Check for viewing key error first
-      if (typeof response === 'object' && response !== null && 'viewing_key_error' in response) {
-        const errorResponse = response as { viewing_key_error: { msg?: string } };
-        const errorMsg =
-          typeof errorResponse.viewing_key_error.msg === 'string' &&
-          errorResponse.viewing_key_error.msg.length > 0
-            ? errorResponse.viewing_key_error.msg
-            : 'Viewing key error';
-        console.log('TokenService.getBalance - Viewing key error detected:', errorMsg);
-
-        // Determine if this is a missing or invalid viewing key
-        if (
-          errorMsg.toLowerCase().includes('not set') ||
-          errorMsg.toLowerCase().includes('viewing key not set')
-        ) {
-          throw new TokenServiceError(
-            'Viewing key not set for this token',
-            TokenServiceErrorType.VIEWING_KEY_REQUIRED,
-            true,
-            'Set a viewing key for this token'
-          );
-        } else {
-          throw new TokenServiceError(
-            `Invalid viewing key: ${errorMsg}`,
-            TokenServiceErrorType.VIEWING_KEY_INVALID,
-            true,
-            'Reset the viewing key for this token'
-          );
-        }
-      }
-
-      // Response is now properly typed from the generic parameters
-      if (
-        typeof response.balance !== 'object' ||
-        response.balance === null ||
-        typeof response.balance.amount !== 'string'
-      ) {
-        throw new Error('Invalid balance response from contract');
-      }
-
-      this.lastError = null;
-      this.errorTimestamp = 0;
-
-      return response.balance.amount;
     } catch (error) {
-      console.error('TokenService.getBalance error:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error structure:', JSON.stringify(error, null, 2));
-
-      // If it's already a TokenServiceError, just re-throw it
-      if (error instanceof TokenServiceError) {
-        this.lastError = error;
-        this.errorTimestamp = Date.now();
-        throw error;
-      }
-
-      let errorMessage = 'Unknown error';
-      let errorType = TokenServiceErrorType.UNKNOWN_ERROR;
-      let suggestedAction = 'Try again later';
-
-      // Handle different error object structures
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        // Handle Secret Network API error format: { code: number, message: string, details: [] }
-        if ('message' in error && typeof error.message === 'string') {
-          const originalMessage = error.message;
-
-          // Check for specific error patterns that indicate network/node issues vs viewing key issues
-          if (originalMessage.includes('contract: not found: unknown request')) {
-            // This specific error often indicates a node/network issue, not a viewing key issue
-            errorMessage =
-              'Network error: The Secret Network node is experiencing issues. Please try again in a few moments.';
-            errorType = TokenServiceErrorType.NETWORK_ERROR;
-            suggestedAction = 'Wait a few moments and try again';
-          } else {
-            errorMessage = originalMessage;
-          }
-        } else if ('code' in error && typeof error.code === 'number') {
-          // Map common error codes to user-friendly messages
-          switch (error.code) {
-            case 2:
-              // Code 2 with "contract: not found" is usually a node issue, not viewing key issue
-              if (
-                typeof error === 'object' &&
-                'message' in error &&
-                typeof error.message === 'string' &&
-                error.message.includes('contract: not found')
-              ) {
-                errorMessage =
-                  'Network error: The Secret Network node is experiencing issues. Please try again in a few moments.';
-                errorType = TokenServiceErrorType.NETWORK_ERROR;
-                suggestedAction = 'Wait a few moments and try again';
-              } else {
-                errorMessage = 'Invalid viewing key. Please reset your viewing key and try again.';
-                errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
-                suggestedAction = 'Reset your viewing key';
-              }
-              break;
-            case 5:
-              errorMessage =
-                'Token contract not found. Please check if the token address is correct.';
-              errorType = TokenServiceErrorType.CONTRACT_ERROR;
-              suggestedAction = 'Verify the token address is correct';
-              break;
-            default:
-              errorMessage = `Network error (code ${error.code}): The Secret Network is experiencing issues. Please try again later.`;
-              errorType = TokenServiceErrorType.NETWORK_ERROR;
-              suggestedAction = 'Try again later';
-          }
-        }
-      }
-
-      // Handle specific error cases based on message content
-      if (typeof errorMessage === 'string') {
-        if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
-          errorMessage =
-            'Invalid viewing key. The viewing key for this token appears to be corrupted or invalid. Please reset your viewing key and try again.';
-          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
-          suggestedAction = 'Reset your viewing key';
-        } else if (
-          errorMessage.includes('unauthorized') ||
-          errorMessage.includes('viewing key') ||
-          errorMessage.includes('Invalid viewing key')
-        ) {
-          errorMessage = 'Invalid viewing key. Please reset your viewing key and try again.';
-          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
-          suggestedAction = 'Reset your viewing key';
-        } else if (
-          errorMessage.includes('contract: not found') ||
-          errorMessage.includes('unknown request')
-        ) {
-          errorMessage =
-            'Invalid viewing key. The viewing key for this token appears to be corrupted or invalid. Please reset your viewing key and try again.';
-          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
-          suggestedAction = 'Reset your viewing key';
-        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-          errorMessage =
-            'Network error: Unable to connect to Secret Network. Please check your connection.';
-          errorType = TokenServiceErrorType.NETWORK_ERROR;
-          suggestedAction = 'Check your internet connection';
-        } else if (errorMessage.includes('timeout')) {
-          errorMessage = 'Request timeout: The network is slow. Please try again.';
-          errorType = TokenServiceErrorType.NETWORK_ERROR;
-          suggestedAction = 'Wait and try again';
-        } else if (errorMessage.includes('query failed') || errorMessage.includes('contract')) {
-          errorMessage =
-            'Contract query failed. The viewing key might be invalid or the token contract is experiencing issues.';
-          errorType = TokenServiceErrorType.CONTRACT_ERROR;
-          suggestedAction = 'Check viewing key or try again later';
-        } else if (errorMessage === 'Unknown error') {
-          // Fallback for truly unknown errors - assume it's a viewing key issue since that's the most common cause
-          errorMessage =
-            'Unable to fetch balance. This is likely due to an invalid viewing key. Please reset your viewing key and try again.';
-          errorType = TokenServiceErrorType.VIEWING_KEY_INVALID;
-          suggestedAction = 'Reset your viewing key';
-        }
-      }
-
-      this.lastError = new TokenServiceError(errorMessage, errorType, true, suggestedAction);
+      console.error(
+        `TokenService.getBalance - A fatal network/query error occurred for token ${tokenAddress}:`,
+        error
+      );
+      // This is for truly unexpected errors. Wrap it and throw.
+      const errorMessage = error instanceof Error ? error.message : 'A network error occurred';
+      this.lastError = new TokenServiceError(
+        `Network/Query failed for ${tokenAddress}: ${errorMessage}`,
+        TokenServiceErrorType.NETWORK_ERROR,
+        true,
+        'The network may be congested. Please wait and try again.',
+        caller,
+        traceId
+      );
       this.errorTimestamp = Date.now();
       throw this.lastError;
     }
+
+    // Step 3: Analyze the response. If the query succeeded, the response itself may contain an error.
+    if (typeof response === 'object' && response !== null) {
+      let errorMsg = '';
+      let hasViewingKeyError = false;
+
+      if ('viewing_key_error' in response) {
+        const errorResponse = response as { viewing_key_error: { msg?: string } };
+        errorMsg = errorResponse.viewing_key_error.msg || 'Viewing key error';
+        hasViewingKeyError = true;
+      } else if ('query_error' in response) {
+        const errorResponse = response as { query_error: { msg?: string } };
+        const msg = errorResponse.query_error.msg || 'Query error';
+        if (msg.toLowerCase().includes('viewing key')) {
+          errorMsg = msg;
+          hasViewingKeyError = true;
+        }
+      }
+
+      if (hasViewingKeyError) {
+        // We successfully retrieved a key from Keplr, but the contract rejected it. It's INVALID.
+        throw new TokenServiceError(
+          `Invalid viewing key for token ${tokenAddress}: ${errorMsg} (called from: ${caller})`,
+          TokenServiceErrorType.VIEWING_KEY_INVALID,
+          true,
+          'Reset the viewing key for this token',
+          caller,
+          traceId
+        );
+      }
+    }
+
+    // Step 4: Validate the response structure.
+    if (
+      typeof response?.balance !== 'object' ||
+      response.balance === null ||
+      typeof response.balance.amount !== 'string'
+    ) {
+      throw new TokenServiceError(
+        `Invalid balance response from contract for token ${tokenAddress} (called from: ${caller}).`,
+        TokenServiceErrorType.CONTRACT_ERROR,
+        true,
+        'Check if the token contract is working properly',
+        caller,
+        traceId
+      );
+    }
+
+    // Success!
+    this.lastError = null;
+    this.errorTimestamp = 0;
+    return response.balance.amount;
   }
 
-  async suggestToken(tokenAddress: string): Promise<void> {
+  async suggestToken(tokenAddress: string, caller: string, traceId?: string): Promise<void> {
     const keplr = (window as unknown as Window).keplr;
     if (!keplr) {
-      throw new Error('Keplr not installed');
+      throw new TokenServiceError(
+        `Keplr not installed (called from: ${caller})`,
+        TokenServiceErrorType.WALLET_ERROR,
+        false,
+        'Install Keplr wallet extension',
+        caller,
+        traceId
+      );
     }
 
     await keplr.suggestToken('secret-4', tokenAddress);
@@ -367,10 +305,17 @@ export class TokenService {
   }
 
   // Method to help reset viewing key when it's invalid
-  async resetViewingKey(tokenAddress: string): Promise<void> {
+  async resetViewingKey(tokenAddress: string, caller: string, traceId?: string): Promise<void> {
     const keplr = (window as unknown as Window).keplr;
     if (!keplr) {
-      throw new Error('Keplr not installed');
+      throw new TokenServiceError(
+        `Keplr not installed (called from: ${caller})`,
+        TokenServiceErrorType.WALLET_ERROR,
+        false,
+        'Install Keplr wallet extension',
+        caller,
+        traceId
+      );
     }
 
     try {
@@ -400,8 +345,13 @@ export class TokenService {
       // cannot override existing viewing keys according to Keplr's design
     } catch (error) {
       console.error('Error resetting viewing key:', error);
-      throw new Error(
-        'Failed to reset viewing key. You may need to manually remove and re-add this token in Keplr wallet settings.'
+      throw new TokenServiceError(
+        `Failed to reset viewing key for token ${tokenAddress} (called from: ${caller}). You may need to manually remove and re-add this token in Keplr wallet settings.`,
+        TokenServiceErrorType.VIEWING_KEY_INVALID,
+        true,
+        'Manually remove and re-add token in Keplr settings',
+        caller,
+        traceId
       );
     }
   }

@@ -1,5 +1,6 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useLoadBalancePreference } from '@/hooks/useLoadBalancePreference';
+import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { useModalStore } from '@/store/modalStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { useWalletStore } from '@/store/walletStore';
@@ -24,12 +25,12 @@ const WalletSidebar: React.FC = () => {
   const { closeWalletModal, isWalletModalOpen } = useModalStore();
   const { address } = useWalletStore();
   const { listAllTokens } = useTokenStore();
+  const { fetchAllBalances, isProcessingQueue } = useBalanceFetcherStore();
   const loadBalanceConfig = useLoadBalancePreference();
   const tokens = listAllTokens() ?? [];
 
   // Instead of separate dialogs, just track which "sub-view" to render:
   const [currentView, setCurrentView] = useState<'main' | 'send' | 'receive' | 'settings'>('main');
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const truncatedAddress = address === null ? '' : address.slice(0, 8) + '...' + address.slice(-6);
 
@@ -44,48 +45,9 @@ const WalletSidebar: React.FC = () => {
     setCurrentView('settings');
   };
 
-  const refreshAllBalances = async () => {
-    setIsRefreshing(true);
-    try {
-      // Trigger refresh for all tokens
-      const refreshPromises = tokens.map(async (token) => {
-        try {
-          // This would ideally call the token's refetch function
-          // For now, we'll simulate the refresh
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          return { success: true, token: token.symbol };
-        } catch (error) {
-          console.error(`Failed to refresh ${token.symbol}:`, error);
-          return { success: false, token: token.symbol };
-        }
-      });
-
-      const results = await Promise.allSettled(refreshPromises);
-      const successful = results.filter(
-        (result) => result.status === 'fulfilled' && result.value.success
-      ).length;
-
-      if (successful === tokens.length) {
-        showToastOnce(
-          'refresh-success',
-          `All ${tokens.length} token balances refreshed`,
-          'success'
-        );
-      } else if (successful > 0) {
-        showToastOnce(
-          'refresh-partial',
-          `${successful}/${tokens.length} token balances refreshed`,
-          'success'
-        );
-      } else {
-        showToastOnce('refresh-failed', 'Failed to refresh token balances', 'error');
-      }
-    } catch (error) {
-      console.error('Error refreshing balances:', error);
-      showToastOnce('refresh-error', 'Failed to refresh balances', 'error');
-    } finally {
-      setIsRefreshing(false);
-    }
+  const refreshAllBalances = () => {
+    fetchAllBalances();
+    showToastOnce('refresh-started', 'Refreshing all token balances...', 'info');
   };
 
   if (!isWalletModalOpen) {
@@ -241,16 +203,16 @@ const WalletSidebar: React.FC = () => {
               </h3>
               {loadBalanceConfig.shouldShowFetchButton && (
                 <button
-                  onClick={() => void refreshAllBalances()}
-                  disabled={isRefreshing}
+                  onClick={refreshAllBalances}
+                  disabled={isProcessingQueue}
                   className="flex items-center gap-2 px-4 py-2 text-sm bg-adamant-box-dark hover:bg-adamant-box-regular border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-xl transition-all duration-200 text-adamant-text-box-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   <RiRefreshLine
                     className={`w-4 h-4 ${
-                      isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'
+                      isProcessingQueue ? 'animate-spin' : 'group-hover:rotate-180'
                     } transition-transform duration-300`}
                   />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                  {isProcessingQueue ? 'Refreshing...' : 'Refresh'}
                 </button>
               )}
             </div>
