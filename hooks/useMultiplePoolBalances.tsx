@@ -1,4 +1,10 @@
 import { useWalletStore } from '@/store/walletStore';
+import {
+  LPStakingQueryAnswer,
+  LPStakingQueryMsg,
+  isBalanceResponse,
+  isQueryErrorResponse,
+} from '@/types/secretswap/lp-staking';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SecretNetworkClient } from 'secretjs';
 import { useKeplrConnection } from './useKeplrConnection';
@@ -120,30 +126,72 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
         }
 
         try {
-          const queryMsg = {
-            staker_info: {
+          // Try to get viewing key from Keplr
+          const keplr = (window as any).keplr;
+          if (!keplr) {
+            throw new Error('Keplr not found');
+          }
+
+          let viewingKey: string;
+          try {
+            viewingKey = await keplr.getSecret20ViewingKey(
+              'secret-4',
+              config.stakingContractAddress
+            );
+          } catch (viewingKeyError) {
+            // If no viewing key, set needsKey flag
+            setStakedBalances((prev) => ({
+              ...prev,
+              [config.lpTokenAddress]: {
+                balance: '0',
+                isLoading: false,
+                error: false,
+                needsKey: true,
+              },
+            }));
+            continue;
+          }
+
+          const queryMsg: LPStakingQueryMsg = {
+            balance: {
               address: address,
+              key: viewingKey,
             },
           };
-          const result: { staker_info: { bond_amount: string } } =
-            await client.query.compute.queryContract({
-              contract_address: config.stakingContractAddress,
-              code_hash: config.stakingContractCodeHash,
-              query: queryMsg,
-            });
 
-          setStakedBalances((prev) => ({
-            ...prev,
-            [config.lpTokenAddress]: {
-              balance: result.staker_info.bond_amount,
-              isLoading: false,
-              error: false,
-              needsKey: false,
-            },
-          }));
+          const result = await client.query.compute.queryContract({
+            contract_address: config.stakingContractAddress,
+            code_hash: config.stakingContractCodeHash,
+            query: queryMsg,
+          });
+
+          const parsedResult = result as LPStakingQueryAnswer;
+
+          if (isBalanceResponse(parsedResult)) {
+            // Convert from raw balance to human-readable format (assuming 6 decimals)
+            const rawBalance = parsedResult.balance.amount;
+            const humanBalance = (Number(rawBalance) / 1_000_000).toString();
+
+            setStakedBalances((prev) => ({
+              ...prev,
+              [config.lpTokenAddress]: {
+                balance: humanBalance,
+                isLoading: false,
+                error: false,
+                needsKey: false,
+              },
+            }));
+          } else if (isQueryErrorResponse(parsedResult)) {
+            throw new Error(`Query error: ${parsedResult.query_error.msg}`);
+          } else {
+            throw new Error(`Unexpected response format: ${JSON.stringify(result)}`);
+          }
         } catch (e: unknown) {
           console.error(`Failed to fetch staked balance for ${config.lpTokenAddress}`, e);
-          const needsKey = e instanceof Error && e.message?.toLowerCase().includes('viewing key');
+          const needsKey =
+            e instanceof Error &&
+            (e.message?.toLowerCase().includes('viewing key') ||
+              e.message?.toLowerCase().includes('unauthorized'));
           setStakedBalances((prev) => ({
             ...prev,
             [config.lpTokenAddress]: {
