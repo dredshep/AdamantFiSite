@@ -42,7 +42,7 @@ interface BalanceFetcherState {
   processQueue: () => Promise<void>;
 }
 
-const DEFAULT_BALANCE_STATE: TokenBalanceState = {
+export const DEFAULT_BALANCE_STATE: TokenBalanceState = {
   balance: '-',
   loading: false,
   error: null,
@@ -284,12 +284,53 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       const tokenService = new TokenService();
       await tokenService.suggestToken(tokenAddress, 'balanceFetcherStore.suggestToken');
 
-      // Show different messages for LP tokens vs regular tokens
-      if (isLpToken(tokenAddress)) {
-        showToastOnce('lp-token-suggested', 'LP token suggested to Keplr successfully', 'success');
-      } else {
-        showToastOnce('token-suggested', 'Token suggested to Keplr successfully', 'success');
+      // --- NEW: Verification Step ---
+      // After suggesting, immediately try to fetch the balance to verify the new key.
+      try {
+        // Clear previous error states before attempting the fetch.
+        get().setNeedsViewingKey(tokenAddress, false);
+        get().clearError(tokenAddress);
+
+        // This fetch will use the newly suggested key.
+        await get().fetchBalance(tokenAddress, `suggestToken:verify:${Date.now()}`);
+
+        // --- NEW: Robust Check ---
+        // After fetching, get the new state and check if the balance is valid.
+        const newState = get().balances[tokenAddress];
+        const hasValidBalance =
+          newState && newState.balance !== '-' && !isNaN(parseFloat(newState.balance));
+
+        if (!hasValidBalance) {
+          // The fetch "succeeded" but didn't result in a valid balance.
+          // This is the "zombie key" scenario.
+          const errorMessage =
+            'Key is corrupted in Keplr. Please open Keplr, scroll down to the token list, find this token, and click "Set your viewing key".';
+          get().setError(tokenAddress, errorMessage);
+          // Show a persistent error toast that does not auto-close.
+          showToastOnce('token-key-invalid', errorMessage, 'error', { autoClose: false });
+        }
+        // No "success" toast here, as a successful fetch is its own reward.
+      } catch (e) {
+        // If fetchBalance throws, especially an INVALID_VIEWING_KEY error, we catch it here.
+        if (
+          e instanceof TokenServiceError &&
+          e.type === TokenServiceErrorType.VIEWING_KEY_INVALID
+        ) {
+          // This is also the "zombie key" scenario.
+          const errorMessage =
+            'Key is corrupted in Keplr. Please open Keplr, scroll down to the token list, find this token, and click "Set your viewing key".';
+          get().setError(tokenAddress, errorMessage);
+          // Show a persistent error toast that does not auto-close.
+          showToastOnce('token-key-invalid', errorMessage, 'error', { autoClose: false });
+        } else {
+          // Handle other potential errors during verification fetch.
+          const errorMessage =
+            e instanceof Error ? e.message : 'An unknown error occurred during verification.';
+          get().setError(tokenAddress, errorMessage);
+          showToastOnce('token-verification-failed', errorMessage, 'error');
+        }
       }
+      // --- END Verification Step ---
     } catch (error) {
       if (error instanceof Error && error.message.includes('rejected')) {
         get().setError(tokenAddress, 'Token suggestion rejected');

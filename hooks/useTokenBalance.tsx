@@ -45,6 +45,15 @@ interface UseTokenBalanceReturn {
   retryWithViewingKey: () => void;
 }
 
+// Create a stable, default object OUTSIDE the hook.
+const DEFAULT_BALANCE_STATE = {
+  balance: '-',
+  loading: false,
+  error: null,
+  lastUpdated: 0,
+  needsViewingKey: false,
+};
+
 /**
  * Centralized token balance hook that uses the balance fetcher store
  * Supports both regular tokens and LP tokens
@@ -58,31 +67,17 @@ export function useTokenBalance(
   caller: string,
   autoFetch: boolean = true
 ): UseTokenBalanceReturn {
-  const {
-    addToQueue,
-    suggestToken: suggestTokenAction,
-    retryWithViewingKey: retryWithViewingKeyAction,
-  } = useBalanceFetcherStore.getState();
+  // FIX 1: Use stable selectors instead of getState() to prevent unstable function references.
+  const addToQueue = useBalanceFetcherStore((state) => state.addToQueue);
+  const suggestTokenAction = useBalanceFetcherStore((state) => state.suggestToken);
+  const retryWithViewingKeyAction = useBalanceFetcherStore((state) => state.retryWithViewingKey);
 
+  // FIX 2: The root cause of the loop. The selector now returns a STABLE default object.
   const balanceState = useBalanceFetcherStore((state) => {
     if (!tokenAddress) {
-      return {
-        balance: '-',
-        loading: false,
-        error: null,
-        lastUpdated: 0,
-        needsViewingKey: false,
-      };
+      return DEFAULT_BALANCE_STATE;
     }
-    return (
-      state.balances[tokenAddress] ?? {
-        balance: '-',
-        loading: false,
-        error: null,
-        lastUpdated: 0,
-        needsViewingKey: false,
-      }
-    );
+    return state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE;
   });
 
   // Memoized refetch function
@@ -142,26 +137,20 @@ export function useMultipleTokenBalances(
   caller: string,
   autoFetch: boolean = true
 ): Record<string, UseTokenBalanceReturn> {
-  const {
-    addToQueue,
-    suggestToken: suggestTokenAction,
-    retryWithViewingKey: retryWithViewingKeyAction,
-  } = useBalanceFetcherStore.getState();
+  // FIX 1: Use stable selectors instead of getState() here as well.
+  const addToQueue = useBalanceFetcherStore((state) => state.addToQueue);
+  const suggestTokenAction = useBalanceFetcherStore((state) => state.suggestToken);
+  const retryWithViewingKeyAction = useBalanceFetcherStore((state) => state.retryWithViewingKey);
 
   // Filter out undefined addresses
   const validAddresses = tokenAddresses.filter((addr): addr is SecretString => !!addr);
 
   // Use a selector to get all relevant balance states at once
+  // FIX 2: Ensure this selector is also stable by using the default object.
   const balanceStates = useBalanceFetcherStore((state) => {
     const states: Record<string, (typeof state.balances)[string]> = {};
     validAddresses.forEach((address) => {
-      states[address] = state.balances[address] ?? {
-        balance: '-',
-        loading: false,
-        error: null,
-        lastUpdated: 0,
-        needsViewingKey: false,
-      };
+      states[address] = state.balances[address] ?? DEFAULT_BALANCE_STATE;
     });
     return states;
   });
@@ -177,13 +166,7 @@ export function useMultipleTokenBalances(
   const result: Record<string, UseTokenBalanceReturn> = {};
 
   validAddresses.forEach((tokenAddress) => {
-    const balanceState = balanceStates[tokenAddress] ?? {
-      balance: '-',
-      loading: false,
-      error: null,
-      lastUpdated: 0,
-      needsViewingKey: false,
-    };
+    const balanceState = balanceStates[tokenAddress] ?? DEFAULT_BALANCE_STATE;
     const amount = balanceState.balance === '-' ? null : balanceState.balance;
     const error = mapStringToTokenBalanceError(balanceState.error);
 

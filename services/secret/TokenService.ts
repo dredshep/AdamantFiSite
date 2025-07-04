@@ -139,21 +139,38 @@ export class TokenService {
       viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress).catch(() => null);
       console.log('TokenService.getBalance - Got viewing key from Keplr');
 
-      if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
-        await keplr.suggestToken('secret-4', tokenAddress);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress).catch(() => null);
+      // DEBUG: Log the actual viewing key details
+      console.log(`[DEBUG] Viewing key for ${tokenAddress}:`, {
+        keyExists: !!viewingKey,
+        keyType: typeof viewingKey,
+        keyLength: viewingKey?.length || 0,
+        keyPreview: viewingKey
+          ? `${viewingKey.substring(0, 8)}...${viewingKey.substring(viewingKey.length - 4)}`
+          : 'null',
+        caller,
+        traceId,
+      });
 
-        if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
-          throw new TokenServiceError(
-            `Viewing key required for token ${tokenAddress} (called from: ${caller}). Please set a viewing key and try again.`,
-            TokenServiceErrorType.VIEWING_KEY_REQUIRED,
-            true,
-            'Set a viewing key for this token',
-            caller,
-            traceId
-          );
-        }
+      if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
+        console.log(`[DEBUG] Invalid viewing key detected:`, {
+          tokenAddress,
+          viewingKey,
+          keyType: typeof viewingKey,
+          caller,
+          traceId,
+        });
+
+        // DO NOT try to suggest a token here. This is a non-interactive function.
+        // The UI layer should handle the interactive part of setting a key.
+        // We just report that it's required.
+        throw new TokenServiceError(
+          `Viewing key required for token ${tokenAddress} (called from: ${caller}).`,
+          TokenServiceErrorType.VIEWING_KEY_REQUIRED,
+          true,
+          'Set a viewing key for this token',
+          caller,
+          traceId
+        );
       }
     } catch (error) {
       // If we already have a TokenServiceError, just re-throw it.
@@ -242,6 +259,19 @@ export class TokenService {
       }
 
       if (hasViewingKeyError) {
+        // DEBUG: Log the viewing key that caused the error
+        console.log(`[DEBUG] Contract rejected viewing key:`, {
+          tokenAddress,
+          keyPreview: viewingKey
+            ? `${viewingKey.substring(0, 8)}...${viewingKey.substring(viewingKey.length - 4)}`
+            : 'null',
+          keyLength: viewingKey?.length || 0,
+          errorMsg,
+          caller,
+          traceId,
+          fullResponse: response,
+        });
+
         // We successfully retrieved a key from Keplr, but the contract rejected it. It's INVALID.
         throw new TokenServiceError(
           `Invalid viewing key for token ${tokenAddress}: ${errorMsg} (called from: ${caller})`,

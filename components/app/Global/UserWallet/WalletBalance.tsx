@@ -1,4 +1,4 @@
-import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
+import { DEFAULT_BALANCE_STATE, useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { SecretString } from '@/types';
 import React, { useEffect } from 'react';
 import { RiKeyLine, RiRefreshLine } from 'react-icons/ri';
@@ -14,8 +14,12 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
   tokenSymbol,
   className = '',
 }) => {
-  const { getBalanceState, addToQueue, retryWithViewingKey } = useBalanceFetcherStore();
-  const balanceState = getBalanceState(tokenAddress);
+  const balanceState = useBalanceFetcherStore(
+    (state) => state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE
+  );
+  const addToQueue = useBalanceFetcherStore((state) => state.addToQueue);
+  const suggestToken = useBalanceFetcherStore((state) => state.suggestToken);
+
   const [isSettingUpViewingKey, setIsSettingUpViewingKey] = React.useState(false);
 
   // Auto-fetch balance when component mounts
@@ -38,8 +42,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
   const openKeplrForViewingKey = async () => {
     setIsSettingUpViewingKey(true);
     try {
-      // This will trigger the viewing key setup process
-      await retryWithViewingKey(tokenAddress);
+      await suggestToken(tokenAddress);
     } finally {
       setIsSettingUpViewingKey(false);
     }
