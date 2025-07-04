@@ -542,7 +542,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                               </div>
                             )}
                             <div className="flex items-center justify-between">
-                              <span className="text-adamant-text-box-secondary">Balance:</span>
+                              <span className="text-adamant-text-box-secondary">Available:</span>
                               {tokenInfo.isLoadingBalance ? (
                                 <div className="flex items-center">
                                   <ReloadIcon className="w-4 h-4 animate-spin text-adamant-gradientBright mr-2" />

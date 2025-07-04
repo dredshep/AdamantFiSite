@@ -7,7 +7,15 @@ import TokenImageWithFallback from '../../TokenImageWithFallback';
 import TopRightBalanceLp from '../../TopRightBalanceLp';
 import InputLabel from './InputLabel';
 import { PoolInputIdentifier } from './TokenInputBase';
-import { INPUT_STYLES } from './inputStyles';
+import {
+  InputContainer,
+  InputField,
+  InputHeader,
+  InputRow,
+  LoadingOverlay,
+  LoadingPlaceholder,
+  TokenSelectorStatic,
+} from './inputStyles';
 
 interface TokenInputBaseLpProps {
   inputValue: string;
@@ -49,8 +57,8 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
   }, [lpTokenData.amount, inputIdentifier, setTokenInputBalance]);
 
   return (
-    <div className={INPUT_STYLES.container}>
-      <div className={INPUT_STYLES.header}>
+    <InputContainer>
+      <InputHeader>
         <InputLabel label={label} caseType="normal-case" />
         <TopRightBalanceLp
           balance={lpTokenData.amount}
@@ -62,12 +70,11 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
           onFetchBalance={() => void lpTokenData.refetch()}
           onSuggestToken={() => void lpTokenData.suggestToken()}
         />
-      </div>
-      <div className={INPUT_STYLES.inputRow}>
+      </InputHeader>
+      <InputRow>
         <div className="relative flex-1">
-          <input
+          <InputField
             type="text"
-            className={INPUT_STYLES.inputField}
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="0.0"
@@ -75,17 +82,17 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
             data-input-id={inputIdentifier}
           />
           {isLoading && (
-            <div className={INPUT_STYLES.loadingOverlay}>
-              <div className={INPUT_STYLES.loadingPlaceholder} />
-            </div>
+            <LoadingOverlay>
+              <LoadingPlaceholder />
+            </LoadingOverlay>
           )}
         </div>
-        <div className={INPUT_STYLES.tokenSelectorStatic}>
+        <TokenSelectorStatic>
           <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
           {tokenSymbol}
-        </div>
-      </div>
-    </div>
+        </TokenSelectorStatic>
+      </InputRow>
+    </InputContainer>
   );
 };
 

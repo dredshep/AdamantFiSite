@@ -1,7 +1,7 @@
-import React from "react";
-import { usePoolStore } from "@/store/forms/poolStore";
-import PoolMaxButton from "@/components/app/Shared/Forms/Input/TokenInput/PoolMaxButton";
-import { PoolTokenInputs } from "@/types";
+import PoolMaxButton from '@/components/app/Shared/Forms/Input/TokenInput/PoolMaxButton';
+import { usePoolStore } from '@/store/forms/poolStore';
+import { PoolTokenInputs } from '@/types';
+import React from 'react';
 
 interface PoolTokenInputProps {
   poolInputIdentifier: keyof PoolTokenInputs;

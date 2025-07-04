@@ -41,11 +41,11 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
         {withLabel && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">
-              Balance: {balance !== null ? balance.toFixed(6) : '0'} {tokenSymbol}
+              Available: {balance !== null ? balance.toFixed(6) : '0'} {tokenSymbol}
             </span>
             <FetchButton
               loading={loading}

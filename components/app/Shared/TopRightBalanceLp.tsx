@@ -74,7 +74,7 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
         {withLabel && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">
-              Balance: {formatBalance(balance)} {tokenSymbol}
+              {formatBalance(balance)} {tokenSymbol}
             </span>
             <FetchButton
               loading={loading}

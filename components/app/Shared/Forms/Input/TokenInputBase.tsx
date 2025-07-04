@@ -9,7 +9,15 @@ import TopRightBalance from '../../TopRightBalance';
 import PoolSelectionModal from '../Select/PoolSelectionModal';
 import TokenSelectionModal from '../Select/TokenSelectionModal';
 import InputLabel from './InputLabel';
-import { INPUT_STYLES } from './inputStyles';
+import {
+  InputContainer,
+  InputField,
+  InputHeader,
+  InputRow,
+  LoadingOverlay,
+  LoadingPlaceholder,
+  TokenSelectorClickable,
+} from './inputStyles';
 
 export type SwapInputIdentifier = keyof SwapTokenInputs;
 export type PoolInputIdentifier = keyof PoolTokenInputs;
@@ -56,8 +64,8 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   const isSwapInput = typeof inputIdentifier === 'string' && inputIdentifier.startsWith('swap.');
 
   return (
-    <div className={INPUT_STYLES.container}>
-      <div className={INPUT_STYLES.header}>
+    <InputContainer>
+      <InputHeader>
         <InputLabel label={label} caseType="normal-case" />
         <TopRightBalance
           balance={balance}
@@ -68,12 +76,11 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           error={tokenData.error}
           onFetchBalance={() => void tokenData.refetch()}
         />
-      </div>
-      <div className={INPUT_STYLES.inputRow}>
+      </InputHeader>
+      <InputRow>
         <div className="relative flex-1">
-          <input
+          <InputField
             type="text"
-            className={INPUT_STYLES.inputField}
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="0.0"
@@ -81,15 +88,17 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             data-input-id={inputIdentifier}
           />
           {isLoading && (
-            <div className={INPUT_STYLES.loadingOverlay}>
-              <div className={INPUT_STYLES.loadingPlaceholder} />
-            </div>
+            <LoadingOverlay>
+              <LoadingPlaceholder />
+            </LoadingOverlay>
           )}
         </div>
         <Dialog.Root>
-          <Dialog.Trigger className={INPUT_STYLES.tokenSelectorClickable}>
-            <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
-            {tokenSymbol}
+          <Dialog.Trigger asChild>
+            <TokenSelectorClickable>
+              <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
+              {tokenSymbol}
+            </TokenSelectorClickable>
           </Dialog.Trigger>
           {isSwapInput ? (
             <TokenSelectionModal inputIdentifier={inputIdentifier as SwapInputIdentifier} />
@@ -97,7 +106,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
             <PoolSelectionModal />
           )}
         </Dialog.Root>
-      </div>
+      </InputRow>
       {showEstimatedPrice && (
         <div className="text-sm text-gray-400 place-self-end flex items-center gap-1">
           <PiApproximateEquals className="h-3 w-3" />
@@ -108,7 +117,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           )}
         </div>
       )}
-    </div>
+    </InputContainer>
   );
 };
 

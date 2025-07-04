@@ -116,11 +116,11 @@ const SwapForm: React.FC = () => {
   // }
 
   return (
-    <div className="flex flex-col gap-6 py-2.5 px-2.5">
+    <div className="flex flex-col gap-2.5 py-2.5 px-2.5">
       {/* Header with Reset Button */}
-      <div className="flex justify-between items-center px-2">
-        <h2 className="text-lg font-semibold text-gray-300">Swap Tokens</h2>
-        {/* <button
+      {/* <div className="flex justify-between items-center px-2"> */}
+      {/* <h2 className="text-lg font-semibold text-gray-300">Swap Tokens</h2> */}
+      {/* <button
           onClick={resetTokenSelections}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors duration-200 bg-adamant-app-input/30 hover:bg-adamant-app-input/50 px-3 py-1.5 rounded-lg"
           title="Reset token selections"
@@ -128,7 +128,7 @@ const SwapForm: React.FC = () => {
           <MdClear className="w-4 h-4" />
           Reset
         </button> */}
-      </div>
+      {/* </div> */}
 
       <div className="flex flex-col gap-6 relative">
         {/* <div className="flex flex-col gap-2.5 bg-adamant-app-input bg-opacity-50 rounded-lg p-4"> */}

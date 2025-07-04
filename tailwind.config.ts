@@ -50,6 +50,7 @@ const config = {
             box: '#272632',
             boxHighlight: '#444a5f',
             input: '#10131f',
+            inputBorder: '#404040',
             selectTrigger: '#232631',
             buttonDisabled: '#999ca4',
           },
