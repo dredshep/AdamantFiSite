@@ -1,6 +1,6 @@
 import { MobileSearchButton, SmartSearchBox } from '@/components/app/Global/SmartSearch';
 import UserWallet from '@/components/app/Global/UserWallet';
-import Logo from '@/components/SVG/Logo';
+import AdamantFiLogo from '@/components/SVG/logo';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';
@@ -18,7 +18,7 @@ const Navbar: React.FC = () => {
       <div className="flex items-center gap-4 md:gap-9">
         <Link href="/" passHref>
           <div className="flex items-center cursor-pointer">
-            <Logo className="h-8 w-8 md:h-10 md:w-10" />
+            <AdamantFiLogo className="h-8 w-8 md:h-10 md:w-10" />
           </div>
         </Link>
 
