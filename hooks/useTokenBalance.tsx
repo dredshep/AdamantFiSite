@@ -1,6 +1,6 @@
 import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { SecretString } from '@/types';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 // Keep the error enum for backward compatibility
 export enum TokenBalanceError {
@@ -142,18 +142,25 @@ export function useMultipleTokenBalances(
   const suggestTokenAction = useBalanceFetcherStore((state) => state.suggestToken);
   const retryWithViewingKeyAction = useBalanceFetcherStore((state) => state.retryWithViewingKey);
 
-  // Filter out undefined addresses
-  const validAddresses = tokenAddresses.filter((addr): addr is SecretString => !!addr);
+  // Memoize valid addresses to prevent re-renders
+  const stringifiedAddresses = JSON.stringify(tokenAddresses.filter(Boolean).sort());
+  const validAddresses = useMemo(
+    () => tokenAddresses.filter((addr): addr is SecretString => !!addr),
+    [stringifiedAddresses]
+  );
 
-  // Use a selector to get all relevant balance states at once
-  // FIX 2: Ensure this selector is also stable by using the default object.
-  const balanceStates = useBalanceFetcherStore((state) => {
-    const states: Record<string, (typeof state.balances)[string]> = {};
+  // SUBSCRIBE to the entire balances object. This is less optimal but avoids the unstable selector issue.
+  const allBalances = useBalanceFetcherStore((state) => state.balances);
+
+  // CREATE the specific slice we need for this component using useMemo.
+  // This will only re-run when allBalances (from the store) or validAddresses (from props) changes.
+  const balanceStates = useMemo(() => {
+    const states: Record<string, (typeof allBalances)[string]> = {};
     validAddresses.forEach((address) => {
-      states[address] = state.balances[address] ?? DEFAULT_BALANCE_STATE;
+      states[address] = allBalances[address] ?? DEFAULT_BALANCE_STATE;
     });
     return states;
-  });
+  }, [allBalances, validAddresses]);
 
   // Auto-fetch balances when component mounts (if enabled)
   useEffect(() => {
@@ -162,25 +169,43 @@ export function useMultipleTokenBalances(
     }
   }, [autoFetch, validAddresses, addToQueue, caller]);
 
-  // Create the return object with balance states for each token
-  const result: Record<string, UseTokenBalanceReturn> = {};
+  // FIX 3: Memoize the callback functions for each token to ensure they are stable
+  const callbacks = useMemo(() => {
+    const cbs: Record<
+      string,
+      {
+        refetch: () => void;
+        suggestToken: () => void;
+        retryWithViewingKey: () => void;
+      }
+    > = {};
+    validAddresses.forEach((tokenAddress) => {
+      cbs[tokenAddress] = {
+        refetch: () => addToQueue(tokenAddress, `${caller}:${tokenAddress.slice(-6)}`),
+        suggestToken: () => void suggestTokenAction(tokenAddress),
+        retryWithViewingKey: () => void retryWithViewingKeyAction(tokenAddress),
+      };
+    });
+    return cbs;
+  }, [validAddresses, caller, addToQueue, suggestTokenAction, retryWithViewingKeyAction]);
 
-  validAddresses.forEach((tokenAddress) => {
-    const balanceState = balanceStates[tokenAddress] ?? DEFAULT_BALANCE_STATE;
-    const amount = balanceState.balance === '-' ? null : balanceState.balance;
-    const error = mapStringToTokenBalanceError(balanceState.error);
+  // FIX 4: Memoize the final result object
+  return useMemo(() => {
+    const result: Record<string, UseTokenBalanceReturn> = {};
+    validAddresses.forEach((tokenAddress) => {
+      const balanceState = balanceStates[tokenAddress] ?? DEFAULT_BALANCE_STATE;
+      const amount = balanceState.balance === '-' ? null : balanceState.balance;
+      const error = mapStringToTokenBalanceError(balanceState.error);
 
-    result[tokenAddress] = {
-      amount, // For backward compatibility
-      balance: balanceState.balance,
-      loading: balanceState.loading,
-      error, // Converted to enum for backward compatibility
-      needsViewingKey: balanceState.needsViewingKey,
-      refetch: () => addToQueue(tokenAddress, `${caller}:${tokenAddress.slice(-6)}`),
-      suggestToken: () => void suggestTokenAction(tokenAddress),
-      retryWithViewingKey: () => void retryWithViewingKeyAction(tokenAddress),
-    };
-  });
-
-  return result;
+      result[tokenAddress] = {
+        amount, // For backward compatibility
+        balance: balanceState.balance,
+        loading: balanceState.loading,
+        error, // Converted to enum for backward compatibility
+        needsViewingKey: balanceState.needsViewingKey,
+        ...(callbacks[tokenAddress] || {}), // Spread the stable callbacks
+      } as UseTokenBalanceReturn;
+    });
+    return result;
+  }, [validAddresses, balanceStates, callbacks]);
 }

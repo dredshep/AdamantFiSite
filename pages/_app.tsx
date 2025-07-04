@@ -8,7 +8,6 @@ import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
 // import inter font
 import { RadixToastProvider } from '@/components/app/Shared/Toasts/RadixToastProvider';
-import { ViewingKeyDebugger } from '@/components/ViewingKeyDebugger';
 import { TokenServiceError, TokenServiceErrorType } from '@/services/secret/TokenService';
 import { getSwappableTokens } from '@/utils/apis/getSwappableTokens';
 import { toastManager } from '@/utils/toast/toastManager';
@@ -125,7 +124,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <div className={`${inter.className} bg-[#151321] min-h-screen text-white font-sans`}>
         <Component {...pageProps} />
-        <ViewingKeyDebugger />
+        {/* <ViewingKeyDebugger /> */}
         <RadixToastProvider />
       </div>
     </QueryClientProvider>

@@ -1,4 +1,4 @@
-import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
+import { LP_TOKENS, TOKENS } from '@/config/tokens';
 import {
   TokenService,
   TokenServiceError,
@@ -67,9 +67,9 @@ function getTokenInfo(tokenAddress: string) {
 }
 
 // Helper function to check if token is an LP token
-function isLpToken(tokenAddress: string): boolean {
-  return LIQUIDITY_PAIRS.some((pair) => pair.lpToken === tokenAddress);
-}
+// function isLpToken(tokenAddress: string): boolean {
+//   return LIQUIDITY_PAIRS.some((pair) => pair.lpToken === tokenAddress);
+// }
 
 export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => ({
   balances: {},

@@ -6,6 +6,7 @@ import {
   isQueryErrorResponse,
 } from '@/types/secretswap/lp-staking';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
+import { showToastOnce } from '@/utils/toast/toastManager';
 import { SecretNetworkClient } from 'secretjs';
 
 /**
@@ -117,11 +118,14 @@ export const getStakedBalance = async (params: StakedBalanceParams): Promise<str
         if (error instanceof Error) {
           const errorMessage = error.message;
 
-          // For viewing key errors, provide a more helpful message
+          // For viewing key errors, provide a more helpful message with consistent toast
           if (errorMessage.includes('viewing key') || errorMessage.includes('unauthorized')) {
-            throw new Error(
-              `Viewing key authentication failed: The provided viewing key is incorrect or not authorized for this address.`
-            );
+            const improvedMessage =
+              'Key is corrupted in Keplr. Please open Keplr, scroll down to the token list, find this token, and click "Set your viewing key".';
+            showToastOnce('staked-balance-key-invalid', improvedMessage, 'error', {
+              autoClose: false,
+            });
+            throw new Error(`Viewing key authentication failed: ${improvedMessage}`);
           }
 
           // For other errors, try to parse the response
