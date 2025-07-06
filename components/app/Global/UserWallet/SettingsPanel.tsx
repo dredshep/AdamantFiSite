@@ -1,13 +1,14 @@
 import { LoadBalancePreference } from '@/utils/env';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import React, { useState } from 'react';
-import { RiArrowLeftLine, RiCheckLine } from 'react-icons/ri';
+import { RiArrowLeftLine, RiCheckLine, RiKey2Line } from 'react-icons/ri';
 
 interface SettingsPanelProps {
   onClose: () => void;
+  onManageKeys: () => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onManageKeys }) => {
   const [selectedPreference, setSelectedPreference] = useState<LoadBalancePreference>(
     (process.env['NEXT_PUBLIC_LOAD_BALANCE_PREFERENCE'] as LoadBalancePreference) ||
       LoadBalancePreference.Pair
@@ -54,67 +55,78 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-adamant-box-border">
+    <div className="p-6 flex flex-col h-full">
+      {/* Back button */}
+      <div className="flex items-center mb-6">
         <button
           onClick={onClose}
-          className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-colors text-adamant-text-box-secondary hover:text-adamant-text-box-main"
+          className="flex items-center gap-2 text-sm text-adamant-text-box-secondary hover:text-white transition-colors"
         >
-          <RiArrowLeftLine className="w-5 h-5" />
+          <RiArrowLeftLine />
+          Back to Wallet
         </button>
-        <h2 className="text-lg font-semibold text-adamant-text-box-main">Settings</h2>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-4 space-y-6">
+      <div className="flex-1 space-y-6">
+        {/* Balance Loading Preference */}
         <div>
-          <h3 className="text-sm font-medium text-adamant-text-box-main mb-3">
-            Balance Loading Preference
-          </h3>
-          <p className="text-xs text-adamant-text-box-secondary mb-4">
-            Choose when token balances should be automatically loaded to optimize performance and
-            prevent rate limiting.
-          </p>
-
+          <h3 className="font-bold text-white text-base mb-3">Balance Auto-Loading</h3>
           <div className="space-y-3">
-            {preferences.map((preference) => (
-              <button
-                key={preference.value}
-                onClick={() => setSelectedPreference(preference.value)}
-                className={`w-full p-4 rounded-xl border transition-all duration-200 text-left ${
-                  selectedPreference === preference.value
-                    ? 'border-adamant-gradientBright bg-adamant-gradientBright/10'
-                    : 'border-adamant-box-border hover:border-adamant-gradientBright/50 hover:bg-adamant-box-dark/30'
-                }`}
+            {preferences.map((pref) => (
+              <div
+                key={pref.value}
+                onClick={() => setSelectedPreference(pref.value)}
+                className={`
+                  p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
+                  ${
+                    selectedPreference === pref.value
+                      ? 'bg-adamant-box-regular border-adamant-gradientBright/50'
+                      : 'bg-adamant-box-dark border-adamant-box-border hover:border-adamant-box-border-highlight'
+                  }
+                `}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg">{preference.icon}</span>
-                    <div>
-                      <div className="font-medium text-adamant-text-box-main mb-1">
-                        {preference.title}
-                      </div>
-                      <div className="text-xs text-adamant-text-box-secondary">
-                        {preference.description}
-                      </div>
+                <div className="flex items-center">
+                  <div className="text-2xl mr-4">{pref.icon}</div>
+                  <div>
+                    <div className="font-semibold text-white">{pref.title}</div>
+                    <div className="text-sm text-adamant-text-box-secondary">
+                      {pref.description}
                     </div>
                   </div>
-                  {selectedPreference === preference.value && (
-                    <RiCheckLine className="w-5 h-5 text-adamant-gradientBright flex-shrink-0" />
+                  {selectedPreference === pref.value && (
+                    <RiCheckLine className="ml-auto w-6 h-6 text-adamant-gradientBright" />
                   )}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </div>
+
+        {/* Key Management */}
+        <div>
+          <h3 className="font-bold text-white text-base mb-3">Key Management</h3>
+          <button
+            onClick={onManageKeys}
+            className="w-full flex items-center justify-between p-4 rounded-xl bg-adamant-box-dark hover:bg-adamant-box-regular border-2 border-adamant-box-border hover:border-adamant-box-border-highlight transition-all duration-200"
+          >
+            <div className="flex items-center">
+              <RiKey2Line className="w-5 h-5 mr-3 text-adamant-gradientBright" />
+              <div>
+                <div className="font-semibold text-white">Manage Contract Keys</div>
+                <div className="text-sm text-adamant-text-box-secondary">
+                  View and copy your saved viewing keys.
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-adamant-box-border">
+      {/* Save Button */}
+      <div className="mt-6">
         <button
           onClick={handleSave}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark text-black font-semibold hover:from-adamant-gradientDark hover:to-adamant-gradientBright transition-all duration-300"
+          className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-200 transition-colors duration-200"
         >
           Save Settings
         </button>

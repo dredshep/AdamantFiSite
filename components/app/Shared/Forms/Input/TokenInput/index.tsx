@@ -109,7 +109,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
     if (isSwap) {
       return isSell ? 'Sell' : 'Buy';
     }
-    return isPool ? 'Pool' : 'Token';
+    return isPool ? '' : 'Token';
   }
 
   // console.log('Rendering TokenInputBase with:', {

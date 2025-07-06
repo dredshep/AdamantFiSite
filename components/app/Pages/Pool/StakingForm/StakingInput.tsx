@@ -69,7 +69,10 @@
  * RECOMMENDATION: Use StakingInput2 approach for production
  */
 
-import { InfoContainer } from '@/components/app/Shared/Forms/Input/InputWrappers';
+import {
+  InfoContainer,
+  LoadingPlaceholder,
+} from '@/components/app/Shared/Forms/Input/InputWrappers';
 import StakingPoolSelectionModal from '@/components/app/Shared/Forms/Select/StakingPoolSelectionModal';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { getActiveStakingPools } from '@/config/staking';
@@ -115,8 +118,11 @@ const StakingInput: React.FC<StakingInputProps> = ({
 
   const operationLabel = operation === 'stake' ? 'Stake' : 'Unstake';
   const amount = stakingInputs[inputIdentifier].amount;
-  const isInvalid = amountExceedsBalance(amount, balance);
-  const balanceNumber = parseFloat(balance) || 0;
+
+  // Properly handle balance states: '-' means unknown, actual numbers are known values
+  const isBalanceKnown = balance !== '-';
+  const balanceNumber = isBalanceKnown ? parseFloat(balance) : null;
+  const isInvalid = isBalanceKnown && amountExceedsBalance(amount, balance);
 
   // Calculate reward estimates for stake operations when amount is entered
   const shouldShowEstimates =
@@ -140,7 +146,9 @@ const StakingInput: React.FC<StakingInputProps> = ({
   };
 
   const handleMaxClick = () => {
-    setStakingInputAmount(inputIdentifier, balance);
+    if (isBalanceKnown) {
+      setStakingInputAmount(inputIdentifier, balance);
+    }
   };
 
   const handleTokenSelectorClick = () => {
@@ -156,18 +164,26 @@ const StakingInput: React.FC<StakingInputProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-adamant-text-box-main">{operationLabel}</h3>
-        <div className="text-right">
+        <div className="flex gap-3 items-center">
           <div className="text-sm text-adamant-text-box-secondary">{balanceLabel}</div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-adamant-text-box-main">
-              {balanceNumber.toLocaleString('en-US', { maximumFractionDigits: 6 })}
-            </span>
-            <button
-              onClick={handleMaxClick}
-              className="text-xs text-adamant-accentText hover:text-adamant-accentText/80 transition-colors"
-            >
-              MAX
-            </button>
+            {isLoading || !isBalanceKnown ? (
+              <LoadingPlaceholder size="medium" className="h-5 w-20" />
+            ) : (
+              <>
+                <span className="text-sm font-medium text-adamant-text-box-main">
+                  {balanceNumber?.toLocaleString('en-US', { maximumFractionDigits: 6 }) ?? '0'}
+                </span>
+                {isBalanceKnown && (
+                  <button
+                    className="font-medium text-base flex items-center justify-center bg-white opacity-80 hover:opacity-100 text-black rounded-md px-2"
+                    onClick={handleMaxClick}
+                  >
+                    max
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -187,7 +203,7 @@ const StakingInput: React.FC<StakingInputProps> = ({
           />
           {isLoading && (
             <div className="absolute inset-0 flex items-center">
-              <div className="h-8 w-32 bg-white/5 animate-pulse rounded" />
+              <LoadingPlaceholder size="large" className="h-8 w-32" />
             </div>
           )}
         </div>

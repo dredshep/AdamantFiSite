@@ -45,11 +45,16 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   // Use reward estimates hook if we have LP token address
   const rewardEstimates = useRewardEstimates(resolvedLpTokenAddress || '');
 
-  // Helper to format numbers cleanly
+  // Helper to format numbers cleanly - NEVER show '0' for null/unknown values
   const formatBalance = (value: string | null): string => {
-    if (!value || value === '0') return '0';
+    // If value is null/undefined, we don't know the balance - don't show anything
+    if (value === null || value === undefined) return '';
+
+    // If value is '0', that's actually zero - show it
+    if (value === '0') return '0';
+
     const num = parseFloat(value);
-    if (isNaN(num)) return '0';
+    if (isNaN(num)) return '';
 
     // For very small numbers, show more decimals
     if (num < 0.001) return num.toFixed(8);
@@ -77,24 +82,25 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
     return `${value.toFixed(2)}%`;
   };
 
-  const hasStakedTokens = stakedBalance && stakedBalance !== '0';
+  // Properly distinguish between null (unknown) and '0' (actually zero)
+  const hasStakedTokens = stakedBalance !== null && stakedBalance !== '0';
   const hasPendingRewards =
-    pendingRewards && pendingRewards !== '0' && parseFloat(pendingRewards) > 0;
+    pendingRewards !== null && pendingRewards !== '0' && parseFloat(pendingRewards) > 0;
+  const isStakedBalanceKnown = stakedBalance !== null;
+  const isPendingRewardsKnown = pendingRewards !== null;
 
   // Calculate current stake rewards if user has staked tokens
-  const currentStakeRewards = hasStakedTokens
-    ? rewardEstimates.getCurrentStakeRewards(stakedBalance || '0')
-    : null;
+  const currentStakeRewards =
+    hasStakedTokens && stakedBalance ? rewardEstimates.getCurrentStakeRewards(stakedBalance) : null;
 
   // Calculate user's share percentage
-  const userSharePercentage = hasStakedTokens
-    ? rewardEstimates.getUserSharePercentage(stakedBalance || '0')
-    : 0;
+  const userSharePercentage =
+    hasStakedTokens && stakedBalance ? rewardEstimates.getUserSharePercentage(stakedBalance) : 0;
 
-  // Calculate staked value in USD (convert from raw amount to display amount first)
+  // Calculate staked value in USD - only if we have actual staked balance
   const stakedValueUsd =
-    hasStakedTokens && rewardEstimates.poolData.lpTokenPrice
-      ? (parseFloat(stakedBalance || '0') / 1_000_000) * rewardEstimates.poolData.lpTokenPrice
+    hasStakedTokens && stakedBalance && rewardEstimates.poolData.lpTokenPrice
+      ? (parseFloat(stakedBalance) / 1_000_000) * rewardEstimates.poolData.lpTokenPrice
       : undefined;
 
   // Update allocation function to trigger reward initialization
@@ -223,7 +229,17 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
           <div>
             <p className="text-adamant-text-box-secondary">Your Share</p>
             <p className="font-medium text-adamant-text-box-main">
-              {hasStakedTokens ? formatPercentage(userSharePercentage) : '0%'}
+              {isLoading ? (
+                <LoadingPlaceholder size="small" />
+              ) : isStakedBalanceKnown ? (
+                hasStakedTokens ? (
+                  formatPercentage(userSharePercentage)
+                ) : (
+                  '0%'
+                )
+              ) : (
+                <LoadingPlaceholder size="small" />
+              )}
             </p>
           </div>
         </div>
@@ -290,17 +306,19 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
           <div className="text-right">
             {isLoading ? (
               <LoadingPlaceholder size="medium" />
-            ) : (
+            ) : isStakedBalanceKnown ? (
               <div className="text-xl font-semibold text-adamant-text-box-main">
                 {formatBalance(stakedBalance)}
               </div>
+            ) : (
+              <LoadingPlaceholder size="medium" />
             )}
           </div>
         </div>
       </div>
 
       {/* Pending Rewards - Enhanced with current earning rate */}
-      {(hasPendingRewards || hasStakedTokens) && (
+      {(hasPendingRewards || hasStakedTokens || !isPendingRewardsKnown) && (
         <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-4 border border-adamant-accentText/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -324,7 +342,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             <div className="text-right flex items-center gap-2">
               {isLoading ? (
                 <LoadingPlaceholder size="small" />
-              ) : (
+              ) : isPendingRewardsKnown ? (
                 <>
                   <div className="text-xl font-semibold text-adamant-accentText">
                     {formatBalance(pendingRewards)}
@@ -333,6 +351,8 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
                     <div className="w-2 h-2 bg-adamant-accentText rounded-full animate-pulse"></div>
                   )}
                 </>
+              ) : (
+                <LoadingPlaceholder size="small" />
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { debugKeplrQuery } from '@/lib/keplr/utils';
+import { useViewingKeyStore } from '@/store/viewingKeyStore';
 import {
   LPStakingQueryAnswer,
   LPStakingQueryMsg,
@@ -6,7 +7,8 @@ import {
   isRewardsResponse,
 } from '@/types/secretswap/lp-staking';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { SecretNetworkClient } from 'secretjs';
+import { showToastOnce } from '@/utils/toast/toastManager';
+import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 /**
  * Parameters for getRewards function
@@ -154,6 +156,89 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
 
           // For viewing key errors, provide a more helpful message
           if (errorMessage.includes('viewing key') || errorMessage.includes('unauthorized')) {
+            console.log('🔑 Viewing key authentication failed:', { errorMessage });
+
+            const generateRandomKey = () => {
+              const randomBytes = new Uint8Array(32);
+              crypto.getRandomValues(randomBytes);
+              return Array.from(randomBytes)
+                .map((b) => b.toString(16).padStart(2, '0'))
+                .join('');
+            };
+
+            const handleCreateKey = async () => {
+              try {
+                const newKey = generateRandomKey();
+                const setViewingKeyMsg = {
+                  set_viewing_key: {
+                    key: newKey,
+                  },
+                };
+
+                showToastOnce(
+                  'create-vk-info',
+                  'Please approve the transaction in Keplr to create a new viewing key.',
+                  'info',
+                  { autoClose: 10000 }
+                );
+
+                const result = await secretjs.tx.compute.executeContract(
+                  {
+                    sender: secretjs.address,
+                    contract_address: lpStakingContractAddress,
+                    code_hash: lpStakingContractHash,
+                    msg: setViewingKeyMsg,
+                    sent_funds: [],
+                  },
+                  {
+                    gasLimit: 150_000,
+                  }
+                );
+
+                if (result.code === TxResultCode.Success) {
+                  useViewingKeyStore.getState().setViewingKey(lpStakingContractAddress, newKey);
+                  showToastOnce('create-vk-success', 'Viewing key created!', 'success', {
+                    message: `Your new key is: ${newKey}. Please copy it and save it securely.`,
+                    actionLabel: 'Copy Key',
+                    onAction: () => {
+                      navigator.clipboard
+                        .writeText(newKey)
+                        .then(() => {
+                          showToastOnce('copy-success', 'Key copied to clipboard!', 'success');
+                        })
+                        .catch((err) => {
+                          console.error('Failed to copy key: ', err);
+                          showToastOnce('copy-error', 'Failed to copy key.', 'error');
+                        });
+                    },
+                    autoClose: false,
+                  });
+                } else {
+                  throw new Error(`Failed to set viewing key: ${result.rawLog}`);
+                }
+              } catch (error) {
+                console.error('Error creating viewing key:', error);
+                const message = error instanceof Error ? error.message : String(error);
+                showToastOnce(
+                  'create-vk-error',
+                  `Failed to create viewing key: ${message}`,
+                  'error'
+                );
+              }
+            };
+            // let's log our old key:
+            console.log('🔑 Old viewing key:', viewingKey);
+
+            showToastOnce('staking-vk-error', 'Viewing Key Error', 'error', {
+              message:
+                'The viewing key for this staking pool is invalid or not set. You can create a new one.',
+              actionLabel: 'Create New Key',
+              onAction: () => {
+                void handleCreateKey();
+              },
+              autoClose: false,
+            });
+
             throw new Error(
               `Viewing key authentication failed: The provided viewing key is incorrect or not authorized for this address.`
             );

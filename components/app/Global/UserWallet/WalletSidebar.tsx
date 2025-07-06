@@ -11,11 +11,13 @@ import { HiQrCode } from 'react-icons/hi2';
 import {
   RiArrowUpSLine,
   RiFileCopyLine,
+  RiKey2Line,
   RiRefreshLine,
   RiSendPlaneLine,
   RiSettings3Line,
   RiWalletLine,
 } from 'react-icons/ri';
+import { ContractKeysPanel } from './ContractKeysPanel';
 import { ReceivePanel } from './ReceivePanel';
 import { SendTokensPanel } from './SendTokensPanel';
 import { SettingsPanel } from './SettingsPanel';
@@ -30,7 +32,9 @@ const WalletSidebar: React.FC = () => {
   const tokens = listAllTokens() ?? [];
 
   // Instead of separate dialogs, just track which "sub-view" to render:
-  const [currentView, setCurrentView] = useState<'main' | 'send' | 'receive' | 'settings'>('main');
+  const [currentView, setCurrentView] = useState<
+    'main' | 'send' | 'receive' | 'settings' | 'contractKeys'
+  >('main');
 
   const truncatedAddress = address === null ? '' : address.slice(0, 8) + '...' + address.slice(-6);
 
@@ -58,6 +62,10 @@ const WalletSidebar: React.FC = () => {
   const handleCloseSidebar = () => {
     closeWalletModal();
     setCurrentView('main');
+  };
+
+  const handleBackToSettings = () => {
+    setCurrentView('settings');
   };
 
   return (
@@ -154,7 +162,10 @@ const WalletSidebar: React.FC = () => {
             </div>
           )}
 
-          {(currentView === 'send' || currentView === 'receive' || currentView === 'settings') && (
+          {(currentView === 'send' ||
+            currentView === 'receive' ||
+            currentView === 'settings' ||
+            currentView === 'contractKeys') && (
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-white flex items-center gap-3">
                 {currentView === 'send' && (
@@ -173,6 +184,12 @@ const WalletSidebar: React.FC = () => {
                   <>
                     <RiSettings3Line className="w-6 h-6 text-adamant-gradientBright" />
                     Settings
+                  </>
+                )}
+                {currentView === 'contractKeys' && (
+                  <>
+                    <RiKey2Line className="w-6 h-6 text-adamant-gradientBright" />
+                    Contract Keys
                   </>
                 )}
               </h2>
@@ -262,7 +279,15 @@ const WalletSidebar: React.FC = () => {
       )}
 
       {/* Settings View */}
-      {currentView === 'settings' && <SettingsPanel onClose={() => setCurrentView('main')} />}
+      {currentView === 'settings' && (
+        <SettingsPanel
+          onManageKeys={() => setCurrentView('contractKeys')}
+          onClose={() => setCurrentView('main')}
+        />
+      )}
+
+      {/* Contract Keys View */}
+      {currentView === 'contractKeys' && <ContractKeysPanel onClose={handleBackToSettings} />}
     </aside>
   );
 };

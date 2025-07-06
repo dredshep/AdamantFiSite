@@ -1,10 +1,11 @@
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 interface ViewingKeyStore {
   viewingKeys: { [tokenAddress: string]: string };
   setViewingKey: (tokenAddress: string, viewingKey: string) => void;
   getViewingKey: (tokenAddress: string) => string | undefined;
+  removeViewingKey: (tokenAddress: string) => void;
 }
 
 export const useViewingKeyStore = create<ViewingKeyStore>()(
@@ -22,9 +23,17 @@ export const useViewingKeyStore = create<ViewingKeyStore>()(
       getViewingKey: (tokenAddress: string) => {
         return get().viewingKeys[tokenAddress];
       },
+      removeViewingKey: (tokenAddress: string) => {
+        set((state) => {
+          const { [tokenAddress]: removed, ...remainingKeys } = state.viewingKeys;
+          return {
+            viewingKeys: remainingKeys,
+          };
+        });
+      },
     }),
     {
-      name: "viewing-key-store",
+      name: 'viewing-key-store',
       storage: createJSONStorage(() => sessionStorage),
     }
   )

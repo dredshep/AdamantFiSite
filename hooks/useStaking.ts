@@ -7,6 +7,7 @@ import {
   unstakeLP,
 } from '@/lib/keplr/incentives';
 import { useTxStore } from '@/store/txStore';
+import { useViewingKeyStore } from '@/store/viewingKeyStore';
 import isNotNullish from '@/utils/isNotNullish';
 import { toastManager } from '@/utils/toast/toastManager';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -67,6 +68,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
   const [stakedBalance, setStakedBalance] = useState<string | null>(null);
   const [pendingRewards, setPendingRewards] = useState<string | null>(null);
   const [viewingKey, setViewingKey] = useState<string | null>(null);
+  const { getViewingKey: getStoreViewingKey } = useViewingKeyStore();
   const { setPending, setResult } = useTxStore();
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingRef = useRef<Record<string, boolean>>({});
@@ -85,7 +87,21 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
 
   // Fetch staked balance
   const fetchStakedBalance = useCallback(async () => {
-    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo || !isNotNullish(viewingKey)) {
+    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo) {
+      return null;
+    }
+
+    const keyToUse = getStoreViewingKey(stakingInfo.stakingAddress) || viewingKey;
+
+    console.log('🔧 Fixed key priority:');
+    console.log('  - Store key:', getStoreViewingKey(stakingInfo.stakingAddress));
+    console.log('  - Local key:', viewingKey);
+    console.log('  - Final keyToUse:', keyToUse);
+    console.log('  - Looking for address:', stakingInfo.stakingAddress);
+    console.log('  - All keys in store:', useViewingKeyStore.getState().viewingKeys);
+    console.log('  - Store addresses:', Object.keys(useViewingKeyStore.getState().viewingKeys));
+
+    if (!isNotNullish(keyToUse)) {
       return null;
     }
 
@@ -103,7 +119,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         secretjs,
         lpToken: stakingInfo.lpTokenAddress,
         address: walletAddress,
-        viewingKey,
+        viewingKey: keyToUse,
         stakingContractAddress: stakingInfo.stakingAddress,
         stakingContractCodeHash: stakingInfo.stakingCodeHash,
       });
@@ -115,11 +131,17 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
     } finally {
       setLoadingState('fetchBalance', false);
     }
-  }, [secretjs, walletAddress, stakingInfo, viewingKey, setLoadingState]);
+  }, [secretjs, walletAddress, stakingInfo, viewingKey, getStoreViewingKey]);
 
   // Fetch pending rewards
   const fetchPendingRewards = useCallback(async () => {
-    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo || !isNotNullish(viewingKey)) {
+    if (!secretjs || !isNotNullish(walletAddress) || !stakingInfo) {
+      return null;
+    }
+
+    const keyToUse = getStoreViewingKey(stakingInfo.stakingAddress) || viewingKey;
+
+    if (!isNotNullish(keyToUse)) {
       return null;
     }
 
@@ -137,7 +159,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         secretjs,
         lpToken: stakingInfo.lpTokenAddress,
         address: walletAddress,
-        viewingKey,
+        viewingKey: keyToUse,
         stakingContractAddress: stakingInfo.stakingAddress,
         stakingContractCodeHash: stakingInfo.stakingCodeHash,
       });
@@ -150,7 +172,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
     } finally {
       setLoadingState('fetchRewards', false);
     }
-  }, [secretjs, walletAddress, stakingInfo, viewingKey, setLoadingState]);
+  }, [secretjs, walletAddress, stakingInfo, viewingKey, getStoreViewingKey]);
 
   // Stake LP tokens
   const stakeLpTokens = useCallback(

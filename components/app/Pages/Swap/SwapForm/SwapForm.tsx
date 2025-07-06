@@ -1,13 +1,9 @@
 import FormButton from '@/components/app/Shared/Forms/FormButton';
-import {
-  ButtonContainer,
-  InfoContainer,
-  SmallInput,
-} from '@/components/app/Shared/Forms/Input/InputWrappers';
+import { SmallInput } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import TokenInput from '@/components/app/Shared/Forms/Input/TokenInput';
 import { useSwapFormLean as useSwapForm } from '@/hooks/useSwapFormLean';
 import * as Dialog from '@radix-ui/react-dialog';
-import { CheckIcon, Cross2Icon, InfoCircledIcon, ReloadIcon } from '@radix-ui/react-icons';
+import { CheckIcon, Cross2Icon, InfoCircledIcon } from '@radix-ui/react-icons';
 import React, { useEffect, useState } from 'react';
 import { HiArrowsUpDown } from 'react-icons/hi2';
 // import BestRouteEstimator from '../../BestRouteEstimator';
@@ -173,18 +169,18 @@ const SwapForm: React.FC = () => {
         {/* </div> */}
       </div>
       {payToken !== undefined && receiveToken !== undefined && (
-        <InfoContainer className="flex flex-col gap-3 px-2.5 text-gray-400 text-sm">
+        <div className="flex flex-col gap-3 px-2.5 text-gray-400 text-sm">
           {/* Header with refresh button */}
-          <div className="flex justify-between items-center -mt-1 mb-1">
-            <span className="text-xs font-medium text-adamant-text-form-main">Swap Details</span>
-            <ButtonContainer
+          {/* <div className="flex justify-between items-center -mt-1 mb-1"> */}
+          {/* <span className="text-xs font-medium text-gray-400">Swap Details</span> */}
+          {/* <ButtonContainer
               onClick={refreshEstimation}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors duration-200 px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors duration-200 px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
             >
               <ReloadIcon className={`w-3 h-3 ${isEstimating ? 'animate-spin' : ''}`} />
               Refresh
-            </ButtonContainer>
-          </div>
+            </ButtonContainer> */}
+          {/* </div> */}
           <div className="flex justify-between">
             <div className="flex items-center">
               <span>Price impact:</span>
@@ -355,7 +351,7 @@ const SwapForm: React.FC = () => {
               <span>{receiveToken.symbol}</span>
             </div>
           </div>
-        </InfoContainer>
+        </div>
       )}
       {/* <BestRouteEstimator
         // amountIn={payDetails.amount}

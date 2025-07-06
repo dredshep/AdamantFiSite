@@ -6,7 +6,7 @@ import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { ViewingKeyStatus } from '@/types/staking';
 // import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import StakingActions from './StakingActions';
 import StakingInput from './StakingInput';
 import StakingOverview from './StakingOverview';
@@ -14,7 +14,9 @@ import StakingPoolSelector from './StakingPoolSelector';
 
 const StakingForm: React.FC = () => {
   const { selectedPool } = usePoolStore();
-  const poolStaking = usePoolStaking(selectedPool?.address ?? null);
+
+  // Track initial loading state separately from background refreshes
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   // Get LP token address for this pool
   const pairInfo = selectedPool?.address
@@ -28,6 +30,9 @@ const StakingForm: React.FC = () => {
     true
   );
 
+  // Get poolStaking hook
+  const poolStaking = usePoolStaking(selectedPool?.address ?? null);
+
   const {
     hasStakingRewards,
     staking,
@@ -40,6 +45,103 @@ const StakingForm: React.FC = () => {
     refreshBalances,
     loadBalanceConfig,
   } = poolStaking;
+
+  // Setup is complete, display the staking UI
+  const rawStakedBalance = staking?.stakedBalance ?? null;
+  const rawPendingRewards = staking?.pendingRewards ?? null;
+
+  // Convert staked balance from raw amount to display amount (6 decimals for LP tokens)
+  // Only convert if we have actual data - never show '0' when we don't know
+  const stakedBalance =
+    rawStakedBalance !== null ? (parseInt(rawStakedBalance) / 1_000_000).toString() : null;
+
+  // Convert pending rewards from raw amount to display amount (6 decimals for bADMT)
+  // Only convert if we have actual data - never show '0' when we don't know
+  const pendingRewards =
+    rawPendingRewards !== null ? (parseInt(rawPendingRewards) / 1_000_000).toString() : null;
+
+  // Check if we have any data loaded (indicating we've completed initial load)
+  const hasAnyData =
+    rawStakedBalance !== null || rawPendingRewards !== null || lpTokenBalance.balance !== '-';
+
+  // Track when we've initially loaded data
+  useEffect(() => {
+    if (hasAnyData && !hasInitiallyLoaded) {
+      setHasInitiallyLoaded(true);
+    }
+  }, [hasAnyData, hasInitiallyLoaded]);
+
+  // Reset initial loading state when pool changes
+  useEffect(() => {
+    setHasInitiallyLoaded(false);
+  }, [selectedPool?.address]);
+
+  // An "initial load" is when we have no data for a value AND it's currently being fetched.
+  const isInitiallyLoadingStaked =
+    rawStakedBalance === null && (staking?.isOperationLoading('fetchBalance') ?? false);
+  const isInitiallyLoadingRewards =
+    rawPendingRewards === null && (staking?.isOperationLoading('fetchRewards') ?? false);
+  const isInitiallyLoadingLpToken = lpTokenBalance.balance === '-' && lpTokenBalance.loading;
+
+  // The entire form is in an "initial loading" state if any key data point is loading for the first time.
+  const isInitialLoading =
+    isInitiallyLoadingStaked || isInitiallyLoadingRewards || isInitiallyLoadingLpToken;
+
+  // A "background refresh" is when we ALREADY have data, but are fetching a new version.
+  const isBackgroundRefreshingStaked =
+    rawStakedBalance !== null && (staking?.isOperationLoading('fetchBalance') ?? false);
+  const isBackgroundRefreshingRewards =
+    rawPendingRewards !== null && (staking?.isOperationLoading('fetchRewards') ?? false);
+  const isBackgroundRefreshingLpToken = lpTokenBalance.balance !== '-' && lpTokenBalance.loading;
+
+  // Show a discrete refresh indicator if any data is updating in the background.
+  const isBackgroundRefreshing =
+    isBackgroundRefreshingStaked || isBackgroundRefreshingRewards || isBackgroundRefreshingLpToken;
+
+  // Only check for user action loading states (not background polling)
+  const isUserActionLoading =
+    (staking?.isOperationLoading('stake') ?? false) ||
+    (staking?.isOperationLoading('unstake') ?? false) ||
+    (staking?.isOperationLoading('claim') ?? false);
+
+  // Check if stakingInputs has a valid amount
+  const hasStakeAmount = poolStaking.stakingInputs.stakeAmount.amount !== '';
+  const hasUnstakeAmount = poolStaking.stakingInputs.unstakeAmount.amount !== '';
+
+  // Helper functions to check actual values vs unknown states
+  const hasActualStakedBalance = rawStakedBalance !== null && rawStakedBalance !== '0';
+  const hasActualPendingRewards = rawPendingRewards !== null && rawPendingRewards !== '0';
+  const isStakedBalanceKnown = rawStakedBalance !== null;
+  const isPendingRewardsKnown = rawPendingRewards !== null;
+
+  // Updated conditional checks - only disable for initial loading or user actions, not background refreshes
+  // Also properly handle unknown vs zero states
+  const isStakeDisabled = isInitialLoading || isUserActionLoading || !hasStakeAmount;
+  const isUnstakeDisabled =
+    isInitialLoading || isUserActionLoading || !hasUnstakeAmount || !hasActualStakedBalance; // Only disable if we know there's no staked balance
+  const isClaimDisabled = isInitialLoading || isUserActionLoading || !hasActualPendingRewards; // Only disable if we know there are no pending rewards
+
+  const handleStake = async () => {
+    const success = await stakeLpTokens();
+
+    // Refresh LP token balance after successful staking
+    if (success) {
+      lpTokenBalance.refetch();
+    }
+  };
+
+  const handleUnstake = async () => {
+    const success = await unstakeLpTokens();
+
+    // Refresh LP token balance after successful unstaking
+    if (success) {
+      lpTokenBalance.refetch();
+    }
+  };
+
+  const handleClaim = () => {
+    void claimRewards();
+  };
 
   // If staking is not available for this pool
   if (!selectedPool || !hasStakingRewards || stakingInfo === null) {
@@ -73,58 +175,6 @@ const StakingForm: React.FC = () => {
     );
   }
 
-  // Setup is complete, display the staking UI
-  const rawStakedBalance = staking?.stakedBalance ?? null;
-  const rawPendingRewards = staking?.pendingRewards ?? null;
-
-  // Convert staked balance from raw amount to display amount (6 decimals for LP tokens)
-  const stakedBalance = rawStakedBalance
-    ? (parseInt(rawStakedBalance) / 1_000_000).toString()
-    : null;
-
-  // Convert pending rewards from raw amount to display amount (6 decimals for bADMT)
-  const pendingRewards = rawPendingRewards
-    ? (parseInt(rawPendingRewards) / 1_000_000).toString()
-    : null;
-
-  const isBalanceLoading =
-    (staking?.isOperationLoading('fetchBalance') ?? false) ||
-    (staking?.isOperationLoading('fetchRewards') ?? false) ||
-    lpTokenBalance.loading;
-
-  // Check if stakingInputs has a valid amount
-  const hasStakeAmount = poolStaking.stakingInputs.stakeAmount.amount !== '';
-  const hasUnstakeAmount = poolStaking.stakingInputs.unstakeAmount.amount !== '';
-
-  // Fixed conditional checks to avoid object truthiness checks
-  const isStakeDisabled = isBalanceLoading || !hasStakeAmount;
-  const isUnstakeDisabled =
-    isBalanceLoading || !hasUnstakeAmount || rawStakedBalance === '0' || rawStakedBalance === null;
-  const isClaimDisabled =
-    isBalanceLoading || rawPendingRewards === '0' || rawPendingRewards === null;
-
-  const handleStake = async () => {
-    const success = await stakeLpTokens();
-
-    // Refresh LP token balance after successful staking
-    if (success) {
-      lpTokenBalance.refetch();
-    }
-  };
-
-  const handleUnstake = async () => {
-    const success = await unstakeLpTokens();
-
-    // Refresh LP token balance after successful unstaking
-    if (success) {
-      lpTokenBalance.refetch();
-    }
-  };
-
-  const handleClaim = () => {
-    void claimRewards();
-  };
-
   return (
     <div className="flex flex-col gap-6 py-6 px-6 flex-1">
       {/* Header Section - Compact */}
@@ -154,10 +204,10 @@ const StakingForm: React.FC = () => {
           stakedBalance={stakedBalance}
           pendingRewards={pendingRewards}
           rewardSymbol={stakingInfo.rewardTokenSymbol}
-          isLoading={isBalanceLoading}
+          isLoading={isInitialLoading}
           showRefreshButton={loadBalanceConfig.shouldShowFetchButton}
           onRefresh={refreshBalances}
-          isRefreshing={isBalanceLoading}
+          isRefreshing={isBackgroundRefreshing}
           stakingContractAddress={stakingInfo?.stakingAddress}
           pairSymbol={lpPairName}
           lpTokenAddress={stakingInfo?.lpTokenAddress}
@@ -171,19 +221,21 @@ const StakingForm: React.FC = () => {
           balanceLabel="Available LP Balance"
           tokenSymbol={lpPairName}
           stakingContractAddress={stakingInfo?.stakingAddress}
-          isLoading={(staking?.isOperationLoading('stake') ?? false) || lpTokenBalance.loading}
+          isLoading={isInitialLoading || (staking?.isOperationLoading('stake') ?? false)}
         />
 
-        {/* Unstaking Section - Only show if user has staked tokens */}
-        {rawStakedBalance !== '0' && rawStakedBalance !== null && (
+        {/* Unstaking Section - Show if we have staked tokens OR if we're still loading and don't know yet */}
+        {(hasActualStakedBalance || !isStakedBalanceKnown) && (
           <StakingInput
             inputIdentifier="unstakeAmount"
             operation="unstake"
-            balance={stakedBalance ?? '0'}
+            balance={stakedBalance ?? '-'} // Show '-' when unknown, not '0'
             balanceLabel="Staked LP Balance"
             tokenSymbol={lpPairName}
             stakingContractAddress={stakingInfo?.stakingAddress}
-            isLoading={staking?.isOperationLoading('unstake') ?? false}
+            isLoading={
+              isInitiallyLoadingStaked || (staking?.isOperationLoading('unstake') ?? false)
+            }
           />
         )}
       </div>
