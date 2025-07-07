@@ -25,7 +25,7 @@ export const useViewingKeyStore = create<ViewingKeyStore>()(
       },
       removeViewingKey: (tokenAddress: string) => {
         set((state) => {
-          const { [tokenAddress]: removed, ...remainingKeys } = state.viewingKeys;
+          const { [tokenAddress]: _, ...remainingKeys } = state.viewingKeys;
           return {
             viewingKeys: remainingKeys,
           };

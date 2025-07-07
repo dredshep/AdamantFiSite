@@ -5,6 +5,7 @@ import {
   isBalanceResponse,
   isQueryErrorResponse,
 } from '@/types/secretswap/lp-staking';
+import { Window as KeplrWindow } from '@keplr-wallet/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SecretNetworkClient } from 'secretjs';
 import { useKeplrConnection } from './useKeplrConnection';
@@ -127,7 +128,7 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
 
         try {
           // Try to get viewing key from Keplr
-          const keplr = (window as any).keplr;
+          const { keplr } = window as unknown as KeplrWindow;
           if (!keplr) {
             throw new Error('Keplr not found');
           }
@@ -138,7 +139,7 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
               'secret-4',
               config.stakingContractAddress
             );
-          } catch (viewingKeyError) {
+          } catch (_viewingKeyError) {
             // If no viewing key, set needsKey flag
             setStakedBalances((prev) => ({
               ...prev,
@@ -212,7 +213,7 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
     if (secretjs && walletAddress) {
       const configsWithStaking = memoizedConfigs.filter((c) => c.stakingContractAddress);
       if (configsWithStaking.length > 0) {
-        fetchStakedBalances(secretjs, walletAddress, configsWithStaking);
+        void fetchStakedBalances(secretjs, walletAddress, configsWithStaking);
       }
     } else {
       setStakedBalances((prev) => {
@@ -238,7 +239,7 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
       if (config.stakingContractAddress) {
         functions[config.lpTokenAddress] = () => {
           if (secretjs && walletAddress) {
-            fetchStakedBalances(secretjs, walletAddress, [config]);
+            void fetchStakedBalances(secretjs, walletAddress, [config]);
           }
         };
       }

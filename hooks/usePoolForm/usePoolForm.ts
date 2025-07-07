@@ -265,7 +265,7 @@ export function usePoolForm(
 
         // Update the store with the fetched balances if needed
         // This would require extending the store to handle balance updates
-      } catch (error) {
+      } catch (_error) {
         // Silent error handling for balance fetching
       }
     }, 2000); // Increased debounce time
@@ -482,13 +482,13 @@ export function usePoolForm(
               'Liquidity provided but auto-staking failed: could not determine LP amount'
             );
           }
-        } catch (stakeError) {
+        } catch (_stakeError) {
           toast.error('Liquidity provided but auto-staking failed');
         }
       } else {
         toast.success('Liquidity provided successfully');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Transaction failed. Please try again.');
       setPending(false);
     }
@@ -553,7 +553,7 @@ export function usePoolForm(
       }
 
       toast.success('Liquidity withdrawn successfully');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Transaction failed. Please try again.');
       setPending(false);
     }
@@ -743,7 +743,7 @@ export function usePoolForm(
         // Clear any existing validation warnings since we no longer check pool availability
         // Users are only limited by their personal token balance, not pool reserves
         setValidationWarning(null);
-      } catch (error) {
+      } catch (_error) {
         // Silent error handling
       } finally {
         setTimeout(() => {
@@ -918,7 +918,7 @@ function extractLpAmountFromTx(txResult: Record<string, unknown>): string | null
     }
 
     return null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

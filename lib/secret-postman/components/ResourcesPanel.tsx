@@ -87,7 +87,7 @@ export default function ResourcesPanel({ onResourceSelect, className }: Resource
     try {
       await navigator.clipboard.writeText(text);
       showToastOnce(`copy-${label}`, `Copied ${label} to clipboard`, 'success');
-    } catch (error) {
+    } catch (_error) {
       showToastOnce('copy-error', 'Failed to copy to clipboard', 'error');
     }
   };
@@ -281,7 +281,7 @@ export default function ResourcesPanel({ onResourceSelect, className }: Resource
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          copyToClipboard(resource.value, resource.name);
+                          void copyToClipboard(resource.value, resource.name);
                         }}
                         className="p-1 text-adamant-text-box-secondary hover:text-adamant-accentText transition-colors"
                         title="Copy value"

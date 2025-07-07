@@ -1,6 +1,7 @@
 import { getTokenImagePath } from '@/config/tokenImages';
 import { SecretString } from '@/types';
-import React from 'react';
+import Image from 'next/image';
+import React, { useState } from 'react';
 
 interface TokenInputBaseProps {
   inputIdentifier: string;
@@ -27,6 +28,9 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   hasMax = false,
   isLoading = false,
 }) => {
+  const [imageError, setImageError] = useState(false);
+  const imagePath = getTokenImagePath(tokenAddress as SecretString);
+
   return (
     <div className="relative flex flex-col gap-2.5 bg-adamant-app-input backdrop-blur-sm rounded-lg p-4 border border-white/5 transition-all duration-200 hover:bg-adamant-app-input/40">
       <div className="flex justify-between items-center">
@@ -57,26 +61,20 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {(() => {
-            const imagePath = getTokenImagePath(tokenAddress as SecretString);
-            return imagePath ? (
-              <img
-                src={imagePath}
-                alt={`${tokenSymbol} icon`}
-                className="h-8 w-8 rounded-full"
-                onError={(e) => {
-                  // Fallback to placeholder if image fails to load
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-            ) : (
-              <div className="h-8 w-8 rounded-full bg-adamant-app-input/50 flex items-center justify-center text-xs font-medium text-gray-400">
-                {tokenSymbol.slice(0, 2).toUpperCase()}
-              </div>
-            );
-          })()}
-          <div className="h-8 w-8 rounded-full bg-adamant-app-input/50 hidden" />
+          {imagePath && !imageError ? (
+            <Image
+              src={imagePath}
+              alt={`${tokenSymbol} icon`}
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-adamant-app-input/50 flex items-center justify-center text-xs font-medium text-gray-400">
+              {tokenSymbol.slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <span className="text-lg">{tokenSymbol}</span>
         </div>
       </div>

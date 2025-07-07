@@ -90,11 +90,11 @@ export function calculateProportionalAmount(
       amount: formattedAmount,
       isValid: true,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       amount: '0',
       isValid: true,
-      error: error instanceof Error ? error.message : 'Calculation error',
+      error: _error instanceof Error ? _error.message : 'Calculation error',
     };
   }
 }
@@ -145,7 +145,7 @@ export function convertPoolReservesToFormat(
         decimals: 6, // Standard decimals for Secret Network tokens
       },
     };
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

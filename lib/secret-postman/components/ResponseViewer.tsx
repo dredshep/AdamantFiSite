@@ -23,7 +23,7 @@ export default function ResponseViewer({
     try {
       await navigator.clipboard.writeText(content);
       toast.success(`${label} copied to clipboard`);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to copy to clipboard');
     }
   };
@@ -137,7 +137,7 @@ export default function ResponseViewer({
 
             <button
               onClick={() =>
-                copyToClipboard(
+                void copyToClipboard(
                   viewMode === 'formatted'
                     ? formatJson(response.data || response.error)
                     : JSON.stringify(response.data || response.error),

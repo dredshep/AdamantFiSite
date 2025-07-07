@@ -161,7 +161,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
             break;
           case TokenServiceErrorType.VIEWING_KEY_REJECTED:
             get().setNeedsViewingKey(tokenAddress, true);
-            toastManager.viewingKeyRejected(() => get().retryWithViewingKey(tokenAddress));
+            toastManager.viewingKeyRejected(() => void get().retryWithViewingKey(tokenAddress));
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
             get().setNeedsViewingKey(tokenAddress, true);
@@ -292,7 +292,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         get().clearError(tokenAddress);
 
         // This fetch will use the newly suggested key.
-        await get().fetchBalance(tokenAddress, `suggestToken:verify:${Date.now()}`);
+        void get().fetchBalance(tokenAddress, `suggestToken:verify:${Date.now()}`);
 
         // --- NEW: Robust Check ---
         // After fetching, get the new state and check if the balance is valid.

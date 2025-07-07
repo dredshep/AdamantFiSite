@@ -112,7 +112,6 @@ const StakingForm: React.FC = () => {
   const hasActualStakedBalance = rawStakedBalance !== null && rawStakedBalance !== '0';
   const hasActualPendingRewards = rawPendingRewards !== null && rawPendingRewards !== '0';
   const isStakedBalanceKnown = rawStakedBalance !== null;
-  const isPendingRewardsKnown = rawPendingRewards !== null;
 
   // Updated conditional checks - only disable for initial loading or user actions, not background refreshes
   // Also properly handle unknown vs zero states
@@ -243,8 +242,8 @@ const StakingForm: React.FC = () => {
       {/* Action Buttons */}
       <div className="mt-auto pt-6">
         <StakingActions
-          onStake={handleStake}
-          onUnstake={handleUnstake}
+          onStake={() => void handleStake()}
+          onUnstake={() => void handleUnstake()}
           onClaim={handleClaim}
           isStakeDisabled={isStakeDisabled}
           isUnstakeDisabled={isUnstakeDisabled}

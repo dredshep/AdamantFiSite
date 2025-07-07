@@ -1,6 +1,6 @@
 import { MobileSearchButton, SmartSearchBox } from '@/components/app/Global/SmartSearch';
 import UserWallet from '@/components/app/Global/UserWallet';
-import AdamantFiLogo from '@/components/SVG/logo';
+import AdamantFiLogo from '@/components/SVG/Logo';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';

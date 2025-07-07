@@ -63,7 +63,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
 
       {balanceState.needsViewingKey && !isSettingUpViewingKey && (
         <button
-          onClick={openKeplrForViewingKey}
+          onClick={() => void openKeplrForViewingKey()}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 hover:text-yellow-300 rounded-md transition-colors border border-yellow-500/30"
           title="Click to set viewing key in Keplr"
         >

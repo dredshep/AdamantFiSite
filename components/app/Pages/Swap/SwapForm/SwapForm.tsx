@@ -22,7 +22,7 @@ const SwapForm: React.FC = () => {
     estimatedOutput,
     isEstimating,
     swapTokens,
-    refreshEstimation,
+    refreshEstimation: _refreshEstimation,
   } = useSwapForm();
 
   // const { resetTokenSelections } = useSwapStore();

@@ -18,7 +18,7 @@ export const PoolBalanceCell: React.FC<PoolBalanceCellProps> = ({
   const { suggestToken } = useBalanceFetcherStore();
 
   const handleSetLpViewingKey = () => {
-    suggestToken(lpTokenAddress);
+    void suggestToken(lpTokenAddress);
   };
 
   if (isLoading || !poolData) {

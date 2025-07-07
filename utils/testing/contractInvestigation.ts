@@ -2,6 +2,31 @@ import { STAKING_EMISSION_CONFIG } from '@/config/staking';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { SecretNetworkClient } from 'secretjs';
 
+// Define proper interfaces for contract responses
+interface TokenInfo {
+  name: string;
+  symbol: string;
+  decimals: number;
+  total_supply?: string;
+}
+
+interface ContractStatus {
+  status: string;
+  [key: string]: unknown;
+}
+
+interface RewardSource {
+  address: string;
+  contract_hash: string;
+  [key: string]: unknown;
+}
+
+interface Subscriber {
+  address: string;
+  contract_hash: string;
+  [key: string]: unknown;
+}
+
 /**
  * Advanced contract investigation to discover emission rates and contract mechanics
  */
@@ -13,13 +38,13 @@ export interface ContractInvestigation {
   rewardToken: {
     address: string;
     codeHash: string;
-    tokenInfo?: any;
+    tokenInfo?: TokenInfo;
   };
   totalLocked: string;
-  contractStatus: any;
+  contractStatus: ContractStatus | null;
   admin: string;
-  rewardSources: any[];
-  subscribers: any[];
+  rewardSources: RewardSource[];
+  subscribers: Subscriber[];
   blockHeight: string;
   timestamp: string;
   queryResults: QueryResult[];
@@ -34,7 +59,7 @@ export interface ContractInvestigation {
 export interface QueryResult {
   queryName: string;
   success: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   timestamp: string;
 }
@@ -112,18 +137,45 @@ export async function investigateStakingContract(
   const allQueryResults = await Promise.all(queryPromises);
   queryResults.push(...allQueryResults);
 
-  // Extract successful results
-  const getQueryResult = (name: string) => {
+  // Extract successful results with proper type guards
+  const getQueryResult = (name: string): unknown => {
     const result = queryResults.find((q) => q.queryName === name && q.success);
     return result?.result;
   };
 
-  const totalLocked = getQueryResult('total_locked')?.total_locked?.amount || '0';
-  const rewardTokenData = getQueryResult('reward_token')?.reward_token?.token;
-  const contractStatus = getQueryResult('contract_status');
-  const admin = getQueryResult('admin')?.admin?.address || 'Unknown';
-  const rewardSources = getQueryResult('reward_sources')?.reward_sources?.contracts || [];
-  const subscribers = getQueryResult('subscribers')?.subscribers?.contracts || [];
+  const safeGetProperty = (obj: unknown, path: string[]): unknown => {
+    let current = obj;
+    for (const key of path) {
+      if (current && typeof current === 'object' && key in current) {
+        current = (current as Record<string, unknown>)[key];
+      } else {
+        return undefined;
+      }
+    }
+    return current;
+  };
+
+  const totalLockedResult = getQueryResult('total_locked');
+  const totalLocked =
+    (safeGetProperty(totalLockedResult, ['total_locked', 'amount']) as string) || '0';
+
+  const rewardTokenResult = getQueryResult('reward_token');
+  const rewardTokenData = safeGetProperty(rewardTokenResult, ['reward_token', 'token']) as
+    | RewardSource
+    | undefined;
+
+  const contractStatus = getQueryResult('contract_status') as ContractStatus | null;
+
+  const adminResult = getQueryResult('admin');
+  const admin = (safeGetProperty(adminResult, ['admin', 'address']) as string) || 'Unknown';
+
+  const rewardSourcesResult = getQueryResult('reward_sources');
+  const rewardSources =
+    (safeGetProperty(rewardSourcesResult, ['reward_sources', 'contracts']) as RewardSource[]) || [];
+
+  const subscribersResult = getQueryResult('subscribers');
+  const subscribers =
+    (safeGetProperty(subscribersResult, ['subscribers', 'contracts']) as Subscriber[]) || [];
 
   console.log('📊 Contract investigation results:', {
     totalLocked,
@@ -135,14 +187,15 @@ export async function investigateStakingContract(
   });
 
   // If we have reward token info, query it for more details
-  let rewardTokenInfo = null;
+  let rewardTokenInfo: TokenInfo | null = null;
   if (rewardTokenData?.address && rewardTokenData?.contract_hash) {
     try {
-      rewardTokenInfo = await secretjs.query.compute.queryContract({
+      const tokenInfoResult = await secretjs.query.compute.queryContract({
         contract_address: rewardTokenData.address,
         code_hash: rewardTokenData.contract_hash,
         query: { token_info: {} },
       });
+      rewardTokenInfo = tokenInfoResult as TokenInfo;
       console.log('🪙 Reward token info:', rewardTokenInfo);
     } catch (err) {
       console.log('❌ Failed to query reward token:', err);
@@ -157,7 +210,7 @@ export async function investigateStakingContract(
     rewardToken: {
       address: rewardTokenData?.address || '',
       codeHash: rewardTokenData?.contract_hash || '',
-      tokenInfo: rewardTokenInfo,
+      ...(rewardTokenInfo && { tokenInfo: rewardTokenInfo }),
     },
     totalLocked,
     contractStatus,
@@ -172,6 +225,22 @@ export async function investigateStakingContract(
   return investigation;
 }
 
+// Define interfaces for emission discovery
+interface EmissionSource {
+  address: string;
+  queryType?: string;
+  info?: unknown;
+  type: string;
+  error?: string;
+}
+
+interface EstimatedRate {
+  source: string;
+  dailyRewards: string;
+  annualRewards: string;
+  assumptions: string[];
+}
+
 /**
  * Try to discover emission rates by analyzing contract state and reward sources
  */
@@ -179,12 +248,12 @@ export async function discoverEmissionRates(
   secretjs: SecretNetworkClient,
   investigation: ContractInvestigation
 ): Promise<{
-  possibleEmissionSources: any[];
-  estimatedRates: any[];
+  possibleEmissionSources: EmissionSource[];
+  estimatedRates: EstimatedRate[];
   recommendations: string[];
 }> {
-  const possibleEmissionSources: any[] = [];
-  const estimatedRates: any[] = [];
+  const possibleEmissionSources: EmissionSource[] = [];
+  const estimatedRates: EstimatedRate[] = [];
   const recommendations: string[] = [];
 
   console.log('🔍 Analyzing emission sources...');

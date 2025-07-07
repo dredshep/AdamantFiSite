@@ -8,7 +8,7 @@ interface ContractKeysPanelProps {
   onClose: () => void;
 }
 
-export const ContractKeysPanel: React.FC<ContractKeysPanelProps> = ({ onClose }) => {
+export const ContractKeysPanel: React.FC<ContractKeysPanelProps> = ({ onClose: _onClose }) => {
   const { viewingKeys, setViewingKey, removeViewingKey } = useViewingKeyStore();
   const stakingPools = getAllStakingPools();
   const [showAddForm, setShowAddForm] = useState(false);
