@@ -198,8 +198,105 @@ function PoolRow({ pool, index }: { pool: ValidatedPool; index: number }) {
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          poolData.retryLpBalance();
-                          poolData.retryStakedBalance();
+
+                          // Comprehensive logging for retry functionality
+                          console.log('=== RETRY BUTTON CLICKED ===');
+                          console.log('Pool:', pool.name);
+                          console.log('Pool Address:', pool.contract_address);
+                          console.log('Timestamp:', new Date().toISOString());
+
+                          // Log current pool data state
+                          console.log('Current poolData state:', {
+                            isLoading: poolData.isLoading,
+                            error: poolData.error,
+                            lpBalance: poolData.lpBalance,
+                            stakedBalance: poolData.stakedBalance,
+                            hasLpBalance: poolData.hasLpBalance,
+                            hasStakedBalance: poolData.hasStakedBalance,
+                            lpNeedsViewingKey: poolData.lpNeedsViewingKey,
+                            stakedNeedsViewingKey: poolData.stakedNeedsViewingKey,
+                          });
+
+                          // Log LP token info
+                          const lpTokenInfo = LIQUIDITY_PAIRS.find(
+                            (p) => p.pairContract === pool.contract_address
+                          );
+                          console.log('LP Token Info:', {
+                            lpToken: lpTokenInfo?.lpToken,
+                            lpTokenCodeHash: lpTokenInfo?.lpTokenCodeHash,
+                          });
+
+                          // Log staking info
+                          const stakingPools = getAllStakingPools();
+                          const stakingInfo = stakingPools.find(
+                            (s) => s.poolAddress === pool.contract_address
+                          );
+                          console.log('Staking Info:', {
+                            hasStaking: !!stakingInfo,
+                            stakingAddress: stakingInfo?.stakingInfo?.stakingAddress,
+                            stakingCodeHash: stakingInfo?.stakingInfo?.stakingCodeHash,
+                          });
+
+                          // Log retry function availability
+                          console.log('Retry functions available:', {
+                            retryLpBalance: typeof poolData.retryLpBalance,
+                            retryStakedBalance: typeof poolData.retryStakedBalance,
+                          });
+
+                          try {
+                            console.log('Calling retryLpBalance...');
+                            poolData.retryLpBalance();
+                            console.log('retryLpBalance called successfully');
+                          } catch (error) {
+                            console.error('Error calling retryLpBalance:', error);
+                          }
+
+                          try {
+                            console.log('Calling retryStakedBalance...');
+                            poolData.retryStakedBalance();
+                            console.log('retryStakedBalance called successfully');
+                          } catch (error) {
+                            console.error('Error calling retryStakedBalance:', error);
+                          }
+
+                          console.log('=== RETRY BUTTON PROCESSING COMPLETE ===');
+
+                          // Add a small delay and then log the new state
+                          setTimeout(() => {
+                            console.log('=== RETRY RESULT CHECK (after 1 second) ===');
+                            console.log('New poolData state:', {
+                              isLoading: poolData.isLoading,
+                              error: poolData.error,
+                              lpBalance: poolData.lpBalance,
+                              stakedBalance: poolData.stakedBalance,
+                            });
+                          }, 1000);
+
+                          // Also check after 3 seconds
+                          setTimeout(() => {
+                            console.log('=== RETRY RESULT CHECK (after 3 seconds) ===');
+                            console.log('Final poolData state:', {
+                              isLoading: poolData.isLoading,
+                              error: poolData.error,
+                              lpBalance: poolData.lpBalance,
+                              stakedBalance: poolData.stakedBalance,
+                            });
+                          }, 3000);
+
+                          // Check after 10 seconds to see if auto-suggestion worked
+                          setTimeout(() => {
+                            console.log(
+                              '=== RETRY RESULT CHECK (after 10 seconds - post auto-suggest) ==='
+                            );
+                            console.log('Post auto-suggest poolData state:', {
+                              isLoading: poolData.isLoading,
+                              error: poolData.error,
+                              lpBalance: poolData.lpBalance,
+                              stakedBalance: poolData.stakedBalance,
+                              lpNeedsViewingKey: poolData.lpNeedsViewingKey,
+                              stakedNeedsViewingKey: poolData.stakedNeedsViewingKey,
+                            });
+                          }, 10000);
                         }}
                         className="flex items-center gap-1 px-2 py-1 text-xs bg-adamant-gradientBright/10 hover:bg-adamant-gradientBright/20 border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-md text-adamant-gradientBright hover:text-white transition-all duration-200"
                       >

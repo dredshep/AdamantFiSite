@@ -321,77 +321,32 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
 
   suggestToken: async (tokenAddress: string) => {
     const token = getTokenInfo(tokenAddress);
-    if (!token) {
-      get().setError(tokenAddress, 'Token not found');
-      return;
+    // Note: It's okay if token is not in our config, any contract can be suggested.
+    // We'll proceed as long as it's a valid address format.
+
+    const keplr = (window as unknown as Window).keplr;
+    if (!keplr) {
+      const error = new Error('Keplr not found');
+      toastManager.keplrNotInstalled();
+      throw error;
     }
 
     try {
-      const keplr = (window as unknown as Window).keplr;
-      if (!keplr) {
-        get().setError(tokenAddress, 'Keplr not found');
-        toastManager.keplrNotInstalled();
-        return;
-      }
-
-      const tokenService = new TokenService();
-      await tokenService.suggestToken(tokenAddress, 'balanceFetcherStore.suggestToken');
-
-      // --- NEW: Verification Step ---
-      // After suggesting, immediately try to fetch the balance to verify the new key.
-      try {
-        // Clear previous error states before attempting the fetch.
-        get().setNeedsViewingKey(tokenAddress, false);
-        get().clearError(tokenAddress);
-
-        // This fetch will use the newly suggested key.
-        void get().fetchBalance(tokenAddress, `suggestToken:verify:${Date.now()}`);
-
-        // --- NEW: Robust Check ---
-        // After fetching, get the new state and check if the balance is valid.
-        const newState = get().balances[tokenAddress];
-        const hasValidBalance =
-          newState && newState.balance !== '-' && !isNaN(parseFloat(newState.balance));
-
-        if (!hasValidBalance) {
-          // The fetch "succeeded" but didn't result in a valid balance.
-          // This is the "zombie key" scenario.
-          const errorMessage =
-            'Key is corrupted in Keplr. Please open Keplr, scroll down to the token list, find this token, and click "Set your viewing key".';
-          get().setError(tokenAddress, errorMessage);
-          // Show a persistent error toast that does not auto-close.
-          showToastOnce('token-key-invalid', errorMessage, 'error', { autoClose: false });
-        }
-        // No "success" toast here, as a successful fetch is its own reward.
-      } catch (e) {
-        // If fetchBalance throws, especially an INVALID_VIEWING_KEY error, we catch it here.
-        if (
-          e instanceof TokenServiceError &&
-          e.type === TokenServiceErrorType.VIEWING_KEY_INVALID
-        ) {
-          // This is also the "zombie key" scenario.
-          const errorMessage =
-            'Key is corrupted in Keplr. Please open Keplr, scroll down to the token list, find this token, and click "Set your viewing key".';
-          get().setError(tokenAddress, errorMessage);
-          // Show a persistent error toast that does not auto-close.
-          showToastOnce('token-key-invalid', errorMessage, 'error', { autoClose: false });
-        } else {
-          // Handle other potential errors during verification fetch.
-          const errorMessage =
-            e instanceof Error ? e.message : 'An unknown error occurred during verification.';
-          get().setError(tokenAddress, errorMessage);
-          showToastOnce('token-verification-failed', errorMessage, 'error');
-        }
-      }
-      // --- END Verification Step ---
+      // The core action is just to ask Keplr to suggest the token.
+      // This will pop up the Keplr window for the user.
+      await keplr.suggestToken('secret-4', tokenAddress);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('rejected')) {
-        get().setError(tokenAddress, 'Token suggestion rejected');
-        showToastOnce('token-suggestion-rejected', 'Token suggestion was rejected', 'error');
-      } else {
-        get().setError(tokenAddress, 'Failed to suggest token');
-        showToastOnce('token-suggestion-failed', 'Failed to suggest token to Keplr', 'error');
-      }
+      // This catch block handles cases where the user rejects the request in Keplr.
+      const message =
+        error instanceof Error && error.message.toLowerCase().includes('rejected')
+          ? 'Token suggestion rejected'
+          : 'Failed to suggest token';
+
+      showToastOnce(`suggest-token-failed-${tokenAddress}`, message, 'error');
+
+      // Update the state to reflect the error and re-throw to notify the caller.
+      get().setError(tokenAddress, message);
+      throw error;
     }
   },
 
