@@ -1,4 +1,4 @@
-import { LoadingPlaceholder } from '@/components/app/Shared/Forms/Input/InputWrappers';
+import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
