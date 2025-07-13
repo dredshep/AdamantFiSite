@@ -1,0 +1,6 @@
+---
+description: How to check for type/lint errors
+alwaysApply: false
+---
+
+We cannot use bun run build to type-check, because with the development server running, .next cannot be replaced. Instead, we use bun type-check. We only use bun run build if the Vercel CI/CD deployment pipeline fails (Vercel has its own types, but they're rarely different from ours)

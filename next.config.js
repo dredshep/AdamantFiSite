@@ -2,10 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   // Disable error overlay in development to prevent interference with browser extension errors
-  devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: 'bottom-right',
-  },
+  // devIndicators: {
+  //   buildActivity: true,
+  //   buildActivityPosition: 'bottom-left',
+  // },
+  devIndicators: false,
   onDemandEntries: {
     // Keep the error page open indefinitely
     maxInactiveAge: 1000 * 60 * 60,
