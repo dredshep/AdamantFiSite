@@ -270,8 +270,8 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
   poolTvl: {},
   queue: [],
   isProcessing: false,
-  fetchDelayMs: 37,
-  maxConcurrentRequests: 10, // Default to 5
+  fetchDelayMs: 0,
+  maxConcurrentRequests: 100, // Default to 5
   currentActiveRequests: 0,
   secretjs: null, // Initialize secretjs
 
