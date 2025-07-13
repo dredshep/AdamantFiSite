@@ -1,16 +1,17 @@
-import { ConfigToken, LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
+import { DIRECT_SWAP_FEE, MULTIHOP_SWAP_FEE_PER_HOP } from '@/config/fees';
+import { ConfigToken, MULTIHOP_ENABLED, TOKENS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { useSwapStore } from '@/store/swapStore';
 import { useTxStore } from '@/store/txStore';
+import { useViewingKeyStore } from '@/store/viewingKeyStore';
 import { SecretString } from '@/types';
-import { calculateSingleHopOutput } from '@/utils/estimation/calculateSingleHopOutput';
-import { getPoolData } from '@/utils/estimation/getPoolData';
 import isNotNullish from '@/utils/isNotNullish';
+import { calculateMultihopOutput } from '@/utils/swap/multihopCalculation';
+import { executeMultihopSwap, validateMultihopConfig } from '@/utils/swap/multihopExecution';
+import { findMultihopPath, MultihopPath } from '@/utils/swap/routing';
 import Decimal from 'decimal.js';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { TxOptions, TxResultCode } from 'secretjs';
-import { Snip20SendOptions } from 'secretjs/dist/extensions/snip20/types';
 
 export const useSwapFormLean = () => {
   const { swapTokenInputs: tokenInputs } = useSwapStore();
@@ -29,26 +30,21 @@ export const useSwapFormLean = () => {
   const [poolFee, setPoolFee] = useState('0');
   const [txFee, setTxFee] = useState('0');
   const [minReceive, setMinReceive] = useState('0');
+  // Enhanced state for multihop support
+  const [swapPath, setSwapPath] = useState<MultihopPath | null>(null);
+  const [hopPriceImpacts, setHopPriceImpacts] = useState<string[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const { secretjs, walletAddress } = useKeplrConnection();
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0');
   const { setPending, setResult } = useTxStore.getState();
   const [isEstimating, setIsEstimating] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { getViewingKey } = useViewingKeyStore();
 
   // Find token details from config
   function findToken(address: SecretString | undefined): ConfigToken | undefined {
     if (address == null) return undefined;
     return TOKENS.find((t) => t.address === address);
-  }
-
-  // Find liquidity pair from config
-  function findLiquidityPair(token0Symbol: string, token1Symbol: string) {
-    return LIQUIDITY_PAIRS.find(
-      (pair) =>
-        (pair.token0 === token0Symbol && pair.token1 === token1Symbol) ||
-        (pair.token0 === token1Symbol && pair.token1 === token0Symbol)
-    );
   }
 
   // Reset all estimation values to default
@@ -57,6 +53,9 @@ export const useSwapFormLean = () => {
     setPriceImpact('0');
     setPoolFee('0');
     setTxFee('0');
+    setMinReceive('0');
+    setSwapPath(null);
+    setHopPriceImpacts([]);
   }
 
   function resetAndSetIsEstimating(isEstimating: boolean) {
@@ -74,16 +73,10 @@ export const useSwapFormLean = () => {
         const estimationPayToken = payToken?.symbol;
         const estimationReceiveToken = receiveToken?.symbol;
 
-        console.log('=== Starting Estimation Process ===', {
+        console.log('=== Starting Enhanced Estimation Process ===', {
           amount: estimationAmount,
           payToken: estimationPayToken,
           receiveToken: estimationReceiveToken,
-        });
-        console.log('Current conditions:', {
-          hasSecretJs: !!secretjs,
-          payAmount: payDetails.amount,
-          payTokenSymbol: payToken?.symbol,
-          receiveTokenSymbol: receiveToken?.symbol,
         });
 
         // Set default "0" when conditions aren't met
@@ -119,11 +112,20 @@ export const useSwapFormLean = () => {
         setIsEstimating(true);
 
         try {
-          // Find the matching liquidity pair from config
-          const liquidityPair = findLiquidityPair(payToken.symbol, receiveToken.symbol);
+          // Find the optimal routing path using multihop routing
+          console.log('🔍 Finding routing path for:', {
+            from: payToken.address,
+            to: receiveToken.address,
+            fromSymbol: payToken.symbol,
+            toSymbol: receiveToken.symbol,
+          });
 
-          if (!liquidityPair) {
-            console.log('❌ Estimation failed: No liquidity pair found for these tokens', {
+          const routingPath = findMultihopPath(payToken.address, receiveToken.address);
+
+          console.log('🔗 Routing path result:', routingPath);
+
+          if (!routingPath) {
+            console.log('❌ Estimation failed: No routing path found for these tokens', {
               payToken,
               receiveToken,
             });
@@ -131,33 +133,22 @@ export const useSwapFormLean = () => {
             return;
           }
 
-          const poolAddress = liquidityPair.pairContract;
-          const codeHash = liquidityPair.pairContractCodeHash;
-
-          console.log(`🔗 Using liquidity pair:`, {
+          console.log(`✅ Using routing path:`, {
             payTokenSymbol: payToken.symbol,
             receiveTokenSymbol: receiveToken.symbol,
-            poolAddress,
-            codeHash,
-            liquidityPair,
+            path: routingPath,
+            isDirectPath: routingPath.isDirectPath,
+            totalHops: routingPath.totalHops,
             estimationAmount,
           });
 
-          // Get the actual pool data from the blockchain
-          const poolData = await getPoolData(secretjs, poolAddress, codeHash);
-
-          // Calculate the swap output using the actual pool data
+          // Calculate the swap output using enhanced multihop calculation
           const amountInDecimal = new Decimal(estimationAmount);
           const {
             output,
-            priceImpact: impact,
-            lpFee,
-          } = calculateSingleHopOutput(
-            amountInDecimal,
-            poolData,
-            payToken.address,
-            receiveToken.address
-          );
+            totalPriceImpact: impact,
+            totalFee: lpFee,
+          } = await calculateMultihopOutput(secretjs, routingPath, amountInDecimal);
 
           // CRITICAL: Only update state if the form values haven't changed since we started
           const currentAmount = payDetails.amount;
@@ -169,30 +160,37 @@ export const useSwapFormLean = () => {
             currentPayToken === estimationPayToken &&
             currentReceiveToken === estimationReceiveToken
           ) {
-            console.log('✅ Estimation complete and still current:', {
+            console.log('✅ Enhanced estimation complete and still current:', {
               estimationAmount,
               currentAmount,
               output: output.toFixed(6),
+              isDirectPath: routingPath.isDirectPath,
+              totalHops: routingPath.totalHops,
             });
+
+            // Store the routing path for display and execution
+            setSwapPath(routingPath);
 
             // Set the calculated values
             setEstimatedOutput(output.toFixed(6));
             setPriceImpact(impact);
             setPoolFee(lpFee.toFixed(6));
 
-            // Calculate transaction fee based on gas settings
-            // Default gas price if not set or if gas is 0
-            const gasPrice = gas;
-            const gasLimit = 500_000; // Standard gas limit for swaps
-            const txFeeInUscrt = gasPrice * gasLimit;
-            const txFeeInScrt = txFeeInUscrt / 1_000_000; // Convert from uscrt to SCRT
+            // Calculate transaction fee based on swap type
+            const txFeeInScrt = routingPath.isDirectPath
+              ? DIRECT_SWAP_FEE
+              : MULTIHOP_SWAP_FEE_PER_HOP * routingPath.totalHops;
             setTxFee(txFeeInScrt.toFixed(6));
 
             // Calculate min receive based on output and slippage
             const minReceiveAmount = output.mul(new Decimal(1).sub(slippage / 100)).toFixed(6);
             setMinReceive(minReceiveAmount);
+
+            // TODO: Calculate per-hop price impacts for enhanced UI
+            // This would require extending calculateMultihopOutput to return per-hop data
+            setHopPriceImpacts([]);
           } else {
-            console.log('🚫 Estimation outdated, ignoring result:', {
+            console.log('🚫 Enhanced estimation outdated, ignoring result:', {
               estimationAmount,
               currentAmount,
               estimationPayToken,
@@ -205,7 +203,7 @@ export const useSwapFormLean = () => {
           // Need to add an await to satisfy the linter
           await Promise.resolve();
         } catch (error) {
-          console.error('❌ Error during estimation:', error);
+          console.error('❌ Error during enhanced estimation:', error);
 
           // Only update state if the form values haven't changed since we started
           const currentAmount = payDetails.amount;
@@ -225,6 +223,9 @@ export const useSwapFormLean = () => {
               setPoolFee('0');
               setTxFee('0');
               setMinReceive('0');
+              // Keep the routing path for display even if pool is empty
+              const routingPath = findMultihopPath(payToken.address, receiveToken.address);
+              setSwapPath(routingPath);
             } else {
               resetEstimationValues();
             }
@@ -257,7 +258,7 @@ export const useSwapFormLean = () => {
   const handleSwapClick = async () => {
     const keplr = (window as unknown as Window).keplr;
     if (!isNotNullish(keplr)) {
-      alert('Keplr extension not detected.');
+      toast.error('Keplr extension not detected.');
       return;
     }
     showDebugAlert();
@@ -270,11 +271,9 @@ export const useSwapFormLean = () => {
       return;
     }
 
-    // Find the liquidity pair
-    const liquidityPair = findLiquidityPair(payToken.symbol, receiveToken.symbol);
-
-    if (!liquidityPair) {
-      console.error('No liquidity pair found for these tokens', {
+    // Use the current swap path for execution
+    if (!swapPath) {
+      console.error('No swap path available for execution', {
         payToken,
         receiveToken,
       });
@@ -283,137 +282,90 @@ export const useSwapFormLean = () => {
 
     try {
       // Assert the address is in the correct format for Keplr
-      const inputViewingKey = await keplr.getSecret20ViewingKey(
-        'secret-4',
-        // The as cast is safe here because we've verified the token exists
-        payToken.address
-      );
-      const outputViewingKey = await keplr.getSecret20ViewingKey(
-        'secret-4',
-        // The as cast is safe here because we've verified the token exists
-        receiveToken.address
-      );
+      const inputViewingKey = getViewingKey(payToken.address);
+      const outputViewingKey = getViewingKey(receiveToken.address);
 
-      if (inputViewingKey === undefined || outputViewingKey === undefined) {
-        alert('Viewing keys are missing. Please create them before swapping.');
+      if (!inputViewingKey || !outputViewingKey) {
+        toast.error('Viewing keys are missing. Please create them before swapping.');
+        return;
+      }
+
+      // Validate multihop configuration
+      const validation = validateMultihopConfig();
+      if (!validation.valid) {
+        console.error('❌ Multihop configuration validation failed:', validation.errors);
+        validation.errors.forEach((error) => toast.error(error));
+        return;
+      }
+
+      // Ensure wallet address is available
+      if (!walletAddress) {
+        toast.error('Wallet address is not available. Please connect your wallet.');
+        return;
+      }
+
+      // Execute the swap using the current routing path
+      const multihopParams = {
+        client: secretjs,
+        fromTokenAddress: payToken.address,
+        toTokenAddress: receiveToken.address,
+        amount: payDetails.amount,
+        minReceived: minReceive,
+        path: swapPath,
+        userAddress: walletAddress, // Now guaranteed to be non-null
+      };
+
+      console.log('🚀 Executing swap with params:', multihopParams);
+
+      // Check if multihop is enabled and available
+      if (!MULTIHOP_ENABLED) {
+        toast.error('Multihop functionality is not available. Please use direct token pairs.');
         return;
       }
 
       setPending(true);
+      const multihopResult = await executeMultihopSwap(multihopParams);
 
-      // Fetch the account information to get the sequence number and account number
-      const accountInfo = await secretjs.query.auth.account({
-        address: walletAddress!,
-      });
+      console.log('✅ Multihop swap executed successfully:', multihopResult);
 
-      const baseAccount = accountInfo as {
-        '@type': '/cosmos.auth.v1beta1.BaseAccount';
-        sequence?: string;
-        account_number?: string;
-      };
-
-      // Check if sequence number is available
-      const sequence = isNotNullish(baseAccount.sequence)
-        ? parseInt(baseAccount.sequence, 10)
-        : null;
-      const accountNumber = isNotNullish(baseAccount.account_number)
-        ? parseInt(baseAccount.account_number, 10)
-        : null;
-
-      const txOptions: TxOptions = {
-        gasLimit: 500_000,
-        gasPriceInFeeDenom: gas, // Use gas from store or default to 0.25
-        feeDenom: 'uscrt',
-        // Only include explicitSignerData if both sequence and accountNumber are available
-        ...(sequence !== null && accountNumber !== null
-          ? {
-              explicitSignerData: {
-                accountNumber: accountNumber,
-                sequence: sequence,
-                chainId: 'secret-4',
-              },
-            }
-          : {}),
-      };
-
-      // Use token decimals from the static config (default to 6 if not found)
-      const decimalsIn = payToken.symbol === 'ETH.axl' ? 18 : 6; // ETH uses 18 decimals, others use 6
-      const decimalsOut = receiveToken.symbol === 'ETH.axl' ? 18 : 6;
-
-      const send_amount = new Decimal(payDetails.amount)
-        .times(Decimal.pow(10, decimalsIn))
-        .toFixed(0);
-
-      // Calculate expected return with slippage
-      let expected_return = new Decimal(estimatedOutput)
-        .times(new Decimal(1).minus(slippage / 100))
-        .times(Decimal.pow(10, decimalsOut))
-        .toFixed(0);
-
-      // Make sure even low value trade won't lose funds
-      if (new Decimal(expected_return).lt(1)) {
-        expected_return = '1';
-      }
-      console.log('Expected Return:', expected_return);
-
-      // Always use direct swap since we know all the pairs from the config
-      console.log('Single hop. Using Pair contract directly.');
-
-      const poolAddress = liquidityPair.pairContract;
-      const inputTokenAddress = payToken.address;
-      const outputTokenAddress = receiveToken.address;
-
-      console.log(`Executing swap on pool ${poolAddress}`);
-      console.log(`Swapping ${inputTokenAddress} for ${outputTokenAddress}`);
-
-      const swapMsg = {
-        swap: {
-          expected_return: expected_return,
-          to: walletAddress,
-        },
-      };
-
-      const sendMsg: Snip20SendOptions = {
-        send: {
-          recipient: poolAddress,
-          amount: send_amount,
-          msg: btoa(JSON.stringify(swapMsg)),
-        },
-      };
-
-      console.log('Swapping with message:', JSON.stringify(sendMsg, null, 2));
-      console.log('Callback message:', JSON.stringify(swapMsg, null, 2));
-
-      // gasLimit for single swap
-      txOptions.gasLimit = 500_000;
-
-      const result = await secretjs.tx.snip20.send(
-        {
-          sender: walletAddress!,
-          contract_address: inputTokenAddress,
-          code_hash: payToken.codeHash,
-          msg: sendMsg,
-          sent_funds: [],
-        },
-        txOptions
-      );
-
-      setPending(false);
-      setResult(result);
-
-      console.log('Transaction Result:', result);
-
-      if (result.code !== TxResultCode.Success) {
-        throw new Error(`Swap failed: ${result.rawLog}`);
+      // Show success toast instead of changing input value
+      if (swapPath.isDirectPath) {
+        toast.success('Direct swap completed successfully!');
+      } else {
+        toast.success('Multihop swap completed successfully via router contract!');
       }
 
-      console.log(`Swap executed successfully!`);
-      alert('Swap completed successfully!');
-      setEstimatedOutput('Swap completed successfully!');
+      // Handle successful swap result
+      if (multihopResult.success) {
+        // Check if txResponse exists and is valid
+        if ('txResponse' in multihopResult && multihopResult.txResponse) {
+          setResult(multihopResult.txResponse);
+        } else {
+          console.log('✅ Swap successful but no txResponse available');
+        }
+      } else {
+        console.error('❌ Swap failed:', multihopResult.error);
+        throw new Error(multihopResult.error || 'Swap execution failed');
+      }
     } catch (error) {
       console.error('Error during swap execution:', error);
-      alert('Swap failed. Check the console for more details.');
-      setEstimatedOutput('Error during swap execution. Please try again.');
+
+      // Provide specific error messages for different cases
+      if (error instanceof Error) {
+        if (error.message.includes('no liquidity')) {
+          toast.error(
+            'Swap failed: One or more pools have no liquidity. Please try a different token pair.'
+          );
+        } else if (error.message.includes('insufficient')) {
+          toast.error('Swap failed: Cannot execute swap due to insufficient liquidity.');
+        } else {
+          toast.error(`Swap failed: ${error.message}`);
+        }
+      } else {
+        console.error('Unknown error:', error);
+        toast.error('Swap failed. Check the console for more details.');
+      }
+    } finally {
       setPending(false);
     }
   };
@@ -518,5 +470,8 @@ RawData: ${JSON.stringify(
     handleSwapClick,
     swapTokens,
     refreshEstimation,
+    // Enhanced multihop properties
+    swapPath,
+    hopPriceImpacts,
   };
 };

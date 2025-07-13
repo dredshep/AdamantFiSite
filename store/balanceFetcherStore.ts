@@ -320,7 +320,6 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
   },
 
   suggestToken: async (tokenAddress: string) => {
-    const token = getTokenInfo(tokenAddress);
     // Note: It's okay if token is not in our config, any contract can be suggested.
     // We'll proceed as long as it's a valid address format.
 

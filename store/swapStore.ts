@@ -8,7 +8,6 @@ import {
   TokenInputState,
   WalletState,
 } from '@/types';
-import { getSwappableTokensForToken } from '@/utils/apis/getSwappableTokens';
 import { create } from 'zustand';
 
 export const useSwapStore = create<SwapStoreState>((set, get) => ({
@@ -100,7 +99,7 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
       },
     })),
 
-  // New method to get available tokens for selection based on the other input
+  // Enhanced method to get available tokens for selection based on multihop routing
   getAvailableTokensForInput: (inputIdentifier: keyof SwapTokenInputs): ConfigToken[] => {
     const state = get();
     const otherInputIdentifier = inputIdentifier === 'swap.pay' ? 'swap.receive' : 'swap.pay';
@@ -111,27 +110,18 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
       return [];
     }
 
-    // Find the other token to get its symbol
-    const otherToken = state.swappableTokens.find((token) => token.address === otherTokenAddress);
+    // With multihop routing enabled, any token can swap to any other token through sSCRT
+    // The only restriction is that we can't select the same token for both inputs
+    const availableTokens = state.swappableTokens.filter(
+      (token) => token.address !== otherTokenAddress
+    );
 
-    if (!otherToken) {
-      // If no other token is selected, return all swappable tokens
-      return state.swappableTokens;
-    }
-
-    // Return only tokens that can be swapped with the other token
-    const compatibleTokens = getSwappableTokensForToken(otherToken.symbol);
-
-    // Filter out the currently selected token from the other input
-    const availableTokens = compatibleTokens.filter((token) => token.address !== otherTokenAddress);
-
-    // If no compatible tokens found, show all swappable tokens (this handles edge cases)
-    if (availableTokens.length === 0) {
-      console.warn(
-        `No compatible tokens found for ${otherToken.symbol}, showing all swappable tokens`
-      );
-      return state.swappableTokens.filter((token) => token.address !== otherTokenAddress);
-    }
+    console.log('🔄 Token selection for multihop:', {
+      inputIdentifier,
+      otherTokenAddress,
+      availableTokensCount: availableTokens.length,
+      totalTokens: state.swappableTokens.length,
+    });
 
     return availableTokens;
   },
@@ -150,7 +140,7 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
       },
     })),
 
-  // Reset both token selections
+  // Reset both token selections with multihop-aware defaults
   resetTokenSelections: () =>
     set((state) => {
       // Smart reset: if already at default, change to different tokens
@@ -170,9 +160,10 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
             balance: '',
           },
           'swap.receive': {
-            // If currently sSCRT → USDC, reset to sSCRT → SILK, otherwise reset to sSCRT → USDC
+            // If currently sSCRT → USDC, reset to sSCRT → sATOM (popular multihop pair)
+            // Otherwise reset to sSCRT → USDC
             tokenAddress: defaultsSCRTtoUSDC
-              ? ('secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd' as SecretString) // SILK
+              ? ('secret19e75l25r6sa6nhdf4lggjmgpw0vmpfvsw5cnpe' as SecretString) // sATOM
               : ('secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2' as SecretString), // USDC
             amount: '',
             balance: '',

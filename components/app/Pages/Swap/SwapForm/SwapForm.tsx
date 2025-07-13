@@ -6,7 +6,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { CheckIcon, Cross2Icon, InfoCircledIcon } from '@radix-ui/react-icons';
 import React, { useEffect, useState } from 'react';
 import { HiArrowsUpDown } from 'react-icons/hi2';
-// import BestRouteEstimator from '../../BestRouteEstimator';
+import RouteDisplay from '../RouteDisplay';
 
 const SwapForm: React.FC = () => {
   const {
@@ -23,6 +23,9 @@ const SwapForm: React.FC = () => {
     isEstimating,
     swapTokens,
     refreshEstimation: _refreshEstimation,
+    // Enhanced multihop properties
+    swapPath,
+    hopPriceImpacts,
   } = useSwapForm();
 
   // const { resetTokenSelections } = useSwapStore();
@@ -168,6 +171,20 @@ const SwapForm: React.FC = () => {
           )} */}
         {/* </div> */}
       </div>
+
+      {/* Enhanced Route Display */}
+      {payToken && receiveToken && (
+        <RouteDisplay
+          swapPath={swapPath}
+          payTokenSymbol={payToken.symbol}
+          receiveTokenSymbol={receiveToken.symbol}
+          priceImpact={priceImpact}
+          slippage={slippage}
+          isEstimating={isEstimating}
+          hopPriceImpacts={hopPriceImpacts}
+        />
+      )}
+
       {payToken !== undefined && receiveToken !== undefined && (
         <div className="flex flex-col gap-3 px-2.5 text-gray-400 text-sm">
           {/* Header with refresh button */}

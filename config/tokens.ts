@@ -150,6 +150,15 @@ export const FACTORY: Factory = {
   code_hash: '16ea6dca596d2e5e6eef41df6dc26a1368adaa238aa93f07959841e7968c51bd',
 };
 
+// Router contract configuration - deployed multihop router
+export const ROUTER = {
+  contract_address: 'secret1ysgg7h8x6ukax0phkqmeaq2t8kljg2cuymjuc4',
+  code_hash: '63ba73f63ec43c4778c0a613398a7e95f500f67715dcd50bc1d5eca0ce3360ee',
+};
+
+// Multihop feature flag - enabled now that router is deployed
+export const MULTIHOP_ENABLED = true;
+
 // LP Tokens as ConfigToken format for easier integration
 export const LP_TOKENS: ConfigToken[] = LIQUIDITY_PAIRS.map((pair) => ({
   name: `${pair.symbol} LP Token`,

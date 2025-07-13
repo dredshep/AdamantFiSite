@@ -15,6 +15,16 @@ export const POOL_FEE: Fee = {
 export const SCRT_TX_FEE = 0.0001;
 
 /**
+ * Direct swap transaction fee
+ */
+export const DIRECT_SWAP_FEE = 0.25;
+
+/**
+ * Multihop swap transaction fee per hop
+ */
+export const MULTIHOP_SWAP_FEE_PER_HOP = 0.25;
+
+/**
  * Staking transaction fee (based on actual transaction: AA20CD986813DC894D96752BBD50EEA445693CCFDD58E0FF495D9C2335D91DE6)
  */
 export const STAKING_TX_FEE = 0.05; // 50,000 uscrt
