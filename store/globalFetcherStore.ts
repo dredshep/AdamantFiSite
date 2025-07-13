@@ -70,17 +70,23 @@ interface GlobalFetcherState {
   queue: FetcherTask[];
   isProcessing: boolean;
 
-  // Global delay modifier
+  // Global delay modifier (between batches, not individual requests)
   fetchDelayMs: number;
+
+  // NEW: Concurrency control
+  maxConcurrentRequests: number; // How many requests can run simultaneously
+  currentActiveRequests: number; // Track active requests
 
   // SecretJS client
   secretjs: SecretNetworkClient | null;
 
   // Actions
   setFetchDelayMs: (delay: number) => void;
+  setMaxConcurrentRequests: (limit: number) => void; // NEW
   setSecretjs: (client: SecretNetworkClient | null) => void;
   enqueueTask: (task: Omit<FetcherTask, 'priority'>, priority?: 'high' | 'normal' | 'low') => void;
   processQueue: () => Promise<void>;
+  processSingleTask: (task: FetcherTask) => Promise<void>; // NEW
 
   // Helper getters
   getTokenBalance: (address: string) => DataState<string>;
@@ -264,10 +270,13 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
   poolTvl: {},
   queue: [],
   isProcessing: false,
-  fetchDelayMs: 150,
+  fetchDelayMs: 37,
+  maxConcurrentRequests: 10, // Default to 5
+  currentActiveRequests: 0,
   secretjs: null, // Initialize secretjs
 
   setFetchDelayMs: (delay: number) => set({ fetchDelayMs: delay }),
+  setMaxConcurrentRequests: (limit: number) => set({ maxConcurrentRequests: limit }),
   setSecretjs: (client: SecretNetworkClient | null) => set({ secretjs: client }),
 
   enqueueTask: (task, priority = 'normal') => {
@@ -304,250 +313,47 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
     set({ isProcessing: true });
 
     try {
+      // Process tasks in concurrent batches
       while (get().queue.length > 0) {
-        const task = get().queue.shift();
-        if (!task) break;
+        const currentState = get();
+        const availableSlots = Math.min(
+          currentState.maxConcurrentRequests - currentState.currentActiveRequests,
+          currentState.queue.length
+        );
 
-        // Remove from queue
-        set((s) => ({ queue: s.queue.filter((t) => t !== task) }));
-
-        try {
-          switch (task.type) {
-            case FetcherTaskType.TOKEN_BALANCE: {
-              // Set loading state
-              set((s) => ({
-                tokenBalances: {
-                  ...s.tokenBalances,
-                  [task.key]: {
-                    ...createDefaultState<string>(),
-                    loading: true,
-                  },
-                },
-              }));
-
-              const balance = await fetchTokenBalance(task.key);
-
-              // Update with success
-              set((s) => ({
-                tokenBalances: {
-                  ...s.tokenBalances,
-                  [task.key]: {
-                    value: balance,
-                    loading: false,
-                    error: null,
-                    lastUpdated: Date.now(),
-                    needsViewingKey: false,
-                  },
-                },
-              }));
-              break;
-            }
-
-            case FetcherTaskType.POOL_DATA_BUNDLE: {
-              const poolAddress = task.key;
-              const poolConfig = getPoolConfigByAddress(poolAddress);
-
-              if (!poolConfig.lpTokenAddress) {
-                throw new Error(`No LP token found for pool ${poolAddress}`);
-              }
-
-              // Set all loading states
-              const updates: Partial<GlobalFetcherState> = {};
-
-              if (poolConfig.lpTokenAddress) {
-                updates.tokenBalances = {
-                  ...get().tokenBalances,
-                  [poolConfig.lpTokenAddress]: {
-                    ...createDefaultState<string>(),
-                    loading: true,
-                  },
-                };
-              }
-
-              if (poolConfig.stakingContractAddress) {
-                updates.stakedBalances = {
-                  ...get().stakedBalances,
-                  [poolConfig.stakingContractAddress]: {
-                    ...createDefaultState<string>(),
-                    loading: true,
-                  },
-                };
-              }
-
-              updates.poolTvl = {
-                ...get().poolTvl,
-                [poolAddress]: {
-                  ...createDefaultState<TvlData>(),
-                  loading: true,
-                },
-              };
-
-              set(updates);
-
-              // FIXED: Fetch data independently instead of using Promise.all
-              // This allows TVL to succeed even if balance fetching fails due to viewing key issues
-
-              // 1. Always fetch TVL (doesn't require viewing key)
-              let tvlResult: TvlData | null = null;
-              let tvlError: string | null = null;
-              try {
-                tvlResult = await fetchPoolTvl(poolAddress);
-              } catch (error) {
-                tvlError = error instanceof Error ? error.message : 'TVL fetch failed';
-                console.error(`TVL fetch failed for ${poolAddress}:`, error);
-              }
-
-              // 2. Fetch LP balance (may fail due to viewing key)
-              let lpResult: string | null = null;
-              let lpError: string | null = null;
-              let lpNeedsViewingKey = false;
-              try {
-                lpResult = await fetchTokenBalance(poolConfig.lpTokenAddress);
-              } catch (error) {
-                lpError = error instanceof Error ? error.message : 'LP balance fetch failed';
-                lpNeedsViewingKey = lpError.includes('viewing key');
-                console.error(`LP balance fetch failed for ${poolConfig.lpTokenAddress}:`, error);
-              }
-
-              // 3. Fetch staked balance (may fail due to viewing key)
-              let stakedResult: string | null = null;
-              let stakedError: string | null = null;
-              let stakedNeedsViewingKey = false;
-              if (poolConfig.stakingContractAddress && poolConfig.stakingContractCodeHash) {
-                const currentSecretjs = get().secretjs;
-                if (currentSecretjs) {
-                  try {
-                    stakedResult = await fetchStakedBalance(
-                      poolConfig.stakingContractAddress,
-                      poolConfig.stakingContractCodeHash,
-                      currentSecretjs
-                    );
-                  } catch (error) {
-                    stakedError =
-                      error instanceof Error ? error.message : 'Staked balance fetch failed';
-                    stakedNeedsViewingKey = stakedError.includes('viewing key');
-                    console.error(
-                      `Staked balance fetch failed for ${poolConfig.stakingContractAddress}:`,
-                      error
-                    );
-                  }
-                } else {
-                  stakedError = 'SecretJS not available';
-                }
-              } else {
-                stakedResult = '0'; // No staking contract
-              }
-
-              // ATOMIC UPDATE: Update all state at once with individual success/error states
-              const atomicUpdates: Partial<GlobalFetcherState> = {
-                tokenBalances: {
-                  ...get().tokenBalances,
-                  [poolConfig.lpTokenAddress]: {
-                    value: lpResult,
-                    loading: false,
-                    error: lpError,
-                    lastUpdated: lpResult !== null ? Date.now() : 0,
-                    needsViewingKey: lpNeedsViewingKey,
-                  },
-                },
-                poolTvl: {
-                  ...get().poolTvl,
-                  [poolAddress]: {
-                    value: tvlResult,
-                    loading: false,
-                    error: tvlError,
-                    lastUpdated: tvlResult !== null ? Date.now() : 0,
-                    needsViewingKey: false, // TVL never needs viewing key
-                  },
-                },
-              };
-
-              if (poolConfig.stakingContractAddress) {
-                atomicUpdates.stakedBalances = {
-                  ...get().stakedBalances,
-                  [poolConfig.stakingContractAddress]: {
-                    value: stakedResult,
-                    loading: false,
-                    error: stakedError,
-                    lastUpdated: stakedResult !== null ? Date.now() : 0,
-                    needsViewingKey: stakedNeedsViewingKey,
-                  },
-                };
-              }
-
-              set(atomicUpdates);
-              break;
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to fetch ${task.type} for ${task.key}:`, error);
-
-          // Handle errors based on task type
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-          if (task.type === FetcherTaskType.TOKEN_BALANCE) {
-            set((s) => ({
-              tokenBalances: {
-                ...s.tokenBalances,
-                [task.key]: {
-                  value: null,
-                  loading: false,
-                  error: errorMessage,
-                  lastUpdated: Date.now(),
-                  needsViewingKey: errorMessage.includes('viewing key'),
-                },
-              },
-            }));
-          } else if (task.type === FetcherTaskType.POOL_DATA_BUNDLE) {
-            // For POOL_DATA_BUNDLE, we should rarely get here since we handle errors individually
-            // But if we do, set all related data to error state
-            const poolAddress = task.key;
-            const poolConfig = getPoolConfigByAddress(poolAddress);
-
-            const errorUpdates: Partial<GlobalFetcherState> = {
-              poolTvl: {
-                ...get().poolTvl,
-                [poolAddress]: {
-                  value: null,
-                  loading: false,
-                  error: errorMessage,
-                  lastUpdated: 0,
-                  needsViewingKey: false,
-                },
-              },
-            };
-
-            if (poolConfig.lpTokenAddress) {
-              errorUpdates.tokenBalances = {
-                ...get().tokenBalances,
-                [poolConfig.lpTokenAddress]: {
-                  value: null,
-                  loading: false,
-                  error: errorMessage,
-                  lastUpdated: 0,
-                  needsViewingKey: errorMessage.includes('viewing key'),
-                },
-              };
-            }
-
-            if (poolConfig.stakingContractAddress) {
-              errorUpdates.stakedBalances = {
-                ...get().stakedBalances,
-                [poolConfig.stakingContractAddress]: {
-                  value: null,
-                  loading: false,
-                  error: errorMessage,
-                  lastUpdated: 0,
-                  needsViewingKey: errorMessage.includes('viewing key'),
-                },
-              };
-            }
-
-            set(errorUpdates);
-          }
+        if (availableSlots <= 0) {
+          // Wait a bit and try again if no slots available
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          continue;
         }
 
-        // Global delay between tasks
+        // Take tasks from queue for this batch
+        const tasksToProcess = currentState.queue.slice(0, availableSlots);
+
+        // Remove these tasks from queue
+        set((s) => ({
+          queue: s.queue.slice(availableSlots),
+          currentActiveRequests: s.currentActiveRequests + tasksToProcess.length,
+        }));
+
+        // Process all tasks in this batch concurrently
+        const taskPromises = tasksToProcess.map(async (task) => {
+          try {
+            await get().processSingleTask(task);
+          } catch (error) {
+            console.error(`Failed to process task ${task.type} for ${task.key}:`, error);
+          } finally {
+            // Decrement active requests counter
+            set((s) => ({
+              currentActiveRequests: Math.max(0, s.currentActiveRequests - 1),
+            }));
+          }
+        });
+
+        // Wait for this batch to complete
+        await Promise.all(taskPromises);
+
+        // Add delay between batches (not individual requests)
         if (get().queue.length > 0) {
           await new Promise((resolve) => setTimeout(resolve, get().fetchDelayMs));
         }
@@ -555,7 +361,244 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
     } catch (error) {
       console.error('Critical error in processQueue:', error);
     } finally {
-      set({ isProcessing: false });
+      set({ isProcessing: false, currentActiveRequests: 0 });
+    }
+  },
+
+  // NEW: Extract single task processing logic
+  processSingleTask: async (task: FetcherTask) => {
+    try {
+      switch (task.type) {
+        case FetcherTaskType.TOKEN_BALANCE: {
+          // Set loading state
+          set((s) => ({
+            tokenBalances: {
+              ...s.tokenBalances,
+              [task.key]: {
+                ...createDefaultState<string>(),
+                loading: true,
+              },
+            },
+          }));
+
+          const balance = await fetchTokenBalance(task.key);
+
+          // Update with success
+          set((s) => ({
+            tokenBalances: {
+              ...s.tokenBalances,
+              [task.key]: {
+                value: balance,
+                loading: false,
+                error: null,
+                lastUpdated: Date.now(),
+                needsViewingKey: false,
+              },
+            },
+          }));
+          break;
+        }
+
+        case FetcherTaskType.POOL_DATA_BUNDLE: {
+          const poolAddress = task.key;
+          const poolConfig = getPoolConfigByAddress(poolAddress);
+
+          if (!poolConfig.lpTokenAddress) {
+            throw new Error(`No LP token found for pool ${poolAddress}`);
+          }
+
+          // Set all loading states
+          const updates: Partial<GlobalFetcherState> = {};
+
+          if (poolConfig.lpTokenAddress) {
+            updates.tokenBalances = {
+              ...get().tokenBalances,
+              [poolConfig.lpTokenAddress]: {
+                ...createDefaultState<string>(),
+                loading: true,
+              },
+            };
+          }
+
+          if (poolConfig.stakingContractAddress) {
+            updates.stakedBalances = {
+              ...get().stakedBalances,
+              [poolConfig.stakingContractAddress]: {
+                ...createDefaultState<string>(),
+                loading: true,
+              },
+            };
+          }
+
+          updates.poolTvl = {
+            ...get().poolTvl,
+            [poolAddress]: {
+              ...createDefaultState<TvlData>(),
+              loading: true,
+            },
+          };
+
+          set(updates);
+
+          // Fetch data independently (allows TVL to succeed even if balance fails)
+          // 1. Always fetch TVL (doesn't require viewing key)
+          let tvlResult: TvlData | null = null;
+          let tvlError: string | null = null;
+          try {
+            tvlResult = await fetchPoolTvl(poolAddress);
+          } catch (error) {
+            tvlError = error instanceof Error ? error.message : 'TVL fetch failed';
+            console.error(`TVL fetch failed for ${poolAddress}:`, error);
+          }
+
+          // 2. Fetch LP balance (may fail due to viewing key)
+          let lpResult: string | null = null;
+          let lpError: string | null = null;
+          let lpNeedsViewingKey = false;
+          try {
+            lpResult = await fetchTokenBalance(poolConfig.lpTokenAddress);
+          } catch (error) {
+            lpError = error instanceof Error ? error.message : 'LP balance fetch failed';
+            lpNeedsViewingKey = lpError.includes('viewing key');
+            console.error(`LP balance fetch failed for ${poolConfig.lpTokenAddress}:`, error);
+          }
+
+          // 3. Fetch staked balance (may fail due to viewing key)
+          let stakedResult: string | null = null;
+          let stakedError: string | null = null;
+          let stakedNeedsViewingKey = false;
+          if (poolConfig.stakingContractAddress && poolConfig.stakingContractCodeHash) {
+            const currentSecretjs = get().secretjs;
+            if (currentSecretjs) {
+              try {
+                stakedResult = await fetchStakedBalance(
+                  poolConfig.stakingContractAddress,
+                  poolConfig.stakingContractCodeHash,
+                  currentSecretjs
+                );
+              } catch (error) {
+                stakedError =
+                  error instanceof Error ? error.message : 'Staked balance fetch failed';
+                stakedNeedsViewingKey = stakedError.includes('viewing key');
+                console.error(
+                  `Staked balance fetch failed for ${poolConfig.stakingContractAddress}:`,
+                  error
+                );
+              }
+            } else {
+              stakedError = 'SecretJS not available';
+            }
+          } else {
+            stakedResult = '0'; // No staking contract
+          }
+
+          // ATOMIC UPDATE: Update all state at once with individual success/error states
+          const atomicUpdates: Partial<GlobalFetcherState> = {
+            tokenBalances: {
+              ...get().tokenBalances,
+              [poolConfig.lpTokenAddress]: {
+                value: lpResult,
+                loading: false,
+                error: lpError,
+                lastUpdated: lpResult !== null ? Date.now() : 0,
+                needsViewingKey: lpNeedsViewingKey,
+              },
+            },
+            poolTvl: {
+              ...get().poolTvl,
+              [poolAddress]: {
+                value: tvlResult,
+                loading: false,
+                error: tvlError,
+                lastUpdated: tvlResult !== null ? Date.now() : 0,
+                needsViewingKey: false, // TVL never needs viewing key
+              },
+            },
+          };
+
+          if (poolConfig.stakingContractAddress) {
+            atomicUpdates.stakedBalances = {
+              ...get().stakedBalances,
+              [poolConfig.stakingContractAddress]: {
+                value: stakedResult,
+                loading: false,
+                error: stakedError,
+                lastUpdated: stakedResult !== null ? Date.now() : 0,
+                needsViewingKey: stakedNeedsViewingKey,
+              },
+            };
+          }
+
+          set(atomicUpdates);
+          break;
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to fetch ${task.type} for ${task.key}:`, error);
+
+      // Handle errors based on task type
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (task.type === FetcherTaskType.TOKEN_BALANCE) {
+        set((s) => ({
+          tokenBalances: {
+            ...s.tokenBalances,
+            [task.key]: {
+              value: null,
+              loading: false,
+              error: errorMessage,
+              lastUpdated: Date.now(),
+              needsViewingKey: errorMessage.includes('viewing key'),
+            },
+          },
+        }));
+      } else if (task.type === FetcherTaskType.POOL_DATA_BUNDLE) {
+        // For POOL_DATA_BUNDLE, we should rarely get here since we handle errors individually
+        // But if we do, set all related data to error state
+        const poolAddress = task.key;
+        const poolConfig = getPoolConfigByAddress(poolAddress);
+
+        const errorUpdates: Partial<GlobalFetcherState> = {
+          poolTvl: {
+            ...get().poolTvl,
+            [poolAddress]: {
+              value: null,
+              loading: false,
+              error: errorMessage,
+              lastUpdated: 0,
+              needsViewingKey: false,
+            },
+          },
+        };
+
+        if (poolConfig.lpTokenAddress) {
+          errorUpdates.tokenBalances = {
+            ...get().tokenBalances,
+            [poolConfig.lpTokenAddress]: {
+              value: null,
+              loading: false,
+              error: errorMessage,
+              lastUpdated: 0,
+              needsViewingKey: errorMessage.includes('viewing key'),
+            },
+          };
+        }
+
+        if (poolConfig.stakingContractAddress) {
+          errorUpdates.stakedBalances = {
+            ...get().stakedBalances,
+            [poolConfig.stakingContractAddress]: {
+              value: null,
+              loading: false,
+              error: errorMessage,
+              lastUpdated: 0,
+              needsViewingKey: errorMessage.includes('viewing key'),
+            },
+          };
+        }
+
+        set(errorUpdates);
+      }
     }
   },
 
@@ -566,3 +609,49 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
     get().stakedBalances[address] || createDefaultState<string>(),
   getPoolTvl: (address: string) => get().poolTvl[address] || createDefaultState<TvlData>(),
 }));
+
+// Utility functions for easy configuration
+export const configureGlobalFetcher = {
+  // Preset configurations
+  sequential: () => {
+    useGlobalFetcherStore.getState().setMaxConcurrentRequests(1);
+    useGlobalFetcherStore.getState().setFetchDelayMs(150);
+  },
+
+  conservative: () => {
+    useGlobalFetcherStore.getState().setMaxConcurrentRequests(3);
+    useGlobalFetcherStore.getState().setFetchDelayMs(100);
+  },
+
+  balanced: () => {
+    useGlobalFetcherStore.getState().setMaxConcurrentRequests(5);
+    useGlobalFetcherStore.getState().setFetchDelayMs(37);
+  },
+
+  aggressive: () => {
+    useGlobalFetcherStore.getState().setMaxConcurrentRequests(10);
+    useGlobalFetcherStore.getState().setFetchDelayMs(20);
+  },
+
+  unlimited: () => {
+    useGlobalFetcherStore.getState().setMaxConcurrentRequests(999);
+    useGlobalFetcherStore.getState().setFetchDelayMs(0);
+  },
+
+  // Custom configuration
+  custom: (maxConcurrent: number, delayMs: number) => {
+    useGlobalFetcherStore.getState().setMaxConcurrentRequests(maxConcurrent);
+    useGlobalFetcherStore.getState().setFetchDelayMs(delayMs);
+  },
+
+  // Get current settings
+  getSettings: () => {
+    const state = useGlobalFetcherStore.getState();
+    return {
+      maxConcurrentRequests: state.maxConcurrentRequests,
+      fetchDelayMs: state.fetchDelayMs,
+      currentActiveRequests: state.currentActiveRequests,
+      queueLength: state.queue.length,
+    };
+  },
+};
