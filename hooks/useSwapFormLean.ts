@@ -9,9 +9,9 @@ import isNotNullish from '@/utils/isNotNullish';
 import { calculateMultihopOutput } from '@/utils/swap/multihopCalculation';
 import { executeMultihopSwap, validateMultihopConfig } from '@/utils/swap/multihopExecution';
 import { findMultihopPath, MultihopPath } from '@/utils/swap/routing';
+import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
 import Decimal from 'decimal.js';
 import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
 
 export const useSwapFormLean = () => {
   const { swapTokenInputs: tokenInputs } = useSwapStore();
@@ -258,21 +258,23 @@ export const useSwapFormLean = () => {
   const handleSwapClick = async () => {
     const keplr = (window as unknown as Window).keplr;
     if (!isNotNullish(keplr)) {
-      toast.error('Keplr extension not detected.');
+      toastManager.keplrNotInstalled();
       return;
     }
     showDebugAlert();
     if (payToken == null || receiveToken == null) {
-      toast.error('Pay or receive token is undefined');
+      showToastOnce('pay-receive-undefined', 'Pay or receive token is undefined', 'error');
       return;
     }
     if (!secretjs) {
       console.error('SecretNetworkClient is not initialized');
+      showToastOnce('secretjs-not-init', 'SecretJS is not initialized. Please refresh.', 'error');
       return;
     }
 
     // Use the current swap path for execution
     if (!swapPath) {
+      showToastOnce('no-swap-path', 'No swap path available for execution', 'error');
       console.error('No swap path available for execution', {
         payToken,
         receiveToken,
@@ -281,26 +283,31 @@ export const useSwapFormLean = () => {
     }
 
     try {
-      // Assert the address is in the correct format for Keplr
+      // User only needs a viewing key for the token they are sending.
       const inputViewingKey = getViewingKey(payToken.address);
-      const outputViewingKey = getViewingKey(receiveToken.address);
 
-      if (!inputViewingKey || !outputViewingKey) {
-        toast.error('Viewing keys are missing. Please create them before swapping.');
-        return;
-      }
+      // if (!inputViewingKey) {
+      //   toastManager.viewingKeyRequired();
+      //   return;
+      // }
 
       // Validate multihop configuration
       const validation = validateMultihopConfig();
       if (!validation.valid) {
         console.error('❌ Multihop configuration validation failed:', validation.errors);
-        validation.errors.forEach((error) => toast.error(error));
+        validation.errors.forEach((error) =>
+          showToastOnce(`multihop-validation-${error}`, error, 'error')
+        );
         return;
       }
 
       // Ensure wallet address is available
       if (!walletAddress) {
-        toast.error('Wallet address is not available. Please connect your wallet.');
+        showToastOnce(
+          'wallet-not-connected',
+          'Wallet address is not available. Please connect your wallet.',
+          'error'
+        );
         return;
       }
 
@@ -319,20 +326,31 @@ export const useSwapFormLean = () => {
 
       // Check if multihop is enabled and available
       if (!MULTIHOP_ENABLED) {
-        toast.error('Multihop functionality is not available. Please use direct token pairs.');
+        showToastOnce(
+          'multihop-disabled',
+          'Multihop functionality is not available. Please use direct token pairs.',
+          'error'
+        );
         return;
       }
 
       setPending(true);
       const multihopResult = await executeMultihopSwap(multihopParams);
 
-      console.log('✅ Multihop swap executed successfully:', multihopResult);
+      // Log the raw contract return for multihop swaps
+      if (!swapPath.isDirectPath) {
+        console.log('🔍 Multihop Contract Return:', JSON.stringify(multihopResult, null, 2));
+      }
 
       // Show success toast instead of changing input value
       if (swapPath.isDirectPath) {
-        toast.success('Direct swap completed successfully!');
+        showToastOnce('direct-swap-success', 'Direct swap completed successfully!', 'success');
       } else {
-        toast.success('Multihop swap completed successfully via router contract!');
+        showToastOnce(
+          'multihop-swap-success',
+          'Multihop swap completed successfully via router contract!',
+          'success'
+        );
       }
 
       // Handle successful swap result
@@ -353,17 +371,28 @@ export const useSwapFormLean = () => {
       // Provide specific error messages for different cases
       if (error instanceof Error) {
         if (error.message.includes('no liquidity')) {
-          toast.error(
-            'Swap failed: One or more pools have no liquidity. Please try a different token pair.'
+          showToastOnce(
+            'swap-no-liquidity',
+            'Swap failed: One or more pools have no liquidity.',
+            'error',
+            { message: 'Please try a different token pair.' }
           );
         } else if (error.message.includes('insufficient')) {
-          toast.error('Swap failed: Cannot execute swap due to insufficient liquidity.');
+          showToastOnce(
+            'swap-insufficient-liquidity',
+            'Swap failed: Cannot execute swap due to insufficient liquidity.',
+            'error'
+          );
         } else {
-          toast.error(`Swap failed: ${error.message}`);
+          showToastOnce('swap-failed-generic', `Swap failed: ${error.message}`, 'error');
         }
       } else {
         console.error('Unknown error:', error);
-        toast.error('Swap failed. Check the console for more details.');
+        showToastOnce(
+          'swap-failed-unknown',
+          'Swap failed. Check the console for more details.',
+          'error'
+        );
       }
     } finally {
       setPending(false);
@@ -403,7 +432,7 @@ export const useSwapFormLean = () => {
 
   const showDebugAlert = () => {
     if (payToken == null || receiveToken == null) {
-      toast.error('Pay or receive token is undefined');
+      showToastOnce('pay-receive-undefined-debug', 'Pay or receive token is undefined', 'error');
       return;
     }
 
