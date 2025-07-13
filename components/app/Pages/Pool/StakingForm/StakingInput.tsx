@@ -69,11 +69,9 @@
  * RECOMMENDATION: Use StakingInput2 approach for production
  */
 
-import {
-  InfoContainer,
-  LoadingPlaceholder,
-} from '@/components/app/Shared/Forms/Input/InputWrappers';
+import { InfoContainer } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import StakingPoolSelectionModal from '@/components/app/Shared/Forms/Select/StakingPoolSelectionModal';
+import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { getActiveStakingPools } from '@/config/staking';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';

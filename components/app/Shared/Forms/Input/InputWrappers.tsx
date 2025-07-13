@@ -45,24 +45,8 @@ export const ButtonContainer: React.FC<ButtonContainerProps> = ({
   );
 };
 
-// Loading placeholder components for different sizes
-interface LoadingPlaceholderProps {
-  size?: 'small' | 'medium' | 'large';
-  className?: string;
-}
-
-export const LoadingPlaceholder: React.FC<LoadingPlaceholderProps> = ({
-  size = 'small',
-  className,
-}) => {
-  const sizeClass = {
-    small: INPUT_STYLES.loadingPlaceholderSmall,
-    medium: INPUT_STYLES.loadingPlaceholderMedium,
-    large: INPUT_STYLES.loadingPlaceholderLarge,
-  }[size];
-
-  return <div className={twMerge(sizeClass, className)} />;
-};
+// Note: LoadingPlaceholder has been moved to @/components/app/Shared/LoadingPlaceholder
+// for general use outside of input contexts
 
 // Main input container wrapper
 interface InputContainerProps {

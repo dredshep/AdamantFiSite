@@ -40,10 +40,8 @@ export const INPUT_STYLES = {
   buttonContainer:
     'bg-adamant-app-input backdrop-blur-sm rounded-lg border border-adamant-box-inputBorder transition-all duration-200 hover:bg-adamant-app-input/90',
 
-  // Loading placeholders for different sizes
-  loadingPlaceholderSmall: 'h-4 w-16 bg-adamant-app-input backdrop-blur-sm animate-pulse rounded',
-  loadingPlaceholderMedium: 'h-6 w-20 bg-adamant-app-input backdrop-blur-sm animate-pulse rounded',
-  loadingPlaceholderLarge: 'h-8 w-32 bg-adamant-app-input backdrop-blur-sm animate-pulse rounded',
+  // Note: Size-specific loading placeholders moved to @/components/app/Shared/LoadingPlaceholder
+  // for general use outside of input contexts
 
   // Form button styling (for FormButton component)
   formButton:
