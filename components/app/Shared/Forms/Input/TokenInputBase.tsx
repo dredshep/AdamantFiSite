@@ -67,6 +67,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
           loading={tokenData.loading}
           error={tokenData.error}
           onFetchBalance={() => void tokenData.refetch()}
+          onFetchBalanceWithPriority={tokenData.refetchWithPriority}
         />
       </div>
       <div className={INPUT_STYLES.inputRow}>

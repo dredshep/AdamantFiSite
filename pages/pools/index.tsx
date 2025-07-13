@@ -1,7 +1,7 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import FilterButton from '@/components/app/Pages/Pools/FilterButton';
 import SparklyButton from '@/components/app/Pages/Pools/SparklyButton';
-import { LoadingPlaceholder } from '@/components/app/Shared/Forms/Input/InputWrappers';
+import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import {
   FinancialDataRow,
   FinancialTableSearchBar,
@@ -9,20 +9,17 @@ import {
 } from '@/components/app/Shared/Tables/FinancialTable';
 import TokenDisplay from '@/components/app/Shared/Tables/TokenDisplay';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { LIQUIDITY_PAIRS, poolContainsStablecoin, TOKENS } from '@/config/tokens';
-import { useKeplrConnection } from '@/hooks/useKeplrConnection';
-import { useMultiplePoolBalances } from '@/hooks/useMultiplePoolBalances';
-import { getRewardInfo } from '@/lib/keplr/incentives/getRewardInfo';
+import { LIQUIDITY_PAIRS, poolContainsStablecoin } from '@/config/tokens';
+import { usePoolData } from '@/hooks/usePoolData';
 import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
+import { useGlobalFetcherStore } from '@/store/globalFetcherStore';
 import { SecretString, TablePool } from '@/types';
-import { PoolResponse, QueryMsg } from '@/types/secretswap/pair';
-import { getLpTokenPriceUsd } from '@/utils/pricing/lpTokenPricing';
 import { getAllStakingPools } from '@/utils/staking/stakingRegistry';
 import * as Tabs from '@radix-ui/react-tabs';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RiErrorWarningLine, RiRefreshLine } from 'react-icons/ri';
 import { getTablePools } from '../../utils/apis/getTablePools';
 import { validatePools } from '../../utils/apis/isPoolConfigured';
@@ -32,25 +29,238 @@ interface ValidatedPool extends TablePool {
   validationReason: string | undefined;
 }
 
-// This now only holds TVL data, as balance data is handled by the `useMultiplePoolBalances` hook.
-interface PoolTvlData {
-  tvlUsd: number | null;
-  isLoading: boolean;
-  hasError: boolean;
+// Debug panel component
+function DebugPanel() {
+  const fetchDelayMs = useGlobalFetcherStore((state) => state.fetchDelayMs);
+  const setFetchDelayMs = useGlobalFetcherStore((state) => state.setFetchDelayMs);
+  const [showDebug, setShowDebug] = useState(false);
+
+  if (!showDebug) {
+    return (
+      <button
+        onClick={() => setShowDebug(true)}
+        className="fixed bottom-4 right-4 bg-gray-800 text-white px-3 py-2 rounded-lg text-sm opacity-50 hover:opacity-100"
+      >
+        Debug
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium">Global Fetcher Debug</h3>
+        <button onClick={() => setShowDebug(false)} className="text-gray-400 hover:text-white">
+          ×
+        </button>
+      </div>
+      <div className="space-y-2">
+        <label className="block text-xs text-gray-300">Fetch Delay (ms): {fetchDelayMs}</label>
+        <input
+          type="range"
+          min="50"
+          max="1000"
+          step="50"
+          value={fetchDelayMs}
+          onChange={(e) => setFetchDelayMs(Number(e.target.value))}
+          className="w-full"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFetchDelayMs(50)}
+            className="px-2 py-1 bg-red-600 rounded text-xs"
+          >
+            Fast (50ms)
+          </button>
+          <button
+            onClick={() => setFetchDelayMs(150)}
+            className="px-2 py-1 bg-blue-600 rounded text-xs"
+          >
+            Default (150ms)
+          </button>
+          <button
+            onClick={() => setFetchDelayMs(500)}
+            className="px-2 py-1 bg-green-600 rounded text-xs"
+          >
+            Safe (500ms)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Individual pool row component
+function PoolRow({ pool, index }: { pool: ValidatedPool; index: number }) {
+  const poolData = usePoolData(pool.contract_address, `poolRow:${pool.name}`);
+  const { suggestToken } = useBalanceFetcherStore();
+  const stakingPools = getAllStakingPools();
+  const stakingInfo = stakingPools.find((s) => s.poolAddress === pool.contract_address);
+  const lpToken =
+    LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.contract_address)?.lpToken || '';
+
+  const formatNumber = (value: number): string => {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+    return `$${value.toFixed(2)}`;
+  };
+
+  return (
+    <motion.div
+      key={pool.contract_address}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+    >
+      <Link
+        href={`/pool/${pool.contract_address}`}
+        className="flex items-center bg-adamant-box-dark/50 hover:bg-adamant-box-dark transition-all duration-200 py-4 px-6 group"
+      >
+        <FinancialDataRow
+          cells={[
+            // Pool Name Cell
+            {
+              content: (
+                <div className="flex items-center gap-3">
+                  <TokenDisplay seed={pool.contract_address as SecretString} name={pool.name} />
+                  {stakingInfo && (
+                    <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-500/20 to-amber-600/20 px-2 py-1 rounded-full border border-yellow-500/20">
+                      <Sparkles className="w-3 h-3 text-yellow-400" />
+                      <span className="text-xs font-medium text-yellow-400">Rewards</span>
+                    </div>
+                  )}
+                </div>
+              ),
+              minWidth: '240px',
+            },
+            // TVL Cell
+            {
+              content: (
+                <div className="text-right flex justify-end">
+                  {poolData.isLoading ? (
+                    <LoadingPlaceholder size="small" />
+                  ) : poolData.tvl != null ? (
+                    <span className="font-medium text-adamant-text-box-main">
+                      {formatNumber(poolData.tvl)}
+                    </span>
+                  ) : (
+                    <span className="font-medium text-adamant-text-box-secondary">-</span>
+                  )}
+                </div>
+              ),
+              minWidth: '120px',
+            },
+            // Rewards Cell
+            {
+              content: (
+                <div className="text-right flex justify-end">
+                  {stakingInfo ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-adamant-accentText">
+                        {stakingInfo.stakingInfo.rewardTokenSymbol}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-adamant-text-box-secondary text-sm">-</span>
+                  )}
+                </div>
+              ),
+              minWidth: '120px',
+            },
+            // Your Position Cell
+            {
+              content: (
+                <div className="text-right flex flex-col items-end gap-1">
+                  {poolData.isLoading ? (
+                    <LoadingPlaceholder size="medium" />
+                  ) : poolData.lpNeedsViewingKey || poolData.stakedNeedsViewingKey ? (
+                    <>
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-600/20 px-2 py-1 rounded-md border border-orange-500/20">
+                        <RiErrorWarningLine className="w-3 h-3 text-orange-400" />
+                        <span className="text-xs font-medium text-orange-400">Key Required</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          void suggestToken(lpToken as SecretString);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-adamant-gradientBright/10 hover:bg-adamant-gradientBright/20 border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-md text-adamant-gradientBright hover:text-white transition-all duration-200"
+                      >
+                        <RiRefreshLine className="w-3 h-3" /> Set Key
+                      </button>
+                    </>
+                  ) : poolData.error ? (
+                    <>
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-red-500/20 to-red-600/20 px-2 py-1 rounded-md border border-red-500/20">
+                        <RiErrorWarningLine className="w-3 h-3 text-red-400" />
+                        <span className="text-xs font-medium text-red-400">Error</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          poolData.retryLpBalance();
+                          poolData.retryStakedBalance();
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-adamant-gradientBright/10 hover:bg-adamant-gradientBright/20 border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-md text-adamant-gradientBright hover:text-white transition-all duration-200"
+                      >
+                        <RiRefreshLine className="w-3 h-3" /> Retry
+                      </button>
+                    </>
+                  ) : poolData.hasAnyBalance ? (
+                    <>
+                      {poolData.hasLpBalance && (
+                        <div className="flex items-center gap-1 bg-gradient-to-r from-blue-500/20 to-indigo-600/20 px-2 py-1 rounded-md border border-blue-500/20">
+                          <span className="text-xs font-medium text-blue-400">
+                            {parseFloat(poolData.lpBalance || '0').toFixed(2)} LP
+                          </span>
+                        </div>
+                      )}
+                      {stakingInfo && poolData.hasStakedBalance && (
+                        <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-500/20 to-amber-600/20 px-2 py-1 rounded-md border border-yellow-500/20">
+                          <span className="text-xs font-medium text-yellow-400">
+                            {parseFloat(poolData.stakedBalance || '0').toFixed(2)} Staked
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-adamant-text-box-secondary text-sm">-</span>
+                  )}
+                </div>
+              ),
+              minWidth: '160px',
+            },
+            // Manage Button cell
+            {
+              content: (
+                <div className="text-right flex items-center justify-end gap-2">
+                  <motion.button
+                    className="bg-adamant-button-form-main text-adamant-button-form-secondary px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 hover:opacity-90 border border-adamant-box-border group-hover:scale-105"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Manage
+                  </motion.button>
+                </div>
+              ),
+              minWidth: '120px',
+            },
+          ]}
+        />
+      </Link>
+    </motion.div>
+  );
 }
 
 export default function PoolsPage() {
   const [pools, setPools] = useState<ValidatedPool[]>([]);
-  const [poolTvlMap, setPoolTvlMap] = useState<Map<string, PoolTvlData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [stablecoins, setStablecoins] = useState(false);
   const [incentivized, setIncentivized] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'your'>('all');
 
-  const { secretjs } = useKeplrConnection();
-  const { suggestToken } = useBalanceFetcherStore();
-  const dataFetchedRef = useRef(false);
+  const stakingPools = getAllStakingPools();
 
   // Initial fetch of pool configurations
   useEffect(() => {
@@ -70,152 +280,16 @@ export default function PoolsPage() {
     }
   }, []);
 
-  const stakingPools = getAllStakingPools();
-
-  // Prepare configs for the balance fetching hook
-  const poolBalanceConfigs = useMemo(() => {
-    return pools
-      .map((pool) => {
-        const pairInfo = LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.contract_address);
-        const stakingInfo = stakingPools.find((s) => s.poolAddress === pool.contract_address);
-        return {
-          lpTokenAddress: pairInfo?.lpToken || '',
-          stakingContractAddress: stakingInfo?.stakingInfo.stakingAddress,
-          stakingContractCodeHash: stakingInfo?.stakingInfo.stakingCodeHash,
-        };
-      })
-      .filter((c) => c.lpTokenAddress);
-  }, [pools, stakingPools]);
-
-  // Single hook to fetch all balances for all visible pools
-  const allPoolBalances = useMultiplePoolBalances(poolBalanceConfigs);
-
-  // Helper to get token price in USD
-  const getTokenPriceUsd = useCallback(async (tokenSymbol: string): Promise<number> => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    switch (tokenSymbol) {
-      case 'USDC.nbl':
-      case 'SILK':
-        return 1.0;
-      case 'sSCRT':
-        return 0.5;
-      case 'sATOM':
-        return 8.0;
-      case 'ETH.axl':
-        return 2500.0;
-      case 'JKL':
-        return 0.05;
-      default:
-        return 1.0;
-    }
-  }, []);
-
-  // Function to calculate TVL for a single pool
-  const calculatePoolTvl = useCallback(
-    async (poolAddress: string, pairInfo: (typeof LIQUIDITY_PAIRS)[0]): Promise<number> => {
-      if (!secretjs) return 0;
-      try {
-        const query: QueryMsg = { pool: {} };
-        const poolData = await secretjs.query.compute.queryContract<QueryMsg, PoolResponse>({
-          contract_address: poolAddress,
-          code_hash: pairInfo.pairContractCodeHash,
-          query,
-        });
-
-        if (!poolData.assets || poolData.assets.length !== 2) return 0;
-
-        const [token0Price, token1Price] = await Promise.all([
-          getTokenPriceUsd(pairInfo.token0),
-          getTokenPriceUsd(pairInfo.token1),
-        ]);
-
-        let totalTvl = 0;
-        for (const asset of poolData.assets) {
-          // Type guard to check if asset info is a Token
-          if ('token' in asset.info) {
-            const tokenInfo = asset.info;
-            const tokenConfig = TOKENS.find((t) => t.address === tokenInfo.token.contract_addr);
-            if (tokenConfig) {
-              const price =
-                TOKENS.find((t) => t.symbol === pairInfo.token0)?.address === tokenConfig.address
-                  ? token0Price
-                  : token1Price;
-              totalTvl += (parseFloat(asset.amount) / 10 ** tokenConfig.decimals) * price;
-            }
-          }
-        }
-        return totalTvl;
-      } catch (error) {
-        console.error(`Error calculating TVL for pool ${poolAddress}:`, error);
-        return 0;
-      }
-    },
-    [secretjs, getTokenPriceUsd]
-  );
-
-  // Fetches TVL for all pools
-  const fetchAllPoolTvl = useCallback(async () => {
-    if (!secretjs || dataFetchedRef.current || pools.length === 0) return;
-    dataFetchedRef.current = true;
-
-    const initialMap = new Map<string, PoolTvlData>();
-    pools.forEach((pool) =>
-      initialMap.set(pool.contract_address, { tvlUsd: null, isLoading: true, hasError: false })
-    );
-    setPoolTvlMap(initialMap);
-
-    for (const pool of pools) {
-      const pairInfo = LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.contract_address);
-      if (!pairInfo) continue;
-
-      const stakingInfo = stakingPools.find((s) => s.poolAddress === pool.contract_address);
-      let poolTvl = 0;
-      let stakingTvl = 0;
-
-      try {
-        poolTvl = await calculatePoolTvl(pool.contract_address, pairInfo);
-        if (stakingInfo) {
-          const [rewardInfo, lpTokenPrice] = await Promise.all([
-            getRewardInfo({ secretjs, lpToken: stakingInfo.stakingInfo.lpTokenAddress }),
-            getLpTokenPriceUsd(secretjs, stakingInfo.stakingInfo.lpTokenAddress),
-          ]);
-          stakingTvl = (parseFloat(rewardInfo.totalLocked) / 1e6) * lpTokenPrice;
-        }
-        setPoolTvlMap((prev) =>
-          new Map(prev).set(pool.contract_address, {
-            tvlUsd: poolTvl + stakingTvl,
-            isLoading: false,
-            hasError: false,
-          })
-        );
-      } catch (error) {
-        console.error(`Failed to fetch TVL for ${pool.name}`, error);
-        setPoolTvlMap((prev) =>
-          new Map(prev).set(pool.contract_address, {
-            tvlUsd: null,
-            isLoading: false,
-            hasError: true,
-          })
-        );
-      }
-    }
-  }, [secretjs, pools, stakingPools, calculatePoolTvl]);
-
-  useEffect(() => {
-    if (secretjs && pools.length > 0 && !dataFetchedRef.current) {
-      void fetchAllPoolTvl();
-    }
-  }, [fetchAllPoolTvl, secretjs, pools.length]);
-
   const filteredPools = useMemo(
     () =>
       pools.filter((pool) => {
-        const lpToken = LIQUIDITY_PAIRS.find(
-          (p) => p.pairContract === pool.contract_address
-        )?.lpToken;
-        const balanceData = lpToken ? allPoolBalances[lpToken] : undefined;
+        // For the "your" tab, we'll need to check if any pool has balances
+        // This is a simplified check - in reality we'd need to check the actual balance data
+        if (activeTab === 'your') {
+          // For now, show all pools in "your" tab since we can't easily check balances here
+          // The individual PoolRow components will handle showing/hiding based on actual balance data
+        }
 
-        if (activeTab === 'your' && !balanceData?.hasAnyBalance) return false;
         if (incentivized && !stakingPools.some((s) => s.poolAddress === pool.contract_address))
           return false;
         if (stablecoins && !poolContainsStablecoin(pool.name)) return false;
@@ -228,14 +302,8 @@ export default function PoolsPage() {
 
         return true;
       }),
-    [pools, allPoolBalances, activeTab, incentivized, stablecoins, searchTerm, stakingPools]
+    [pools, activeTab, incentivized, stablecoins, searchTerm, stakingPools]
   );
-
-  const formatNumber = (value: number): string => {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-    return `$${value.toFixed(2)}`;
-  };
 
   if (loading) {
     return (
@@ -306,175 +374,15 @@ export default function PoolsPage() {
             ]}
           />
           <div className="divide-y divide-adamant-box-border">
-            {filteredPools.map((pool, index) => {
-              const lpToken =
-                LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.contract_address)?.lpToken ||
-                '';
-              const balanceData = allPoolBalances[lpToken];
-              const tvlData = poolTvlMap.get(pool.contract_address);
-              const stakingInfo = stakingPools.find((s) => s.poolAddress === pool.contract_address);
-
-              return (
-                <motion.div
-                  key={pool.contract_address}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Link
-                    href={`/pool/${pool.contract_address}`}
-                    className="flex items-center bg-adamant-box-dark/50 hover:bg-adamant-box-dark transition-all duration-200 py-4 px-6 group"
-                  >
-                    <FinancialDataRow
-                      cells={[
-                        // Pool Name Cell
-                        {
-                          content: (
-                            <div className="flex items-center gap-3">
-                              <TokenDisplay
-                                seed={pool.contract_address as SecretString}
-                                name={pool.name}
-                              />
-                              {stakingInfo && (
-                                <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-500/20 to-amber-600/20 px-2 py-1 rounded-full border border-yellow-500/20">
-                                  <Sparkles className="w-3 h-3 text-yellow-400" />
-                                  <span className="text-xs font-medium text-yellow-400">
-                                    Rewards
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ),
-                          minWidth: '240px',
-                        },
-                        // TVL Cell
-                        {
-                          content: (
-                            <div className="text-right flex justify-end">
-                              {tvlData?.isLoading ? (
-                                <LoadingPlaceholder size="small" />
-                              ) : tvlData?.tvlUsd != null ? (
-                                <span className="font-medium text-adamant-text-box-main">
-                                  {formatNumber(tvlData.tvlUsd)}
-                                </span>
-                              ) : (
-                                <span className="font-medium text-adamant-text-box-secondary">
-                                  -
-                                </span>
-                              )}
-                            </div>
-                          ),
-                          minWidth: '120px',
-                        },
-                        // Rewards Cell
-                        {
-                          content: (
-                            <div className="text-right flex justify-end">
-                              {stakingInfo ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-adamant-accentText">
-                                    {stakingInfo.stakingInfo.rewardTokenSymbol}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-adamant-text-box-secondary text-sm">-</span>
-                              )}
-                            </div>
-                          ),
-                          minWidth: '120px',
-                        },
-                        // Your Position Cell
-                        {
-                          content: (
-                            <div className="text-right flex flex-col items-end gap-1">
-                              {!balanceData ||
-                              balanceData.lpLoading ||
-                              balanceData.stakedLoading ? (
-                                <LoadingPlaceholder size="medium" />
-                              ) : balanceData.lpNeedsViewingKey ||
-                                balanceData.stakedNeedsViewingKey ? (
-                                <>
-                                  <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-600/20 px-2 py-1 rounded-md border border-orange-500/20">
-                                    <RiErrorWarningLine className="w-3 h-3 text-orange-400" />
-                                    <span className="text-xs font-medium text-orange-400">
-                                      Key Required
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      void suggestToken(lpToken as SecretString);
-                                    }}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-adamant-gradientBright/10 hover:bg-adamant-gradientBright/20 border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-md text-adamant-gradientBright hover:text-white transition-all duration-200"
-                                  >
-                                    <RiRefreshLine className="w-3 h-3" /> Set Key
-                                  </button>
-                                </>
-                              ) : balanceData.lpError || balanceData.stakedError ? (
-                                <>
-                                  <div className="flex items-center gap-2 bg-gradient-to-r from-red-500/20 to-red-600/20 px-2 py-1 rounded-md border border-red-500/20">
-                                    <RiErrorWarningLine className="w-3 h-3 text-red-400" />
-                                    <span className="text-xs font-medium text-red-400">Error</span>
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      void balanceData.retryLpBalance();
-                                      void balanceData.retryStakedBalance();
-                                    }}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-adamant-gradientBright/10 hover:bg-adamant-gradientBright/20 border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-md text-adamant-gradientBright hover:text-white transition-all duration-200"
-                                  >
-                                    <RiRefreshLine className="w-3 h-3" /> Retry
-                                  </button>
-                                </>
-                              ) : balanceData.hasAnyBalance ? (
-                                <>
-                                  {parseFloat(balanceData.lpBalance) > 0 && (
-                                    <div className="flex items-center gap-1 bg-gradient-to-r from-blue-500/20 to-indigo-600/20 px-2 py-1 rounded-md border border-blue-500/20">
-                                      <span className="text-xs font-medium text-blue-400">
-                                        {parseFloat(balanceData.lpBalance).toFixed(2)} LP
-                                      </span>
-                                    </div>
-                                  )}
-                                  {parseFloat(balanceData.stakedBalance) > 0 && (
-                                    <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-500/20 to-amber-600/20 px-2 py-1 rounded-md border border-yellow-500/20">
-                                      <span className="text-xs font-medium text-yellow-400">
-                                        {parseFloat(balanceData.stakedBalance).toFixed(2)} Staked
-                                      </span>
-                                    </div>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-adamant-text-box-secondary text-sm">-</span>
-                              )}
-                            </div>
-                          ),
-                          minWidth: '160px',
-                        },
-                        // Manage Button cell
-                        {
-                          content: (
-                            <div className="text-right flex items-center justify-end gap-2">
-                              <motion.button
-                                className="bg-adamant-button-form-main text-adamant-button-form-secondary px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 hover:opacity-90 border border-adamant-box-border group-hover:scale-105"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                              >
-                                Manage
-                              </motion.button>
-                            </div>
-                          ),
-                          minWidth: '120px',
-                        },
-                      ]}
-                    />
-                  </Link>
-                </motion.div>
-              );
-            })}
+            {filteredPools.map((pool, index) => (
+              <PoolRow key={pool.contract_address} pool={pool} index={index} />
+            ))}
           </div>
         </div>
       </div>
+
+      {/* Debug Panel */}
+      <DebugPanel />
     </AppLayout>
   );
 }

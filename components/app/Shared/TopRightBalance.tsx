@@ -17,6 +17,7 @@ interface TopRightBalanceProps {
   loading?: boolean;
   error?: TokenBalanceError | null;
   onFetchBalance?: () => void;
+  onFetchBalanceWithPriority?: (priority?: 'high' | 'normal' | 'low') => void;
   withLabel?: boolean;
 }
 
@@ -28,10 +29,13 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   loading = false,
   error = null,
   onFetchBalance,
+  onFetchBalanceWithPriority,
   withLabel = true,
 }) => {
   const handleFetchClick = () => {
-    if (onFetchBalance) {
+    if (onFetchBalanceWithPriority) {
+      onFetchBalanceWithPriority('high'); // Prioritize form-related balance fetching
+    } else if (onFetchBalance) {
       onFetchBalance();
     }
   };
@@ -40,7 +44,10 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   const showMaxButton = hasMax && inputIdentifier;
 
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className="flex items-center gap-2"
+      onClick={() => (error ? alert(JSON.stringify(error)) : null)}
+    >
       <div className="flex items-center gap-1">
         {withLabel && (
           <div className="flex items-center gap-2">

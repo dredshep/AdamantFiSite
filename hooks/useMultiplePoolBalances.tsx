@@ -17,6 +17,7 @@ const DEFAULT_LP_DATA = {
   loading: true,
   needsViewingKey: false,
   error: null,
+  lastUpdated: 0,
   refetch: () => {},
 };
 
@@ -26,6 +27,7 @@ const DEFAULT_STAKED_DATA = {
   isLoading: true,
   error: false,
   needsKey: false,
+  lastUpdated: 0,
 };
 
 // Define the structure for a single pool's balance data
@@ -40,6 +42,8 @@ export interface PoolBalanceData {
   lpError: boolean;
   stakedError: boolean;
   hasAnyBalance: boolean;
+  hasLpBalance: boolean;
+  hasStakedBalance: boolean;
   retryLpBalance: () => void;
   retryStakedBalance: () => void;
 }
@@ -71,12 +75,28 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
 
   // 2. State for staked balances
   const [stakedBalances, setStakedBalances] = useState<
-    Record<string, { balance: string; isLoading: boolean; error: boolean; needsKey: boolean }>
+    Record<
+      string,
+      {
+        balance: string;
+        isLoading: boolean;
+        error: boolean;
+        needsKey: boolean;
+        lastUpdated: number;
+      }
+    >
   >(
     Object.fromEntries(
       configs.map((c) => [
         c.lpTokenAddress,
-        { balance: '0', isLoading: true, error: false, needsKey: false },
+        {
+          balance: '0',
+          // Only set loading to true if there's actually a staking contract to fetch from
+          isLoading: !!(c.stakingContractAddress && c.stakingContractCodeHash),
+          error: false,
+          needsKey: false,
+          lastUpdated: 0,
+        },
       ])
     )
   );
@@ -94,18 +114,28 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
       setStakedBalances((prev) => {
         const next = { ...prev };
         for (const config of configsToFetch) {
-          if (config.stakingContractAddress) {
+          if (config.stakingContractAddress && config.stakingContractCodeHash) {
             const current = prev[config.lpTokenAddress] || {
               balance: '0',
               isLoading: true,
               error: false,
               needsKey: false,
+              lastUpdated: 0,
             };
             next[config.lpTokenAddress] = {
               ...current,
               isLoading: true,
               error: false,
               needsKey: false,
+            };
+          } else {
+            // For tokens without staking contracts, ensure they're not loading
+            next[config.lpTokenAddress] = {
+              balance: '0',
+              isLoading: false,
+              error: false,
+              needsKey: false,
+              lastUpdated: 0,
             };
           }
         }
@@ -117,10 +147,8 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
           setStakedBalances((prev) => ({
             ...prev,
             [config.lpTokenAddress]: {
-              balance: '0',
+              ...(prev[config.lpTokenAddress] || DEFAULT_STAKED_DATA),
               isLoading: false,
-              error: false,
-              needsKey: false,
             },
           }));
           continue;
@@ -144,10 +172,10 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
             setStakedBalances((prev) => ({
               ...prev,
               [config.lpTokenAddress]: {
-                balance: '0',
+                ...(prev[config.lpTokenAddress] || DEFAULT_STAKED_DATA),
                 isLoading: false,
-                error: false,
                 needsKey: true,
+                lastUpdated: Date.now(),
               },
             }));
             continue;
@@ -180,6 +208,7 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
                 isLoading: false,
                 error: false,
                 needsKey: false,
+                lastUpdated: Date.now(),
               },
             }));
           } else if (isQueryErrorResponse(parsedResult)) {
@@ -196,10 +225,11 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
           setStakedBalances((prev) => ({
             ...prev,
             [config.lpTokenAddress]: {
-              balance: '0',
+              ...(prev[config.lpTokenAddress] || DEFAULT_STAKED_DATA),
               isLoading: false,
               error: true,
               needsKey: !!needsKey,
+              lastUpdated: Date.now(),
             },
           }));
         }
@@ -211,20 +241,25 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
   // 5. Effect to trigger staked balance fetch
   useEffect(() => {
     if (secretjs && walletAddress) {
-      const configsWithStaking = memoizedConfigs.filter((c) => c.stakingContractAddress);
+      const configsWithStaking = memoizedConfigs.filter(
+        (c) => c.stakingContractAddress && c.stakingContractCodeHash
+      );
       if (configsWithStaking.length > 0) {
         void fetchStakedBalances(secretjs, walletAddress, configsWithStaking);
       }
     } else {
       setStakedBalances((prev) => {
         const next = { ...prev };
-        for (const key in prev) {
-          const current = prev[key];
-          next[key] = {
+        for (const config of memoizedConfigs) {
+          const current = prev[config.lpTokenAddress];
+          next[config.lpTokenAddress] = {
             balance: current?.balance || '0',
-            isLoading: false,
+            // Only keep loading state if there's a staking contract and we just don't have connection yet
+            isLoading:
+              !!(config.stakingContractAddress && config.stakingContractCodeHash) && !secretjs,
             error: current?.error || false,
             needsKey: current?.needsKey || false,
+            lastUpdated: current?.lastUpdated || 0,
           };
         }
         return next;
@@ -236,7 +271,7 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
   const retryStakedFunctions = useMemo(() => {
     const functions: Record<string, () => void> = {};
     memoizedConfigs.forEach((config) => {
-      if (config.stakingContractAddress) {
+      if (config.stakingContractAddress && config.stakingContractCodeHash) {
         functions[config.lpTokenAddress] = () => {
           if (secretjs && walletAddress) {
             void fetchStakedBalances(secretjs, walletAddress, [config]);
@@ -254,8 +289,21 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
         const lpData = lpBalances[config.lpTokenAddress] || DEFAULT_LP_DATA;
         const stakedData = stakedBalances[config.lpTokenAddress] || DEFAULT_STAKED_DATA;
 
-        const hasLp = parseFloat(lpData.balance) > 0;
-        const hasStaked = parseFloat(stakedData.balance) > 0;
+        // Simplified state derivation
+        const isLoading = lpData.loading || stakedData.isLoading;
+
+        // Consolidate error states
+        const hasLpError = lpData.lastUpdated > 0 && !!lpData.error;
+        const hasStakedError = stakedData.lastUpdated > 0 && stakedData.error;
+
+        // Consolidate viewing key requirements
+        const needsLpKey = lpData.needsViewingKey;
+        const needsStakingKey = stakedData.needsKey;
+
+        // A balance is considered "present" if it has been fetched (lastUpdated > 0).
+        const hasLpBalance = lpData.lastUpdated > 0;
+        const hasStakedBalance = stakedData.lastUpdated > 0;
+        const hasAnyBalance = hasLpBalance || hasStakedBalance;
 
         return [
           config.lpTokenAddress,
@@ -263,13 +311,15 @@ export const useMultiplePoolBalances = (configs: PoolBalanceConfig[]): MultipleP
             lpTokenAddress: config.lpTokenAddress,
             lpBalance: lpData.balance,
             stakedBalance: stakedData.balance,
-            lpLoading: lpData.loading,
-            stakedLoading: stakedData.isLoading,
-            lpNeedsViewingKey: lpData.needsViewingKey,
-            stakedNeedsViewingKey: stakedData.needsKey,
-            lpError: !!lpData.error,
-            stakedError: stakedData.error,
-            hasAnyBalance: hasLp || hasStaked,
+            lpLoading: isLoading, // Use the combined loading state
+            stakedLoading: isLoading, // Use the combined loading state
+            lpNeedsViewingKey: needsLpKey,
+            stakedNeedsViewingKey: needsStakingKey,
+            lpError: hasLpError,
+            stakedError: hasStakedError,
+            hasAnyBalance,
+            hasLpBalance,
+            hasStakedBalance,
             retryLpBalance: lpData.refetch,
             retryStakedBalance: retryStakedFunctions[config.lpTokenAddress] || NO_OP,
           },

@@ -78,7 +78,7 @@ export class TokenService {
     caller: string,
     traceId?: string
   ): Promise<string> {
-    // Get wallet address from Keplr
+    // Get wallet address from Keplr with proper connection check
     const keplr = (window as unknown as Window).keplr;
     if (!keplr) {
       throw new TokenServiceError(
@@ -91,7 +91,25 @@ export class TokenService {
       );
     }
 
-    const accounts = await keplr.getOfflineSignerOnlyAmino('secret-4').getAccounts();
+    let accounts;
+    try {
+      // First ensure the chain is enabled
+      await keplr.enable('secret-4');
+      const offlineSigner = keplr.getOfflineSignerOnlyAmino('secret-4');
+      accounts = await offlineSigner.getAccounts();
+    } catch (error) {
+      throw new TokenServiceError(
+        `Failed to access Keplr wallet (called from: ${caller}): ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+        TokenServiceErrorType.WALLET_ERROR,
+        true,
+        'Unlock your Keplr wallet and try again',
+        caller,
+        traceId
+      );
+    }
+
     const walletAddress = accounts[0]?.address;
     if (typeof walletAddress !== 'string' || walletAddress.length === 0) {
       throw new TokenServiceError(

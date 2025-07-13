@@ -19,6 +19,7 @@ interface TokenBalanceState {
 interface BalanceQueueItem {
   tokenAddress: string;
   caller: string;
+  priority?: 'high' | 'normal' | 'low';
 }
 
 interface BalanceFetcherState {
@@ -27,10 +28,16 @@ interface BalanceFetcherState {
   queue: BalanceQueueItem[];
 
   // Actions
-  addToQueue: (tokenAddress: string, caller: string) => void;
+  addToQueue: (tokenAddress: string, caller: string, priority?: 'high' | 'normal' | 'low') => void;
+  addToQueueWithPriority: (
+    tokenAddress: string,
+    caller: string,
+    priority: 'high' | 'normal' | 'low'
+  ) => void;
   removeFromQueue: (tokenAddress: string) => void;
   fetchBalance: (tokenAddress: string, caller: string) => Promise<void>;
   fetchAllBalances: () => void;
+  fetchPriorityBalances: (tokenAddresses: string[], caller: string) => void;
   getBalanceState: (tokenAddress: string) => TokenBalanceState;
   clearError: (tokenAddress: string) => void;
   setBalance: (tokenAddress: string, balance: string) => void;
@@ -43,7 +50,7 @@ interface BalanceFetcherState {
 }
 
 export const DEFAULT_BALANCE_STATE: TokenBalanceState = {
-  balance: '-',
+  balance: '0',
   loading: false,
   error: null,
   lastUpdated: 0,
@@ -76,21 +83,53 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
   isProcessingQueue: false,
   queue: [],
 
-  addToQueue: (tokenAddress: string, caller: string) => {
+  addToQueue: (
+    tokenAddress: string,
+    caller: string,
+    priority: 'high' | 'normal' | 'low' = 'normal'
+  ) => {
     const state = get();
     const currentBalance = state.balances[tokenAddress];
 
-    if (state.queue.some((item) => item.tokenAddress === tokenAddress) || currentBalance?.loading) {
+    // Skip if already loading or in queue
+    if (currentBalance?.loading || state.queue.some((item) => item.tokenAddress === tokenAddress)) {
       return;
     }
 
-    if (currentBalance?.lastUpdated && Date.now() - currentBalance.lastUpdated < STALE_TIME_MS) {
+    // Skip if balance is fresh and no error
+    if (
+      currentBalance?.lastUpdated &&
+      Date.now() - currentBalance.lastUpdated < STALE_TIME_MS &&
+      !currentBalance.error &&
+      !currentBalance.needsViewingKey
+    ) {
       return;
     }
 
-    set((state) => ({
-      queue: [...state.queue, { tokenAddress, caller }],
+    // --- NEW: Set loading state immediately and clear old errors ---
+    // This ensures the UI shows 'loading' right away and prevents stale error flashes.
+    set((s) => ({
+      balances: {
+        ...s.balances,
+        [tokenAddress]: {
+          ...(s.balances[tokenAddress] || DEFAULT_BALANCE_STATE),
+          loading: true,
+          error: null, // Clear previous errors
+        },
+      },
     }));
+
+    const newItem: BalanceQueueItem = { tokenAddress, caller, priority };
+
+    set((s) => {
+      const newQueue = [...s.queue, newItem];
+      // Sort queue by priority: high > normal > low
+      newQueue.sort((a, b) => {
+        const priorityOrder = { high: 0, normal: 1, low: 2 };
+        return priorityOrder[a.priority || 'normal'] - priorityOrder[b.priority || 'normal'];
+      });
+      return { queue: newQueue };
+    });
 
     if (!state.isProcessingQueue) {
       // Process queue with proper error handling
@@ -102,6 +141,14 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
           set({ isProcessingQueue: false });
         });
     }
+  },
+
+  addToQueueWithPriority: (
+    tokenAddress: string,
+    caller: string,
+    priority: 'high' | 'normal' | 'low'
+  ) => {
+    get().addToQueue(tokenAddress, caller, priority);
   },
 
   removeFromQueue: (tokenAddress: string) => {
@@ -179,7 +226,6 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         get().setError(tokenAddress, errorMessage);
         toastManager.balanceFetchError();
       }
-      console.log(`[${traceId}] Exiting fetchBalance catch block for ${caller}.`);
     } finally {
       get().setLoading(tokenAddress, false);
     }
@@ -188,12 +234,18 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
   fetchAllBalances: () => {
     // Fetch all regular tokens
     TOKENS.forEach((token) => {
-      get().addToQueue(token.address, `fetchAllBalances:${token.symbol}`);
+      get().addToQueue(token.address, `fetchAllBalances:${token.symbol}`, 'low');
     });
 
     // Fetch all LP tokens
     LP_TOKENS.forEach((token) => {
-      get().addToQueue(token.address, `fetchAllBalances:LP:${token.symbol}`);
+      get().addToQueue(token.address, `fetchAllBalances:LP:${token.symbol}`, 'low');
+    });
+  },
+
+  fetchPriorityBalances: (tokenAddresses: string[], caller: string) => {
+    tokenAddresses.forEach((tokenAddress) => {
+      get().addToQueue(tokenAddress, caller, 'high');
     });
   },
 
@@ -249,6 +301,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
           ...(state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE),
           error,
           loading: false,
+          lastUpdated: Date.now(),
         },
       },
     }));
@@ -392,3 +445,39 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
     }
   },
 }));
+
+// Auto-fetch balances when wallet connects
+let lastWalletAddress: string | null = null;
+
+useWalletStore.subscribe((state) => {
+  const currentAddress = state.address;
+
+  // If wallet just connected (address changed from null to something)
+  if (lastWalletAddress === null && currentAddress !== null) {
+    console.log('Wallet connected, starting auto-fetch of balances');
+    // Fetch priority tokens first (commonly used tokens)
+    const priorityTokens = [
+      'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek', // sSCRT
+      'secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2', // USDC
+      'secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd', // USDT
+    ];
+
+    useBalanceFetcherStore
+      .getState()
+      .fetchPriorityBalances(priorityTokens, 'wallet-connect-priority');
+
+    // Then fetch all other balances with lower priority
+    setTimeout(() => {
+      useBalanceFetcherStore.getState().fetchAllBalances();
+    }, 1000);
+  }
+
+  // If wallet disconnected
+  if (lastWalletAddress !== null && currentAddress === null) {
+    console.log('Wallet disconnected, clearing balance states');
+    // Clear all balance states
+    useBalanceFetcherStore.setState({ balances: {}, queue: [] });
+  }
+
+  lastWalletAddress = currentAddress;
+});

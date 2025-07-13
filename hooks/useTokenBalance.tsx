@@ -1,6 +1,6 @@
-import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
+import { DEFAULT_BALANCE_STATE, useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { SecretString } from '@/types';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // Keep the error enum for backward compatibility
 export enum TokenBalanceError {
@@ -12,47 +12,31 @@ export enum TokenBalanceError {
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
-// Helper function to convert string errors to TokenBalanceError enum
+/**
+ * Maps the error string from the store to the TokenBalanceError enum
+ */
 function mapStringToTokenBalanceError(errorString: string | null): TokenBalanceError | null {
   if (!errorString) return null;
 
-  const lowerError = errorString.toLowerCase();
-
-  if (lowerError.includes('keplr') || lowerError.includes('wallet not connected')) {
-    return TokenBalanceError.NO_KEPLR;
-  }
-  if (lowerError.includes('viewing key') || lowerError.includes('set viewing key')) {
-    return TokenBalanceError.NO_VIEWING_KEY;
-  }
-  if (lowerError.includes('rejected')) {
-    return TokenBalanceError.VIEWING_KEY_REJECTED;
-  }
-  if (lowerError.includes('network')) {
-    return TokenBalanceError.NETWORK_ERROR;
-  }
+  if (errorString.includes('NO_KEPLR')) return null; // Treat as loading, not error
+  if (errorString.includes('NETWORK_ERROR')) return TokenBalanceError.NETWORK_ERROR;
+  if (errorString.includes('VIEWING_KEY_REQUIRED')) return TokenBalanceError.VIEWING_KEY_REJECTED;
 
   return TokenBalanceError.UNKNOWN_ERROR;
 }
 
-interface UseTokenBalanceReturn {
+export interface UseTokenBalanceReturn {
   amount: string | null; // Keep "amount" for backward compatibility, "-" becomes null, "0" stays "0"
   balance: string; // "-" for unfetched, "0" for actual zero balance, actual balance otherwise
   loading: boolean;
   error: TokenBalanceError | null; // Convert string errors back to enum for compatibility
   needsViewingKey: boolean;
+  lastUpdated: number;
   refetch: () => void;
+  refetchWithPriority: (priority?: 'high' | 'normal' | 'low') => void;
   suggestToken: () => void;
   retryWithViewingKey: () => void;
 }
-
-// Create a stable, default object OUTSIDE the hook.
-const DEFAULT_BALANCE_STATE = {
-  balance: '-',
-  loading: false,
-  error: null,
-  lastUpdated: 0,
-  needsViewingKey: false,
-};
 
 /**
  * Centralized token balance hook that uses the balance fetcher store
@@ -87,6 +71,16 @@ export function useTokenBalance(
     }
   }, [tokenAddress, addToQueue, caller]);
 
+  // Memoized priority refetch function
+  const refetchWithPriority = useCallback(
+    (priority: 'high' | 'normal' | 'low' = 'high') => {
+      if (tokenAddress) {
+        addToQueue(tokenAddress, caller, priority);
+      }
+    },
+    [tokenAddress, addToQueue, caller]
+  );
+
   // Memoized suggest token function
   const suggestToken = useCallback(() => {
     if (tokenAddress) {
@@ -109,7 +103,7 @@ export function useTokenBalance(
   }, [autoFetch, tokenAddress, addToQueue, caller]);
 
   // Convert balance format for backward compatibility
-  const amount = balanceState.balance === '-' ? null : balanceState.balance;
+  const amount = balanceState.balance;
   const error = mapStringToTokenBalanceError(balanceState.error);
 
   return {
@@ -118,7 +112,9 @@ export function useTokenBalance(
     loading: balanceState.loading,
     error, // Converted to enum for backward compatibility
     needsViewingKey: balanceState.needsViewingKey,
+    lastUpdated: balanceState.lastUpdated,
     refetch,
+    refetchWithPriority,
     suggestToken,
     retryWithViewingKey,
   };
@@ -137,6 +133,13 @@ export function useMultipleTokenBalances(
   caller: string,
   autoFetch: boolean = true
 ): Record<string, UseTokenBalanceReturn> {
+  // --- NEW: Track mount state to prevent flash of stale content ---
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    // This effect runs after the first render, so we can disable the initial loading flag
+    setHasMounted(true);
+  }, []);
+
   // FIX 1: Use stable selectors instead of getState() here as well.
   const addToQueue = useBalanceFetcherStore((state) => state.addToQueue);
   const suggestTokenAction = useBalanceFetcherStore((state) => state.suggestToken);
@@ -165,7 +168,9 @@ export function useMultipleTokenBalances(
   // Auto-fetch balances when component mounts (if enabled)
   useEffect(() => {
     if (autoFetch && validAddresses.length > 0) {
-      validAddresses.forEach((address) => addToQueue(address, `${caller}:${address.slice(-6)}`));
+      validAddresses.forEach((address) =>
+        addToQueue(address, `${caller}:${address.slice(-6)}`, 'high')
+      );
     }
   }, [autoFetch, validAddresses, addToQueue, caller]);
 
@@ -175,6 +180,7 @@ export function useMultipleTokenBalances(
       string,
       {
         refetch: () => void;
+        refetchWithPriority: (priority?: 'high' | 'normal' | 'low') => void;
         suggestToken: () => void;
         retryWithViewingKey: () => void;
       }
@@ -182,6 +188,8 @@ export function useMultipleTokenBalances(
     validAddresses.forEach((tokenAddress) => {
       cbs[tokenAddress] = {
         refetch: () => addToQueue(tokenAddress, `${caller}:${tokenAddress.slice(-6)}`),
+        refetchWithPriority: (priority: 'high' | 'normal' | 'low' = 'high') =>
+          addToQueue(tokenAddress, `${caller}:${tokenAddress.slice(-6)}`, priority),
         suggestToken: () => void suggestTokenAction(tokenAddress),
         retryWithViewingKey: () => void retryWithViewingKeyAction(tokenAddress),
       };
@@ -194,18 +202,24 @@ export function useMultipleTokenBalances(
     const result: Record<string, UseTokenBalanceReturn> = {};
     validAddresses.forEach((tokenAddress) => {
       const balanceState = balanceStates[tokenAddress] ?? DEFAULT_BALANCE_STATE;
-      const amount = balanceState.balance === '-' ? null : balanceState.balance;
-      const error = mapStringToTokenBalanceError(balanceState.error);
+      const amount = balanceState.balance;
+      const errorRaw = mapStringToTokenBalanceError(balanceState.error);
+
+      // --- NEW: Override loading state on initial mount ---
+      const isLoading = !hasMounted && autoFetch ? true : balanceState.loading;
+
+      const error = balanceState.lastUpdated > 0 && !isLoading ? errorRaw : null;
 
       result[tokenAddress] = {
         amount, // For backward compatibility
         balance: balanceState.balance,
-        loading: balanceState.loading,
-        error, // Converted to enum for backward compatibility
+        loading: isLoading,
+        error, // only after lastUpdated>0
         needsViewingKey: balanceState.needsViewingKey,
+        lastUpdated: balanceState.lastUpdated,
         ...(callbacks[tokenAddress] || {}), // Spread the stable callbacks
       } as UseTokenBalanceReturn;
     });
     return result;
-  }, [validAddresses, balanceStates, callbacks]);
+  }, [validAddresses, balanceStates, callbacks, hasMounted, autoFetch]);
 }
