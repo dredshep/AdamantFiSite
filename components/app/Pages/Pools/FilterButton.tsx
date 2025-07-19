@@ -32,20 +32,30 @@ const FilterButton = ({ icon, label, isActive, onClick }: FilterButtonProps) => 
 
   return (
     <button
-      className={`
-        px-4 py-3 border-2 rounded-lg font-semibold 
-        flex gap-2 items-center relative transition-all duration-300
-        ${
-          isActive
-            ? 'border-gray-300 text-gray-100 bg-gradient-to-br from-gray-600 to-gray-700 shadow-inner shadow-gray-900/50'
-            : 'border-gray-600 text-gray-400 bg-gradient-to-br from-gray-700 to-gray-800 hover:border-gray-500 hover:text-gray-300'
-        }
-        transform hover:scale-[1.02]
-      `}
+      className="flex items-center gap-3 px-1 py-2 transition-all duration-200 hover:scale-[1.02] group"
       onClick={onClick}
     >
-      {icons[icon]}
-      <span>{label}</span>
+      {/* Icon with background - using new color scheme */}
+      <div className={`
+        p-2 rounded-lg transition-all duration-200 border
+        ${isActive 
+          ? 'bg-adamant-gradientBright text-white border-adamant-gradientBright' 
+          : 'bg-adamant-app-filterBg border-adamant-box-inputBorder text-adamant-text-box-secondary group-hover:border-adamant-gradientBright/50 group-hover:text-adamant-gradientBright'
+        }
+      `}>
+        {icons[icon]}
+      </div>
+      
+      {/* Label - just text, no background */}
+      <span className={`
+        font-medium transition-colors duration-200
+        ${isActive 
+          ? 'text-white' 
+          : 'text-adamant-text-box-secondary group-hover:text-white'
+        }
+      `}>
+        {label}
+      </span>
     </button>
   );
 };

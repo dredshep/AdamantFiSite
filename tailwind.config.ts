@@ -53,6 +53,7 @@ const config = {
             input: '#10131f',
             selectTrigger: '#232631',
             buttonDisabled: '#999ca4',
+            filterBg: '#282633',
           },
           button: {
             box: {

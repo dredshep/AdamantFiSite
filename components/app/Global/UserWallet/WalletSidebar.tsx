@@ -6,10 +6,10 @@ import { useTokenStore } from '@/store/tokenStore';
 import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
 import { showToastOnce } from '@/utils/toast/toastManager';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { HiQrCode } from 'react-icons/hi2';
 import {
-  RiArrowUpSLine,
+  RiArrowRightSLine,
   RiFileCopyLine,
   RiKey2Line,
   RiRefreshLine,
@@ -20,7 +20,6 @@ import {
 import { ContractKeysPanel } from './ContractKeysPanel';
 import { ReceivePanel } from './ReceivePanel';
 import { SendTokensPanel } from './SendTokensPanel';
-import { SettingsPanel } from './SettingsPanel';
 import { TokenListItem } from './TokenListItem';
 
 const WalletSidebar: React.FC = () => {
@@ -30,6 +29,7 @@ const WalletSidebar: React.FC = () => {
   const { fetchAllBalances, isProcessingQueue } = useBalanceFetcherStore();
   const loadBalanceConfig = useLoadBalancePreference();
   const tokens = listAllTokens() ?? [];
+  const sidebarRef = useRef<HTMLElement>(null);
 
   // Instead of separate dialogs, just track which "sub-view" to render:
   const [currentView, setCurrentView] = useState<
@@ -37,6 +37,26 @@ const WalletSidebar: React.FC = () => {
   >('main');
 
   const truncatedAddress = address === null ? '' : address.slice(0, 8) + '...' + address.slice(-6);
+
+  // Handle click outside to close modal
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isWalletModalOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node)
+      ) {
+        handleCloseSidebar();
+      }
+    };
+
+    if (isWalletModalOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return undefined;
+  }, [isWalletModalOpen]);
 
   const copyAddressToClipboard = () => {
     if (address === null) return;
@@ -70,9 +90,10 @@ const WalletSidebar: React.FC = () => {
 
   return (
     <aside
+      ref={sidebarRef}
       className={`
         fixed top-0 right-0 bottom-0 w-[380px] z-50
-        bg-gradient-to-b from-adamant-box-veryDark/95 via-adamant-box-veryDark/98 to-black/95
+        bg-gradient-to-b from-adamant-app-input via-adamant-app-input to-adamant-box-veryDark
         backdrop-blur-lg
         transition-transform duration-300 ease-out
         shadow-2xl border-l border-adamant-gradientBright/10
@@ -87,76 +108,75 @@ const WalletSidebar: React.FC = () => {
         <div className="relative p-6 border-b border-adamant-box-border/30">
           {currentView === 'main' && (
             <div className="space-y-4">
-              {/* Close button */}
-              <div className="flex justify-end">
-                <button
-                  onClick={handleCloseSidebar}
-                  className="p-2 rounded-xl hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
-                  title="Close wallet"
-                >
-                  <RiArrowUpSLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                </button>
-              </div>
-
-              {/* Wallet info */}
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <TokenImageWithFallback
-                    tokenAddress={(address as SecretString) ?? 'secret1defaultaddress'}
-                    size={56}
-                    alt="Wallet"
-                    className="rounded-2xl ring-2 ring-adamant-gradientBright/20"
-                  />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-adamant-box-veryDark"></div>
+              {/* Top row with wallet info and buttons */}
+              <div className="flex items-start justify-between">
+                {/* Wallet info - positioned top left */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="relative">
+                    <TokenImageWithFallback
+                      tokenAddress={(address as SecretString) ?? 'secret1defaultaddress'}
+                      size={48}
+                      alt="Wallet"
+                      className="rounded-2xl ring-2 ring-adamant-gradientBright/20"
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-adamant-app-input"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <RiWalletLine className="w-3 h-3 text-adamant-gradientBright" />
+                      <span className="text-xs font-medium text-adamant-gradientBright uppercase tracking-wide">
+                        Secret Network
+                      </span>
+                    </div>
+                    <div
+                      onClick={copyAddressToClipboard}
+                      className="font-sans text-base font-semibold text-white cursor-pointer hover:text-adamant-gradientBright transition-colors duration-200 group flex items-center gap-2"
+                      title="Click to copy address"
+                    >
+                      {truncatedAddress || 'Not connected'}
+                      <RiFileCopyLine className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <RiWalletLine className="w-4 h-4 text-adamant-gradientBright" />
-                    <span className="text-xs font-medium text-adamant-gradientBright uppercase tracking-wide">
-                      Secret Network
-                    </span>
-                  </div>
-                  <div
-                    onClick={copyAddressToClipboard}
-                    className="font-mono text-lg font-semibold text-white cursor-pointer hover:text-adamant-gradientBright transition-colors duration-200 group flex items-center gap-2"
-                    title="Click to copy address"
+
+                {/* Settings and close buttons - positioned top right */}
+                <div className="flex items-center gap-2">
+                  {/* <button
+                    onClick={openSettings}
+                    className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
+                    title="Settings"
                   >
-                    {truncatedAddress || 'Not connected'}
-                    <RiFileCopyLine className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
+                    <RiSettings3Line className="w-4 h-4" />
+                  </button> */}
+                  <button
+                    onClick={handleCloseSidebar}
+                    className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
+                    title="Close wallet"
+                  >
+                    <RiArrowRightSLine className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </button>
                 </div>
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setCurrentView('send')}
-                  className="flex-1 group relative bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+                  className="flex-1 group relative bg-white hover:bg-gray-100 text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
                 >
-                  <div className="flex items-center justify-center gap-3">
-                    <RiSendPlaneLine className="w-5 h-5 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+                  <div className="flex items-center justify-center gap-2">
+                    <RiSendPlaneLine className="w-4 h-4 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />
                     <span className="text-sm uppercase tracking-wide font-black">Send</span>
                   </div>
                 </button>
                 <button
                   onClick={() => setCurrentView('receive')}
-                  className="flex-1 group bg-adamant-box-dark hover:bg-adamant-box-regular text-white font-bold py-4 px-6 rounded-2xl border border-adamant-gradientBright/30 hover:border-adamant-gradientBright/60 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex-1 group bg-adamant-box-dark hover:bg-adamant-box-regular text-white font-bold py-3 px-4 rounded-lg border border-adamant-gradientBright/30 hover:border-adamant-gradientBright/60 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <div className="flex items-center justify-center gap-3">
-                    <HiQrCode className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                  <div className="flex items-center justify-center gap-2">
+                    <HiQrCode className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
                     <span className="text-sm uppercase tracking-wide">Receive</span>
                   </div>
-                </button>
-              </div>
-
-              {/* Settings button */}
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={openSettings}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-adamant-text-box-secondary hover:text-white bg-adamant-box-dark/50 hover:bg-adamant-box-dark rounded-xl transition-all duration-200"
-                >
-                  <RiSettings3Line className="w-4 h-4" />
-                  Settings
                 </button>
               </div>
             </div>
@@ -198,7 +218,7 @@ const WalletSidebar: React.FC = () => {
                 className="p-2 rounded-xl hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
                 title="Close"
               >
-                <RiArrowUpSLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <RiArrowRightSLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
               </button>
             </div>
           )}
@@ -209,20 +229,16 @@ const WalletSidebar: React.FC = () => {
       {currentView === 'main' && (
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Tokens Section */}
-          <div className="p-6 flex-1 overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
+          <div className="py-6 flex-1 overflow-hidden">
+            <div className="flex items-center justify-between mb-6 px-6">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <div className="w-2 h-2 bg-adamant-gradientBright rounded-full"></div>
-                Portfolio
-                <span className="text-sm font-normal text-adamant-text-box-secondary ml-1">
-                  ({tokens.length} {tokens.length === 1 ? 'token' : 'tokens'})
-                </span>
+                Tokens
               </h3>
               {loadBalanceConfig.shouldShowFetchButton && (
                 <button
                   onClick={refreshAllBalances}
                   disabled={isProcessingQueue}
-                  className="flex items-center gap-2 px-4 py-2 text-sm bg-adamant-box-dark hover:bg-adamant-box-regular border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-xl transition-all duration-200 text-adamant-text-box-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed group"
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-adamant-box-dark hover:bg-adamant-box-regular border border-adamant-gradientBright/20 hover:border-adamant-gradientBright/40 rounded-lg transition-all duration-200 text-adamant-text-box-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   <RiRefreshLine
                     className={`w-4 h-4 ${
@@ -236,7 +252,7 @@ const WalletSidebar: React.FC = () => {
 
             {tokens.length > 0 ? (
               <div
-                className="space-y-3 overflow-y-auto h-full pr-2"
+                className="space-y-3 overflow-y-auto h-full pl-3"
                 style={{ scrollbarWidth: 'thin', scrollbarColor: '#8A754A #1a1a2e' }}
               >
                 {tokens.map((token, index) => (
@@ -260,6 +276,9 @@ const WalletSidebar: React.FC = () => {
                       Your tokens will appear here once you add them to your wallet or receive
                       transfers.
                     </div>
+                    <button className="bg-adamant-box-dark hover:bg-adamant-box-regular text-white px-4 py-2 rounded-lg border border-adamant-gradientBright/30 hover:border-adamant-gradientBright/60 transition-all duration-200 text-sm">
+                      View Balance
+                    </button>
                   </div>
                 </div>
               </div>
@@ -278,12 +297,39 @@ const WalletSidebar: React.FC = () => {
         <ReceivePanel walletAddress={address} onClose={() => setCurrentView('main')} />
       )}
 
-      {/* Settings View */}
+      {/* Settings View - Simplified */}
       {currentView === 'settings' && (
-        <SettingsPanel
-          onManageKeys={() => setCurrentView('contractKeys')}
-          onClose={() => setCurrentView('main')}
-        />
+        <div className="flex-1 p-6">
+          <div className="space-y-4">
+            {/* Comment out balance auto-loading since it's not in use */}
+            {/* 
+            <div>
+              <h4 className="text-sm font-medium text-adamant-text-box-main mb-2">Balance Auto-Loading</h4>
+              <div className="text-xs text-adamant-text-box-secondary">Feature not currently in use</div>
+            </div>
+            */}
+            
+            {/* Comment out contract keys since we have a different way of handling things now */}
+            {/* 
+            <button
+              onClick={() => setCurrentView('contractKeys')}
+              className="w-full text-left p-3 bg-adamant-box-dark hover:bg-adamant-box-regular rounded-lg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <RiKey2Line className="w-5 h-5 text-adamant-gradientBright" />
+                <div>
+                  <div className="text-sm font-medium text-adamant-text-box-main">Manage Contract Keys</div>
+                  <div className="text-xs text-adamant-text-box-secondary">Feature not currently in use</div>
+                </div>
+              </div>
+            </button>
+            */}
+            
+            <div className="text-center text-adamant-text-box-secondary text-sm">
+              Settings panel simplified - advanced features will be added as needed.
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Contract Keys View */}

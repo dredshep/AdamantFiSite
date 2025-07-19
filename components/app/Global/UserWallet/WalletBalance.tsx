@@ -31,12 +31,36 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
     addToQueue(tokenAddress, 'WalletBalance:Refresh');
   };
 
-  const formatBalance = (balance: string) => {
+  // Tokens that should be rounded (stable coins and low-value tokens)
+  const shouldRoundBalance = (symbol: string): boolean => {
+    const roundableTokens = ['USDC', 'sSCRT', 'SILK', 'USDT', 'DAI'];
+    return roundableTokens.includes(symbol.toUpperCase());
+  };
+
+  const formatBalance = (balance: string, symbol: string) => {
     if (balance === '-') return '-';
     const num = parseFloat(balance);
     if (num === 0) return '0';
     if (num < 0.000001) return '< 0.000001';
-    return num.toFixed(6);
+    
+    // Round certain tokens to 2-3 decimals for better readability
+    if (shouldRoundBalance(symbol)) {
+      if (num >= 1) {
+        return num.toFixed(2); // 2 decimals for values >= 1
+      } else {
+        return num.toFixed(3); // 3 decimals for values < 1
+      }
+    }
+    
+    return num.toFixed(6); // Default 6 decimals for other tokens
+  };
+
+  const getFullBalance = (balance: string): string => {
+    if (balance === '-') return '-';
+    const num = parseFloat(balance);
+    if (num === 0) return '0';
+    if (num < 0.000001) return '< 0.000001';
+    return num.toFixed(8); // Show more precision in tooltip
   };
 
   const openKeplrForViewingKey = async () => {
@@ -48,13 +72,20 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
     }
   };
 
+  const displayBalance = formatBalance(balanceState.balance, tokenSymbol);
+  const fullBalance = getFullBalance(balanceState.balance);
+  const showTooltip = shouldRoundBalance(tokenSymbol) && balanceState.balance !== '-' && displayBalance !== fullBalance;
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="flex items-center gap-1">
-        <span className="text-sm font-mono text-adamant-text-box-main">
-          {formatBalance(balanceState.balance)}
+        <span 
+          className="text-base font-sans text-white font-medium"
+          title={showTooltip ? `Full balance: ${fullBalance} ${tokenSymbol}` : undefined}
+        >
+          {displayBalance}
         </span>
-        <span className="text-xs text-adamant-text-box-secondary uppercase">{tokenSymbol}</span>
+        <span className="text-sm text-white font-normal">{tokenSymbol}</span>
       </div>
 
       {(balanceState.loading || isSettingUpViewingKey) && (
@@ -89,7 +120,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
         balanceState.balance !== '-' && (
           <button
             onClick={handleRefresh}
-            className="p-1 text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1 text-adamant-text-box-secondary hover:text-white transition-colors opacity-0 group-hover:opacity-100"
             title="Refresh balance"
           >
             <RiRefreshLine className="w-3 h-3" />

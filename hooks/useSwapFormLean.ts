@@ -284,7 +284,7 @@ export const useSwapFormLean = () => {
 
     try {
       // User only needs a viewing key for the token they are sending.
-      const inputViewingKey = getViewingKey(payToken.address);
+      // const inputViewingKey = getViewingKey(payToken.address);
 
       // if (!inputViewingKey) {
       //   toastManager.viewingKeyRequired();

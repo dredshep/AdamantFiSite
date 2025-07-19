@@ -17,6 +17,7 @@ export type LiquidityPair = {
   lpToken: SecretString;
   pairContractCodeHash: string;
   lpTokenCodeHash: string;
+  fee: number; // Fee percentage (e.g., 0.5 for 0.5%)
 };
 
 export type StakingContract = {
@@ -95,6 +96,7 @@ export const LIQUIDITY_PAIRS: LiquidityPair[] = [
     lpToken: 'secret1r4982e9ueqxfx3a00rcp09tatrvszztjx8enz7',
     pairContractCodeHash: '0DFD06C7C3C482C14D36BA9826B83D164003F2B0BB302F222DB72361E0927490',
     lpTokenCodeHash: '744c588ed4181b13a49a7c75a49f10b84b22b24a69b1e5f3cdff34b2c343e888',
+    fee: 0.5,
   },
   {
     symbol: 'sSCRT/SILK',
@@ -104,6 +106,7 @@ export const LIQUIDITY_PAIRS: LiquidityPair[] = [
     lpToken: 'secret106cdj82hhh8uupew9qegsugzk2tsefhw5qrkkk',
     pairContractCodeHash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
     lpTokenCodeHash: '744c588ed4181b13a49a7c75a49f10b84b22b24a69b1e5f3cdff34b2c343e888',
+    fee: 0.5,
   },
   {
     symbol: 'sSCRT/ETH.axl',
@@ -113,6 +116,7 @@ export const LIQUIDITY_PAIRS: LiquidityPair[] = [
     lpToken: 'secret10rs5z2x92axlccxdq5pdr0nnnexg09al4tcnct',
     pairContractCodeHash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
     lpTokenCodeHash: '744c588ed4181b13a49a7c75a49f10b84b22b24a69b1e5f3cdff34b2c343e888',
+    fee: 0.5,
   },
   {
     symbol: 'sSCRT/USDC.nbl',
@@ -122,6 +126,7 @@ export const LIQUIDITY_PAIRS: LiquidityPair[] = [
     lpToken: 'secret18xd8j88jrwzagnv09cegv0fm3aca6d3qlfem6v',
     pairContractCodeHash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
     lpTokenCodeHash: '744c588ed4181b13a49a7c75a49f10b84b22b24a69b1e5f3cdff34b2c343e888',
+    fee: 0.5,
   },
   {
     symbol: 'sSCRT/JKL',
@@ -131,6 +136,7 @@ export const LIQUIDITY_PAIRS: LiquidityPair[] = [
     lpToken: 'secret1ex9cm7l8w0xxchptykqsc2vdr79pk3nrm0sxj3',
     pairContractCodeHash: '0dfd06c7c3c482c14d36ba9826b83d164003f2b0bb302f222db72361e0927490',
     lpTokenCodeHash: '744c588ed4181b13a49a7c75a49f10b84b22b24a69b1e5f3cdff34b2c343e888',
+    fee: 0.5,
   },
 ] as const;
 

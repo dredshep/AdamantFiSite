@@ -17,10 +17,10 @@ export const TokenListItem = ({ token }: TokenListItemProps) => {
           className="rounded-lg"
         />
         <div className="flex flex-col">
-          <span className="font-semibold text-adamant-text-box-main group-hover:text-white transition-colors">
+          <span className="font-semibold text-white group-hover:text-white transition-colors text-base">
             {token.symbol}
           </span>
-          <span className="text-xs text-adamant-text-box-secondary">{token.name}</span>
+          <span className="text-sm text-adamant-text-box-secondary">{token.name}</span>
         </div>
       </div>
       <div className="flex flex-col items-end gap-1">
