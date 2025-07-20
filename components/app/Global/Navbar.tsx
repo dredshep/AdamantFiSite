@@ -1,4 +1,8 @@
 import { MobileSearchButton, SmartSearchBox } from '@/components/app/Global/SmartSearch';
+import {
+  MobileSearchButton as MobileSearchButtonRefactored,
+  SmartSearchBox as SmartSearchBoxRefactored,
+} from '@/components/app/Global/SmartSearchRefactor';
 import UserWallet from '@/components/app/Global/UserWallet';
 import AdamantFiLogo from '@/components/SVG/Logo';
 import Link from 'next/link';
@@ -49,16 +53,43 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Center - Desktop Search */}
-      <div className="hidden lg:flex flex-1 max-w-md mx-8">
-        <SmartSearchBox className="w-full" />
+      {/* Center - Desktop Search - COMPARISON VIEW */}
+      <div className="hidden lg:flex flex-col gap-3 flex-1 max-w-2xl mx-8">
+        {/* Original SmartSearch */}
+        <div className="space-y-1">
+          <div className="text-xs text-white/50 px-2">Original (1022 lines)</div>
+          <SmartSearchBox
+            className="w-full"
+            placeholder="Original: Type a command or press Ctrl+K..."
+          />
+        </div>
+
+        {/* Refactored SmartSearch */}
+        <div className="space-y-1">
+          <div className="text-xs text-white/50 px-2">Refactored (~470 lines)</div>
+          <SmartSearchBoxRefactored
+            className="w-full"
+            placeholder="Refactored: Type a command or press Ctrl+J..."
+          />
+        </div>
       </div>
 
       {/* Right side - Mobile Search + Wallet */}
       <div className="flex items-center gap-3">
         {/* Mobile Search Button */}
-        <div className="lg:hidden">
-          <MobileSearchButton />
+        <div className="lg:hidden flex gap-2">
+          <div className="relative">
+            <MobileSearchButton />
+            <div className="absolute -bottom-5 left-0 text-xs text-white/50 whitespace-nowrap">
+              Original
+            </div>
+          </div>
+          <div className="relative">
+            <MobileSearchButtonRefactored />
+            <div className="absolute -bottom-5 left-0 text-xs text-white/50 whitespace-nowrap">
+              Refactored
+            </div>
+          </div>
         </div>
 
         {/* Mobile Navigation Menu - Only show on very small screens */}
