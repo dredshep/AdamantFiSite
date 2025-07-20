@@ -1,3 +1,4 @@
+import { TOKENS } from '@/config/tokens';
 import { usePoolStore } from '@/store/forms/poolStore';
 import {
   PoolReserves,
@@ -24,31 +25,25 @@ export function usePoolRatio({ poolData }: UsePoolRatioProps) {
   const [poolReserves, setPoolReserves] = useState<PoolReserves | null>(null);
   const isUpdatingRef = useRef(false);
 
+  const token0 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token0) : undefined;
+  const token1 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token1) : undefined;
+
   // Update pool reserves when pool data changes
   useEffect(() => {
-    if (!poolData || !selectedPool?.token0 || !selectedPool?.token1) {
+    if (!poolData || !token0 || !token1) {
       setPoolReserves(null);
       return;
     }
 
-    const reserves = convertPoolReservesToFormat(
-      poolData,
-      selectedPool.token0.address,
-      selectedPool.token1.address
-    );
+    const reserves = convertPoolReservesToFormat(poolData, token0.address, token1.address);
 
     setPoolReserves(reserves);
-  }, [poolData, selectedPool]);
+  }, [poolData, selectedPool, token0, token1]);
 
   // Function to update the proportional amount
   const updateProportionalAmount = useCallback(
     (changedInputIdentifier: 'pool.deposit.tokenA' | 'pool.deposit.tokenB', newAmount: string) => {
-      if (
-        !poolReserves ||
-        !selectedPool?.token0 ||
-        !selectedPool?.token1 ||
-        isUpdatingRef.current
-      ) {
+      if (!poolReserves || !token0 || !token1 || isUpdatingRef.current) {
         return;
       }
 
@@ -57,9 +52,7 @@ export function usePoolRatio({ poolData }: UsePoolRatioProps) {
 
       try {
         const isTokenAChanged = changedInputIdentifier === 'pool.deposit.tokenA';
-        const inputTokenAddress = isTokenAChanged
-          ? selectedPool.token0.address
-          : selectedPool.token1.address;
+        const inputTokenAddress = isTokenAChanged ? token0.address : token1.address;
         const targetInputIdentifier = isTokenAChanged
           ? 'pool.deposit.tokenB'
           : 'pool.deposit.tokenA';
@@ -87,7 +80,7 @@ export function usePoolRatio({ poolData }: UsePoolRatioProps) {
         }, 100);
       }
     },
-    [poolReserves, selectedPool, tokenInputs, setTokenInputAmount]
+    [poolReserves, selectedPool, tokenInputs, setTokenInputAmount, token0, token1]
   );
 
   // Monitor token input changes and update proportional amounts

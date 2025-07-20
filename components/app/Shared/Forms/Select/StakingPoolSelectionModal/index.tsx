@@ -56,36 +56,7 @@ const StakingPoolSelectionModal: React.FC<StakingPoolSelectionModalProps> = ({ o
     }
 
     // Set the selected pool in the store
-    setSelectedPool({
-      address: selectedPool.pairContract,
-      pairInfo: {
-        contract_addr: selectedPool.pairContract,
-        liquidity_token: selectedPool.lpTokenAddress,
-        token_code_hash: liquidityPair.pairContractCodeHash,
-        asset0_volume: '0',
-        asset1_volume: '0',
-        factory: {
-          address: '',
-          code_hash: '',
-        },
-        asset_infos: [],
-      },
-      // We'll need to get token info from somewhere - for now using placeholders
-      token0: {
-        name: liquidityPair.token0,
-        symbol: liquidityPair.token0,
-        address: 'secret1placeholder' as SecretString,
-        codeHash: '',
-        decimals: 6,
-      },
-      token1: {
-        name: liquidityPair.token1,
-        symbol: liquidityPair.token1,
-        address: 'secret1placeholder' as SecretString,
-        codeHash: '',
-        decimals: 6,
-      },
-    });
+    setSelectedPool(liquidityPair);
 
     onClose();
   };

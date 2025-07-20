@@ -1,4 +1,4 @@
-import { TOKENS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { NextRouter } from 'next/router';
 import { ACTION_KEYWORDS } from '../constants/actionKeywords';
 import { SOCIAL_LINKS } from '../constants/socialLinks';
@@ -11,8 +11,6 @@ interface SuggestionGeneratorProps {
   executeCommand: (command: ParsedCommand) => Promise<void>;
   setQuery: (query: string) => void;
   inputRef: React.RefObject<HTMLInputElement>;
-  priceImpact: string;
-  isEstimating: boolean;
 }
 
 /**
@@ -27,8 +25,6 @@ export function generateSuggestions({
   executeCommand,
   setQuery,
   inputRef,
-  priceImpact,
-  isEstimating,
 }: SuggestionGeneratorProps): SearchSuggestion[] {
   const suggestions: SearchSuggestion[] = [];
   const queryLower = query.toLowerCase().trim();
@@ -174,31 +170,12 @@ export function generateSuggestions({
       }
     }
 
-    // Generate subtitle with price impact warning if needed
-    let subtitle = 'Execute this command';
-    if (!isEstimating && priceImpact && priceImpact !== '0' && priceImpact !== 'N/A') {
-      const priceImpactNum = parseFloat(priceImpact);
-      if (!isNaN(priceImpactNum)) {
-        if (priceImpactNum >= 20) {
-          subtitle = `⚠️ High price impact (${priceImpact}%) - consider smaller amount`;
-        } else if (priceImpactNum >= 10) {
-          subtitle = `⚠️ Medium price impact (${priceImpact}%)`;
-        } else if (priceImpactNum >= 3) {
-          subtitle = `Price impact: ${priceImpact}%`;
-        }
-      }
-    } else if (priceImpact === 'N/A') {
-      subtitle = '⚠️ No liquidity - swap may fail';
-    } else if (isEstimating) {
-      subtitle = 'Calculating price impact...';
-    }
-
     suggestions.unshift({
       type: 'command',
       title: `${parsedCommand.action?.charAt(0).toUpperCase()}${parsedCommand.action?.slice(
         1
       )} ${fromTokenDisplay} → ${toTokenDisplay}`,
-      subtitle,
+      subtitle: 'Execute this command',
       icon: 'Zap',
       command: parsedCommand,
       onSelect: () => void executeCommand(parsedCommand),
@@ -210,6 +187,35 @@ export function generateSuggestions({
     parsedCommand.action &&
     ['swap', 'stake', 'deposit', 'withdraw', 'send'].includes(parsedCommand.action)
   ) {
+    // Special handling for deposit action to suggest pools
+    const isDepositAction = parsedCommand.action === 'deposit';
+    const hasConnector = queryLower.includes(' in');
+
+    if (isDepositAction && hasConnector && parsedCommand.fromToken) {
+      const fromToken = parsedCommand.fromToken;
+      const poolSearchTerm = query.substring(query.toLowerCase().lastIndexOf(' in') + 3).trim();
+
+      const matchingPools = LIQUIDITY_PAIRS.filter(
+        (p) =>
+          (p.token0 === fromToken.symbol || p.token1 === fromToken.symbol) &&
+          p.symbol.toLowerCase().includes(poolSearchTerm.toLowerCase())
+      );
+
+      matchingPools.forEach((pool) => {
+        suggestions.push({
+          type: 'pool',
+          title: pool.symbol,
+          subtitle: `Deposit into the ${pool.token0}/${pool.token1} pool`,
+          pool: pool,
+          icon: 'Zap',
+          onSelect: () => void router.push(`/pool/${pool.pairContract}`),
+        });
+      });
+
+      // Return early with only pool suggestions
+      return suggestions.slice(0, 8);
+    }
+
     // Parse the current query more carefully to preserve amounts and existing tokens
 
     // Remove action keyword
@@ -276,13 +282,22 @@ export function generateSuggestions({
           // First token - preserve any amount that was already parsed
           const baseWithToken = `${queryBase} ${token.symbol}`.trim();
 
-          // Check if we need to add "for" and if there's already an amount
-          const hasAmount = parsedCommand.amount;
-          if (hasAmount) {
-            suggestionQuery = `${baseWithToken} for `;
+          // Choose appropriate connector based on action type
+          let connector = '';
+          if (parsedCommand.action === 'deposit') {
+            connector = 'in ';
+          } else if (parsedCommand.action === 'stake') {
+            connector = ''; // Don't add connector for stake
+          } else if (parsedCommand.action === 'withdraw') {
+            connector = 'from ';
+          } else if (parsedCommand.action === 'send') {
+            connector = 'to ';
           } else {
-            suggestionQuery = `${baseWithToken} for `;
+            // Default for swap and other actions
+            connector = 'for ';
           }
+
+          suggestionQuery = `${baseWithToken} ${connector}`;
         } else if (!parsedCommand.toToken) {
           // Second token - preserve the existing structure
           suggestionQuery = `${queryBase} ${token.symbol}`;

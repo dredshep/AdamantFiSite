@@ -121,7 +121,7 @@ export function parseCommand(input: string): ParsedCommand {
     // IMPROVED: Assign tokens based on context and position
     if (foundTokens.length >= 2) {
       // Look for directional words to determine order
-      const directionWords = ['for', 'to'];
+      const directionWords = ['for', 'to', 'in', 'from'];
       let directionIndex = -1;
 
       directionWords.forEach((word) => {

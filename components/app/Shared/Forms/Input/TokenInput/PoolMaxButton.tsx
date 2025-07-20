@@ -11,12 +11,12 @@ interface PoolMaxButtonProps {
 
 const PoolMaxButton: React.FC<PoolMaxButtonProps> = ({ poolInputIdentifier: inputIdentifier }) => {
   const { selectedPool, setTokenInputAmount } = usePoolStore();
-  const { setMax } = usePoolForm(selectedPool?.address);
+  const { setMax } = usePoolForm(selectedPool?.pairContract);
 
   // For LP token inputs, we need to get the LP token address
   const getLpTokenAddress = () => {
-    if (inputIdentifier === 'pool.withdraw.lpToken' && selectedPool?.pairInfo?.liquidity_token) {
-      return selectedPool.pairInfo.liquidity_token;
+    if (inputIdentifier === 'pool.withdraw.lpToken' && selectedPool?.lpToken) {
+      return selectedPool.lpToken;
     }
     return undefined;
   };

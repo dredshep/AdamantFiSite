@@ -22,6 +22,7 @@ import { useRouter } from 'next/router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Import our extracted utilities
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import {
   SmartSearchBoxProps,
   SpeechRecognition,
@@ -133,6 +134,36 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
   // Execute a parsed command with proper loading state management
   const executeCommand = useCallback(
     async (command: typeof parsedCommand) => {
+      // Handle Deposit action
+      if (command.action === 'deposit' && command.fromToken && command.target) {
+        setIsLoading(true);
+        try {
+          // Find the pool from the target string (which is the pool's pairContract)
+          const pool = LIQUIDITY_PAIRS.find((p) => p.pairContract === command.target);
+          if (!pool) {
+            console.error('Target pool for deposit not found');
+            setIsLoading(false);
+            return;
+          }
+
+          // Navigate to the pool page with query params for pre-filling
+          const { symbol } = command.fromToken;
+          const { amount } = command;
+
+          const queryParams = new URLSearchParams();
+          if (symbol) queryParams.append('token', symbol);
+          if (amount) queryParams.append('amount', amount);
+
+          await router.push(`/pool/${command.target}?${queryParams.toString()}`);
+          setIsOpen(false);
+        } catch (error) {
+          console.error('Error executing deposit command:', error);
+        } finally {
+          setIsLoading(false);
+        }
+        return; // End execution here
+      }
+
       if (command.action === 'swap' && command.fromToken && command.toToken) {
         setIsLoading(true);
 
@@ -202,7 +233,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           setIsLoading(false);
         }
       }
-      // TODO: Add other command executions (stake, deposit, withdraw, send)
+      // TODO: Add other command executions (stake, withdraw, send)
     },
     [setTokenInputProperty, router, handleSwapClick, isEstimating, estimatedOutput]
   );
@@ -371,7 +402,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
         className = 'text-blue-300 font-medium';
       }
       // Highlight directional words
-      else if (['for', 'to', 'from', 'with'].includes(wordLower)) {
+      else if (['for', 'to', 'from', 'with', 'in'].includes(wordLower)) {
         className = 'text-adamant-text-box-secondary';
       }
       // Highlight recognized tokens
@@ -558,6 +589,10 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                         size={24}
                         alt={suggestion.token.symbol}
                       />
+                    ) : suggestion.pool ? (
+                      <div className="w-6 h-6 flex items-center justify-center text-adamant-accentText">
+                        <Zap className="w-4 h-4" />
+                      </div>
                     ) : (
                       <div className="w-6 h-6 flex items-center justify-center text-adamant-accentText">
                         {renderIcon(suggestion.icon)}
@@ -577,7 +612,8 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
                     {(suggestion.type === 'command' ||
                       suggestion.type === 'navigation' ||
-                      suggestion.type === 'social') && (
+                      suggestion.type === 'social' ||
+                      suggestion.type === 'pool') && (
                       <ArrowRight className="w-4 h-4 text-adamant-accentText" />
                     )}
                   </div>

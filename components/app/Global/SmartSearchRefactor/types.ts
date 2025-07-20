@@ -1,4 +1,4 @@
-import { ConfigToken } from '@/config/tokens';
+import { ConfigToken, LiquidityPair } from '@/config/tokens';
 import React from 'react';
 
 export interface ParsedCommand {
@@ -22,10 +22,11 @@ export interface ParsedCommand {
 }
 
 export interface SearchSuggestion {
-  type: 'token' | 'command' | 'action' | 'navigation' | 'social' | 'utility';
+  type: 'token' | 'command' | 'action' | 'navigation' | 'social' | 'utility' | 'pool';
   title: string;
   subtitle?: string;
   token?: ConfigToken;
+  pool?: LiquidityPair;
   command?: ParsedCommand;
   icon?: string | React.ReactNode; // Can be icon name string or React component
   onSelect: () => void;

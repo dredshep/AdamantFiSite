@@ -1,4 +1,5 @@
 import PoolSelectionModal from '@/components/app/Shared/Forms/Select/PoolSelectionModal';
+import { TOKENS } from '@/config/tokens';
 import { usePoolStore } from '@/store/forms/poolStore';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
@@ -15,6 +16,9 @@ const PoolSelectionTrigger: React.FC = () => {
 
   if (!selectedPool) return null;
 
+  const token0 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token0) : undefined;
+  const token1 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token1) : undefined;
+
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -27,7 +31,7 @@ const PoolSelectionTrigger: React.FC = () => {
             <div className="flex flex-col items-start gap-1">
               <span className="text-adamant-accentText text-sm">Selected Pool</span>
               <span className="text-white font-medium flex items-center gap-2">
-                {selectedPool.token0?.symbol} / {selectedPool.token1?.symbol}
+                {token0?.symbol} / {token1?.symbol}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4 text-adamant-gradientBright group-hover:translate-x-0.5 transition-transform"
@@ -78,7 +82,7 @@ const PoolFormBase: React.FC<PoolFormBaseProps> = ({ children, actionButton, err
       <div className="flex flex-col gap-6 py-2.5 px-2.5 flex-1 justify-center items-center">
         <div className="text-red-400 text-center">
           <p>{errorMessage}</p>
-          <p className="text-sm text-gray-400 mt-2">Pool: {selectedPool.address}</p>
+          <p className="text-sm text-gray-400 mt-2">Pool: {selectedPool.pairContract}</p>
         </div>
       </div>
     );

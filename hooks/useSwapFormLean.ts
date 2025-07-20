@@ -3,7 +3,6 @@ import { ConfigToken, MULTIHOP_ENABLED, TOKENS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { useSwapStore } from '@/store/swapStore';
 import { useTxStore } from '@/store/txStore';
-import { useViewingKeyStore } from '@/store/viewingKeyStore';
 import { SecretString } from '@/types';
 import isNotNullish from '@/utils/isNotNullish';
 import { calculateMultihopOutput } from '@/utils/swap/multihopCalculation';
@@ -39,7 +38,6 @@ export const useSwapFormLean = () => {
   const [estimatedOutput, setEstimatedOutput] = useState<string>('0');
   const { setPending, setResult } = useTxStore.getState();
   const [isEstimating, setIsEstimating] = useState(false);
-  const { getViewingKey } = useViewingKeyStore();
 
   // Find token details from config
   function findToken(address: SecretString | undefined): ConfigToken | undefined {

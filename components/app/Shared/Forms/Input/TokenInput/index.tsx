@@ -1,4 +1,5 @@
 import TokenInputBase from '@/components/app/Shared/Forms/Input/TokenInputBase';
+import { TOKENS } from '@/config/tokens';
 import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useSwapStore } from '@/store/swapStore';
@@ -43,7 +44,7 @@ const TokenInput: React.FC<TokenInputProps> = ({
 
   // Only use pool-related hooks when formType is 'pool'
   const { selectedPool } = formType === 'pool' ? usePoolStore() : { selectedPool: undefined };
-  const poolForm = formType === 'pool' ? usePoolForm(selectedPool?.address) : null;
+  const poolForm = formType === 'pool' ? usePoolForm(selectedPool?.pairContract) : null;
   const poolTokenInputs = poolForm?.tokenInputs;
   const setTokenInputAmount = poolForm?.setTokenInputAmount;
 
@@ -68,10 +69,14 @@ const TokenInput: React.FC<TokenInputProps> = ({
 
       // For pool inputs, use the token address from the selected pool
       const isTokenA = inputIdentifier.endsWith('tokenA');
+      const token0 = selectedPool
+        ? TOKENS.find((t) => t.symbol === selectedPool.token0)
+        : undefined;
+      const token1 = selectedPool
+        ? TOKENS.find((t) => t.symbol === selectedPool.token1)
+        : undefined;
       return {
-        tokenAddress: isTokenA
-          ? selectedPool?.token0?.address ?? ''
-          : selectedPool?.token1?.address ?? '',
+        tokenAddress: isTokenA ? token0?.address ?? '' : token1?.address ?? '',
         amount: data.amount,
         balance: String(data.balance || '0'),
       };

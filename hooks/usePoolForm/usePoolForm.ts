@@ -1,11 +1,10 @@
-import { LIQUIDITY_PAIRS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { useTxStore } from '@/store/txStore';
 import { PoolTokenInputs, SecretString } from '@/types';
 import { Asset, ContractInfo } from '@/types/secretswap/shared';
-import isNotNullish from '@/utils/isNotNullish';
 import {
   calculateProportionalAmount,
   convertPoolReservesToFormat,
@@ -13,12 +12,12 @@ import {
 import { calculateWithdrawalAmounts } from '@/utils/secretjs/pools/calculateWithdrawalAmounts';
 import { provideLiquidity } from '@/utils/secretjs/pools/provideLiquidity';
 import { withdrawLiquidity } from '@/utils/secretjs/pools/withdrawLiquidity';
-import { toastManager } from '@/utils/toast/toastManager';
-import { Window } from '@keplr-wallet/types';
+import { getTokenBalance } from '@/utils/secretjs/tokens/getTokenBalance';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { SecretNetworkClient, TxResultCode } from 'secretjs';
+import { TxResultCode } from 'secretjs';
 import { fetchPoolData, validatePoolAddress } from './queryFunctions';
 import type {
   LoadingState,
@@ -121,6 +120,7 @@ export function usePoolForm(
   const { tokenInputs, selectedPool, setTokenInputAmount, setSelectedPool } = usePoolStore();
   const { secretjs, walletAddress } = useKeplrConnection();
   const { setPending, setResult } = useTxStore.getState();
+  const router = useRouter();
 
   // Use the poolStaking hook instead of directly integrating staking logic
   const poolStaking = usePoolStaking(typeof poolAddress === 'string' ? poolAddress : null);
@@ -129,104 +129,36 @@ export function usePoolForm(
 
   const initialMountRef = useRef(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
-  const balanceCache = useRef<
-    Map<string, { balance: { balance: { amount: string } } | null; timestamp: number }>
-  >(new Map());
-  const pendingRequests = useRef<Map<string, Promise<{ balance: { amount: string } } | null>>>(
-    new Map()
-  );
 
-  // Cache duration: 30 seconds
-  const BALANCE_CACHE_DURATION = 30000;
+  // Effect to pre-fill form from URL query parameters
+  useEffect(() => {
+    // Ensure this runs only once on the client, after the router is ready
+    if (!router.isReady || initialMountRef.current === false) return;
 
-  async function getTokenBalance(
-    secretjs: SecretNetworkClient,
-    tokenAddress: SecretString,
-    tokenCodeHash: string
-  ): Promise<{ balance: { amount: string } } | null> {
-    const cacheKey = `${tokenAddress}-${secretjs.address}`;
+    const { token: tokenSymbol, amount } = router.query;
 
-    // Check cache first
-    const cached = balanceCache.current.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < BALANCE_CACHE_DURATION) {
-      return cached.balance;
-    }
-
-    // Check if request is already pending
-    const pendingRequest = pendingRequests.current.get(cacheKey);
-    if (pendingRequest) {
-      return pendingRequest;
-    }
-
-    const keplr = (window as unknown as Window).keplr;
-    if (!isNotNullish(keplr)) {
-      toastManager.keplrNotInstalled();
-      return null;
-    }
-
-    // Create and cache the promise
-    const requestPromise = (async () => {
-      try {
-        // Add delay to prevent rate limiting
-        await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000 + 500));
-
-        // First try to get the viewing key
-        let viewingKey = await keplr
-          .getSecret20ViewingKey('secret-4', tokenAddress)
-          .catch(() => null);
-
-        // If no viewing key, suggest the token first
-        if (viewingKey === null) {
-          try {
-            await keplr.suggestToken('secret-4', tokenAddress);
-            // Try getting the key again after suggesting
-            viewingKey = await keplr
-              .getSecret20ViewingKey('secret-4', tokenAddress)
-              .catch(() => null);
-          } catch (error) {
-            console.error('Error suggesting token:', error);
-            return null;
-          }
-        }
-
-        if (viewingKey === null) {
-          console.error('No viewing key available after suggesting token');
-          return null;
-        }
-
-        const balance = await secretjs.query.snip20.getBalance({
-          contract: {
-            address: tokenAddress,
-            code_hash: tokenCodeHash,
-          },
-          address: secretjs.address,
-          auth: { key: viewingKey },
-        });
-
-        // Cache the result
-        balanceCache.current.set(cacheKey, {
-          balance,
-          timestamp: Date.now(),
-        });
-
-        return balance;
-      } catch (error) {
-        console.warn('Token balance query failed:', error);
-        // Return null to indicate failure rather than crashing
-        return null;
-      } finally {
-        // Remove from pending requests
-        pendingRequests.current.delete(cacheKey);
+    if (typeof tokenSymbol === 'string' && typeof amount === 'string' && selectedPool) {
+      const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
+      const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
+      let tokenIdentifier: 'pool.deposit.tokenA' | 'pool.deposit.tokenB' | null = null;
+      if (tokenSymbol === token0?.symbol) {
+        tokenIdentifier = 'pool.deposit.tokenA';
+      } else if (tokenSymbol === token1?.symbol) {
+        tokenIdentifier = 'pool.deposit.tokenB';
       }
-    })();
 
-    // Cache the promise
-    pendingRequests.current.set(cacheKey, requestPromise);
+      if (tokenIdentifier) {
+        setTokenInputAmount(tokenIdentifier, amount);
+        // Clean the URL to prevent re-filling on refresh
+        const newPath = `/pool/${selectedPool.pairContract}`;
+        void router.replace(newPath, undefined, { shallow: true });
+      }
+    }
+    // Mark as mounted to prevent re-running
+    initialMountRef.current = false;
+  }, [router.isReady, router.query, selectedPool, setTokenInputAmount, poolAddress, router]);
 
-    return requestPromise;
-  }
-
-  // Debounced balance fetching with proper rate limiting
+  // Effect to set the selected pool on initial mount
   useEffect(() => {
     if (!secretjs || !walletAddress) return;
 
@@ -239,27 +171,37 @@ export function usePoolForm(
       return () => clearTimeout(timer);
     }
 
-    if (!isBalanceLoading || !selectedPool?.token0 || !selectedPool?.token1) return;
+    if (!isBalanceLoading || !selectedPool) return;
 
     const fetchBalancesWithRateLimit = debounce(async () => {
       try {
-        const token0Address = selectedPool.token0?.address;
-        const token1Address = selectedPool.token1?.address;
-        const token0CodeHash = selectedPool.token0?.codeHash;
-        const token1CodeHash = selectedPool.token1?.codeHash;
+        const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
+        const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
 
-        if (!token0Address || !token1Address || !token0CodeHash || !token1CodeHash) {
-          console.error('Missing token information');
+        if (!token0 || !token1 || !walletAddress) {
+          console.error('Missing token information or wallet address');
           return;
         }
 
         // Fetch balances with staggered timing to avoid rate limits
-        const balance0Promise = getTokenBalance(secretjs, token0Address, token0CodeHash);
+        const balance0Promise = getTokenBalance(
+          secretjs,
+          token0.address,
+          token0.codeHash,
+          walletAddress,
+          ''
+        );
 
         // Wait 1 second before second request
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const balance1Promise = getTokenBalance(secretjs, token1Address, token1CodeHash);
+        const balance1Promise = getTokenBalance(
+          secretjs,
+          token1.address,
+          token1.codeHash,
+          walletAddress,
+          ''
+        );
 
         await Promise.all([balance0Promise, balance1Promise]);
 
@@ -291,25 +233,11 @@ export function usePoolForm(
           ? pairInfo?.pairContractCodeHash
           : LIQUIDITY_PAIRS[0]?.pairContractCodeHash;
 
-      return await fetchPoolData(validPoolAddress, pairCodeHash, (pool: SelectedPoolType) => {
+      return await fetchPoolData(validPoolAddress, pairCodeHash, () => {
         // Get the LP token address from LIQUIDITY_PAIRS configuration
-        const lpTokenAddress = pairInfo?.lpToken || '';
 
         setSelectedPool({
-          address: pool.address,
-          token0: pool.token0,
-          token1: pool.token1,
-          pairInfo: {
-            ...pool.pairInfo,
-            liquidity_token: lpTokenAddress as SecretString,
-            token_code_hash: pairInfo?.lpTokenCodeHash || '',
-            asset0_volume: '0',
-            asset1_volume: '0',
-            factory: {
-              address: '',
-              code_hash: '',
-            },
-          },
+          ...LIQUIDITY_PAIRS.find((p) => p.pairContract === validPoolAddress)!,
         });
       });
     },
@@ -350,7 +278,10 @@ export function usePoolForm(
   }
 
   const handleDepositClick = async (): Promise<void> => {
-    if (!selectedPool?.token0 || !selectedPool?.token1) return;
+    if (!selectedPool) return;
+    const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
+    const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
+    if (!token0 || !token1) return;
     if (!secretjs) return;
     if (!data?.pairPoolData) {
       toast.error('Pool data not available');
@@ -380,17 +311,17 @@ export function usePoolForm(
     const token1Balance = safeTokenInputs[inputIdentifier2]?.balance;
 
     if (token0Balance && token0Balance !== '0' && parseFloat(amount0) > parseFloat(token0Balance)) {
-      toast.error(`Insufficient ${selectedPool.token0.symbol} balance`);
+      toast.error(`Insufficient ${token0.symbol} balance`);
       return;
     }
 
     if (token1Balance && token1Balance !== '0' && parseFloat(amount1) > parseFloat(token1Balance)) {
-      toast.error(`Insufficient ${selectedPool.token1.symbol} balance`);
+      toast.error(`Insufficient ${token1.symbol} balance`);
       return;
     }
 
-    const address0 = selectedPool.token0.address;
-    const address1 = selectedPool.token1.address;
+    const address0 = token0.address;
+    const address1 = token1.address;
 
     if (address0 === undefined || address1 === undefined) {
       toast.error('Undefined token address');
@@ -413,7 +344,9 @@ export function usePoolForm(
     // );
 
     // Get the pair contract code hash from the LIQUIDITY_PAIRS configuration
-    const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
+    const pairInfo = LIQUIDITY_PAIRS.find(
+      (pair) => pair.pairContract === selectedPool.pairContract
+    );
 
     // Use the pair contract code hash from config or a fallback if not found
     // We know LIQUIDITY_PAIRS[0] exists and has a pairContractCodeHash
@@ -423,7 +356,7 @@ export function usePoolForm(
         : LIQUIDITY_PAIRS[0]!.pairContractCodeHash;
 
     const pairContract: ContractInfo = {
-      address: selectedPool.address,
+      address: selectedPool.pairContract,
       code_hash: pairCodeHash,
     };
 
@@ -431,22 +364,22 @@ export function usePoolForm(
       info: {
         token: {
           contract_addr: address0,
-          token_code_hash: selectedPool.token0.codeHash,
+          token_code_hash: token0.codeHash,
           viewing_key: 'SecretSwap',
         },
       },
-      amount: convertAmount(amount0, selectedPool.token0.decimals),
+      amount: convertAmount(amount0, token0.decimals),
     };
 
     const asset1: Asset = {
       info: {
         token: {
           contract_addr: address1,
-          token_code_hash: selectedPool.token1.codeHash,
+          token_code_hash: token1.codeHash,
           viewing_key: 'SecretSwap',
         },
       },
-      amount: convertAmount(amount1, selectedPool.token1.decimals),
+      amount: convertAmount(amount1, token1.decimals),
     };
 
     try {
@@ -495,9 +428,9 @@ export function usePoolForm(
   };
 
   const handleWithdrawClick = async (): Promise<void> => {
-    if (!selectedPool?.token0 || !selectedPool?.token1) return;
+    if (!selectedPool) return;
     if (!secretjs) return;
-    if (!selectedPool.pairInfo.liquidity_token || !selectedPool.pairInfo.token_code_hash) {
+    if (!selectedPool.lpToken || !selectedPool.lpTokenCodeHash) {
       toast.error('LP token info not available');
       return;
     }
@@ -518,7 +451,9 @@ export function usePoolForm(
     }
 
     // Get the pair contract code hash from the LIQUIDITY_PAIRS configuration
-    const pairInfo = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address);
+    const pairInfo = LIQUIDITY_PAIRS.find(
+      (pair) => pair.pairContract === selectedPool.pairContract
+    );
 
     // Use the pair contract code hash from config or a fallback if not found
     // We know LIQUIDITY_PAIRS[0] exists and has a pairContractCodeHash
@@ -528,13 +463,13 @@ export function usePoolForm(
         : LIQUIDITY_PAIRS[0]!.pairContractCodeHash;
 
     const pairContract: ContractInfo = {
-      address: selectedPool.address,
+      address: selectedPool.pairContract,
       code_hash: pairCodeHash,
     };
 
     // TODO: Map token address to code_hash. They will all be the same for now.
     const lpTokenContract: ContractInfo = {
-      address: selectedPool.pairInfo.liquidity_token,
+      address: selectedPool.lpToken,
       code_hash: '744C588ED4181B13A49A7C75A49F10B84B22B24A69B1E5F3CDFF34B2C343E888',
     };
 
@@ -575,6 +510,9 @@ export function usePoolForm(
     if (data?.pairPoolData === undefined || selectedPool === undefined || selectedPool === null)
       return;
 
+    const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
+    const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
+
     const lpAmount = safeTokenInputs['pool.withdraw.lpToken']?.amount;
     const lpBalance = safeTokenInputs['pool.withdraw.lpToken']?.balance;
 
@@ -614,7 +552,7 @@ export function usePoolForm(
       return;
     }
 
-    if (!selectedPool.token0 || !selectedPool.token1) {
+    if (!token0 || !token1) {
       return;
     }
 
@@ -628,7 +566,7 @@ export function usePoolForm(
         field: 'lpToken',
         message: 'Insufficient LP token balance',
         maxAvailable: lpBalance,
-        tokenSymbol: `${selectedPool.token0.symbol}/${selectedPool.token1.symbol} LP`,
+        tokenSymbol: `${token0.symbol}/${token1.symbol} LP`,
       });
     } else {
       setValidationWarning(null);
@@ -641,8 +579,8 @@ export function usePoolForm(
       totalLpSupply: total_share,
       asset0Amount,
       asset1Amount,
-      token0: selectedPool.token0,
-      token1: selectedPool.token1,
+      token0: token0,
+      token1: token1,
     });
 
     // Only show calculation errors that aren't about exceeding pool supply
@@ -688,14 +626,14 @@ export function usePoolForm(
 
   const calculateRatio = useCallback(
     (sourceField: 'tokenA' | 'tokenB', amount: string) => {
-      if (
-        !data?.pairPoolData ||
-        !selectedPool?.token0 ||
-        !selectedPool?.token1 ||
-        isCalculatingRef.current
-      ) {
+      if (!data?.pairPoolData || !selectedPool || isCalculatingRef.current) {
         return;
       }
+
+      const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
+      const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
+
+      if (!token0 || !token1) return;
 
       isCalculatingRef.current = true;
 
@@ -705,17 +643,15 @@ export function usePoolForm(
       try {
         const reserves = convertPoolReservesToFormat(
           data.pairPoolData,
-          selectedPool.token0.address,
-          selectedPool.token1.address
+          token0.address,
+          token1.address
         );
 
         if (!reserves) {
           return;
         }
 
-        const inputTokenAddress = isTokenASource
-          ? selectedPool.token0.address
-          : selectedPool.token1.address;
+        const inputTokenAddress = isTokenASource ? token0.address : token1.address;
 
         const result = calculateProportionalAmount(amount, inputTokenAddress, reserves);
 
@@ -740,7 +676,7 @@ export function usePoolForm(
           setTokenInputAmount(targetInputIdentifier, result.amount);
         }
 
-        // Clear any existing validation warnings since we no longer check pool availability
+        // Clear any existing validation warnings since we no longer check pool reserves
         // Users are only limited by their personal token balance, not pool reserves
         setValidationWarning(null);
       } catch (_error) {
@@ -803,23 +739,34 @@ export function usePoolForm(
 
   const typedSelectedPool = (() => {
     if (selectedPool === undefined || selectedPool === null) return null;
-    if (!selectedPool.token0 || !selectedPool.token1) return null;
+
+    const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
+    const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
+
+    if (!token0 || !token1) return null;
 
     // Ensure all contract addresses match the secret1 format
     const isSecret1Address = (addr: string): addr is SecretString => addr.startsWith('secret1');
 
-    const contractAddr = selectedPool.pairInfo.contract_addr;
-    const liquidityToken = selectedPool.pairInfo.liquidity_token;
+    const contractAddr = selectedPool.pairContract;
+    const liquidityToken = selectedPool.lpToken;
 
     if (!isSecret1Address(contractAddr) || !isSecret1Address(liquidityToken)) return null;
 
-    const typedAssetInfos = selectedPool.pairInfo.asset_infos.map((info) => {
-      if (!isSecret1Address(info.token.contract_addr)) return null;
+    const pairInfo = LIQUIDITY_PAIRS.find((p) => p.pairContract === selectedPool.pairContract);
+
+    if (!pairInfo) return null;
+
+    const typedAssetInfos = [
+      TOKENS.find((t) => t.symbol === pairInfo.token0),
+      TOKENS.find((t) => t.symbol === pairInfo.token1),
+    ].map((info) => {
+      if (!info || !isSecret1Address(info.address)) return null;
       return {
         token: {
-          contract_addr: info.token.contract_addr,
-          token_code_hash: info.token.token_code_hash,
-          viewing_key: info.token.viewing_key,
+          contract_addr: info.address,
+          token_code_hash: info.codeHash,
+          viewing_key: '', // This should be handled properly, maybe from user's wallet
         },
       };
     });
@@ -827,9 +774,10 @@ export function usePoolForm(
     if (typedAssetInfos.some((info) => info === null)) return null;
 
     return {
-      address: selectedPool.address,
-      token0: selectedPool.token0,
-      token1: selectedPool.token1,
+      ...selectedPool,
+      address: selectedPool.pairContract,
+      token0: token0,
+      token1: token1,
       pairInfo: {
         contract_addr: contractAddr,
         asset_infos: typedAssetInfos as {
@@ -840,7 +788,7 @@ export function usePoolForm(
           };
         }[],
         liquidity_token: liquidityToken,
-        token_code_hash: selectedPool.pairInfo.token_code_hash,
+        token_code_hash: selectedPool.lpTokenCodeHash,
       },
     };
   })();
@@ -850,7 +798,7 @@ export function usePoolForm(
     setTokenInputAmount: (key: string, value: string) =>
       setTokenInputAmount(key as keyof typeof tokenInputs, value),
     setMax,
-    selectedPool: typedSelectedPool,
+    selectedPool: typedSelectedPool as SelectedPoolType | null,
     loadingState,
     poolDetails: data?.poolDetails,
     pairPoolData: data?.pairPoolData,

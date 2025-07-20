@@ -1,14 +1,8 @@
-import { ConfigToken } from '@/config/tokens';
-import { PoolTokenInputs, SecretString, TokenInputState } from '@/types';
-import { Pair } from '@/types/api/Factory';
-import { create } from 'zustand';
+import { LiquidityPair } from '@/config/tokens';
+import { PoolTokenInputs, TokenInputState } from '@/types';
+import { create, StateCreator } from 'zustand';
 
-interface SelectedPool {
-  address: SecretString;
-  token0?: ConfigToken;
-  token1?: ConfigToken;
-  pairInfo: Pair;
-}
+export type SelectedPool = LiquidityPair;
 
 interface PoolStore {
   selectedPool?: SelectedPool;
@@ -25,7 +19,7 @@ const defaultTokenInputState: TokenInputState = {
   balance: '',
 };
 
-export const usePoolStore = create<PoolStore>((set) => ({
+const poolStoreCreator: StateCreator<PoolStore> = (set) => ({
   tokenInputs: {
     'pool.deposit.tokenA': defaultTokenInputState,
     'pool.deposit.tokenB': defaultTokenInputState,
@@ -33,35 +27,27 @@ export const usePoolStore = create<PoolStore>((set) => ({
     'pool.withdraw.tokenB': defaultTokenInputState,
     'pool.withdraw.lpToken': defaultTokenInputState,
   },
-  setSelectedPool: (pool) => set({ selectedPool: pool }),
-  setTokenInputAmount: (identifier, amount) =>
-    set((state) => ({
-      tokenInputs: {
-        ...state.tokenInputs,
-        [identifier]: {
-          ...state.tokenInputs[identifier],
-          amount,
-        },
-      },
-    })),
-  setTokenInputBalance: (identifier, balance) =>
-    set((state) => ({
-      tokenInputs: {
-        ...state.tokenInputs,
-        [identifier]: {
-          ...state.tokenInputs[identifier],
-          balance,
-        },
-      },
-    })),
-  setTokenInputAmountWithRatio: (identifier, amount) =>
-    set((state) => ({
-      tokenInputs: {
-        ...state.tokenInputs,
-        [identifier]: {
-          ...state.tokenInputs[identifier],
-          amount,
-        },
-      },
-    })),
-}));
+  setSelectedPool: (pool: SelectedPool) => set({ selectedPool: pool }),
+  setTokenInputAmount: (identifier: keyof PoolTokenInputs, amount: string) =>
+    set((state) => {
+      // Create a new object for tokenInputs to ensure re-render
+      const newTokenInputs = { ...state.tokenInputs };
+      // Deep copy the specific token input state to avoid direct mutation
+      newTokenInputs[identifier] = { ...newTokenInputs[identifier], amount };
+      return { tokenInputs: newTokenInputs };
+    }),
+  setTokenInputBalance: (identifier: keyof PoolTokenInputs, balance: string) =>
+    set((state) => {
+      const newTokenInputs = { ...state.tokenInputs };
+      newTokenInputs[identifier] = { ...newTokenInputs[identifier], balance };
+      return { tokenInputs: newTokenInputs };
+    }),
+  setTokenInputAmountWithRatio: (identifier: keyof PoolTokenInputs, amount: string) =>
+    set((state) => {
+      const newTokenInputs = { ...state.tokenInputs };
+      newTokenInputs[identifier] = { ...newTokenInputs[identifier], amount };
+      return { tokenInputs: newTokenInputs };
+    }),
+});
+
+export const usePoolStore = create<PoolStore>(poolStoreCreator);

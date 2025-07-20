@@ -5,9 +5,9 @@ import StakingForm from '@/components/app/Pages/Pool/StakingForm';
 import WithdrawForm from '@/components/app/Pages/Pool/WithdrawForm';
 import SparklyTab from '@/components/app/Pages/Pools/SparklyTab';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
-import { SecretString } from '@/types';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -61,34 +61,17 @@ export default function PoolPage() {
     }
     if (!Array.isArray(pools) || pools.length === 0) return;
 
-    const selectedPool = pools.find((p) => {
-      const contractAddr = p.pair.contract_addr;
-      return typeof contractAddr === 'string' && contractAddr === poolAddress;
-    });
+    const liquidityPair = LIQUIDITY_PAIRS.find((p) => p.pairContract === poolAddress);
 
-    if (!selectedPool) {
-      console.error('Pool not found in available pools:', {
+    if (!liquidityPair) {
+      console.error('Pool not found in LIQUIDITY_PAIRS:', {
         poolAddress,
-        availablePools: pools.map((p) => p.pair.contract_addr),
+        availablePairs: LIQUIDITY_PAIRS.map((p) => p.pairContract),
       });
       return;
     }
 
-    const liquidityToken = selectedPool.pair.liquidity_token;
-    if (typeof liquidityToken !== 'string' || !liquidityToken.startsWith('secret1')) {
-      console.error('Invalid liquidity token format:', liquidityToken);
-      return;
-    }
-
-    setSelectedPool({
-      address: poolAddress as SecretString,
-      pairInfo: {
-        ...selectedPool.pair,
-        liquidity_token: liquidityToken,
-      },
-      token0: selectedPool.token0,
-      token1: selectedPool.token1,
-    });
+    setSelectedPool(liquidityPair);
   }, [poolAddress, pools, setSelectedPool, router.isReady]);
 
   // Handle loading states and errors

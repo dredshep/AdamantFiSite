@@ -65,10 +65,6 @@ const WalletSidebar: React.FC = () => {
     });
   };
 
-  const openSettings = () => {
-    setCurrentView('settings');
-  };
-
   const refreshAllBalances = () => {
     fetchAllBalances();
     showToastOnce('refresh-started', 'Refreshing all token balances...', 'info');
@@ -231,9 +227,7 @@ const WalletSidebar: React.FC = () => {
           {/* Tokens Section */}
           <div className="py-6 flex-1 overflow-hidden">
             <div className="flex items-center justify-between mb-6 px-6">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                Tokens
-              </h3>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">Tokens</h3>
               {loadBalanceConfig.shouldShowFetchButton && (
                 <button
                   onClick={refreshAllBalances}
@@ -308,7 +302,7 @@ const WalletSidebar: React.FC = () => {
               <div className="text-xs text-adamant-text-box-secondary">Feature not currently in use</div>
             </div>
             */}
-            
+
             {/* Comment out contract keys since we have a different way of handling things now */}
             {/* 
             <button
@@ -324,7 +318,7 @@ const WalletSidebar: React.FC = () => {
               </div>
             </button>
             */}
-            
+
             <div className="text-center text-adamant-text-box-secondary text-sm">
               Settings panel simplified - advanced features will be added as needed.
             </div>

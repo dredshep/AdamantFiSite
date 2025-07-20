@@ -1,6 +1,6 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import ViewingKeyStatusComponent from '@/components/common/ViewingKeyStatus';
-import { LIQUIDITY_PAIRS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { usePoolStore } from '@/store/forms/poolStore';
@@ -19,8 +19,8 @@ const StakingForm: React.FC = () => {
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   // Get LP token address for this pool
-  const pairInfo = selectedPool?.address
-    ? LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.address)
+  const pairInfo = selectedPool?.pairContract
+    ? LIQUIDITY_PAIRS.find((pair) => pair.pairContract === selectedPool.pairContract)
     : null;
 
   // Use centralized balance fetcher for LP token
@@ -31,7 +31,7 @@ const StakingForm: React.FC = () => {
   );
 
   // Get poolStaking hook
-  const poolStaking = usePoolStaking(selectedPool?.address ?? null);
+  const poolStaking = usePoolStaking(selectedPool?.pairContract ?? null);
 
   const {
     hasStakingRewards,
@@ -74,7 +74,7 @@ const StakingForm: React.FC = () => {
   // Reset initial loading state when pool changes
   useEffect(() => {
     setHasInitiallyLoaded(false);
-  }, [selectedPool?.address]);
+  }, [selectedPool?.pairContract]);
 
   // An "initial load" is when we have no data for a value AND it's currently being fetched.
   const isInitiallyLoadingStaked =
@@ -150,8 +150,9 @@ const StakingForm: React.FC = () => {
   // Get readable token symbols
   // const token0Symbol = selectedPool.token0 ? getApiTokenSymbol(selectedPool.token0) : '';
   // const token1Symbol = selectedPool.token1 ? getApiTokenSymbol(selectedPool.token1) : '';
-
-  const lpPairName = `${selectedPool.token0?.symbol}/${selectedPool.token1?.symbol}`;
+  const token0 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token0) : undefined;
+  const token1 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token1) : undefined;
+  const lpPairName = `${token0?.symbol}/${token1?.symbol}`;
 
   // If we need a viewing key to proceed
   if (viewingKeyStatus !== ViewingKeyStatus.CREATED) {

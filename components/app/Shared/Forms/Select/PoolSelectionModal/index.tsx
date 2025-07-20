@@ -1,5 +1,6 @@
 import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
 import { usePoolStore } from '@/store/forms/poolStore';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -23,15 +24,10 @@ const PoolSelectionModal: React.FC = () => {
   });
 
   const handlePoolSelect = (pool: (typeof pools)[0]) => {
-    setSelectedPool({
-      address: pool.pair.contract_addr,
-      token0: pool.token0,
-      token1: pool.token1,
-      pairInfo: {
-        ...pool.pair,
-        liquidity_token: pool.pair.liquidity_token,
-      },
-    });
+    const selectedPair = LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.pair.contract_addr);
+    if (selectedPair) {
+      setSelectedPool(selectedPair);
+    }
     // Dialog will close automatically when Dialog.Close is clicked
   };
 

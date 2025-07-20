@@ -14,7 +14,9 @@ const AutoStakeOption: React.FC<AutoStakeOptionProps> = ({ disabled = false }) =
   const { selectedPool, tokenInputs } = usePoolStore();
 
   // Get staking info and reward estimates
-  const stakingInfo = selectedPool ? getStakingContractInfoForPool(selectedPool.address) : null;
+  const stakingInfo = selectedPool
+    ? getStakingContractInfoForPool(selectedPool.pairContract)
+    : null;
   const lpTokenAddress = stakingInfo?.lpTokenAddress;
   const rewardEstimates = useRewardEstimates(lpTokenAddress || '');
 
