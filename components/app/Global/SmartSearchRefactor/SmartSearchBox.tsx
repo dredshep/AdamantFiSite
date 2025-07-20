@@ -52,7 +52,6 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -60,7 +59,6 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const suggestionRefs = useRef<Array<HTMLDivElement | null>>([]);
   const { setTokenInputProperty } = useSwapStore();
   const { handleSwapClick, isEstimating, estimatedOutput } = useSwapFormLean();
   const router = useRouter();
@@ -272,31 +270,17 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
       switch (e.key) {
         case 'ArrowDown':
-          e.preventDefault();
-          const nextIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
-          setSelectedIndex(nextIndex);
-          // Scroll into view
-          suggestionRefs.current[nextIndex]?.scrollIntoView({
-            block: 'nearest',
-            behavior: 'smooth',
-          });
-          break;
         case 'ArrowUp':
-          e.preventDefault();
-          const prevIndex = Math.max(selectedIndex - 1, 0);
-          setSelectedIndex(prevIndex);
-          // Scroll into view
-          suggestionRefs.current[prevIndex]?.scrollIntoView({
-            block: 'nearest',
-            behavior: 'smooth',
-          });
+          // Let Radix handle arrow navigation
           break;
         case 'Enter':
           e.preventDefault();
-          if (suggestions[selectedIndex]) {
-            const suggestion = suggestions[selectedIndex];
-
-            // For command suggestions, complete the query first, then execute
+          // Check if there's a focused suggestion, otherwise use the first one
+          const focusedElement = document.activeElement;
+          if (focusedElement && focusedElement.getAttribute('data-suggestion-type')) {
+            (focusedElement as HTMLButtonElement).click();
+          } else if (suggestions[0]) {
+            const suggestion = suggestions[0];
             if (suggestion.type === 'command' && suggestion.command) {
               // First complete the query to show full command
               const fullCommand = `${suggestion.command.action} ${
@@ -322,13 +306,8 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           break;
       }
     },
-    [isOpen, isLoading, suggestions, selectedIndex, executeCommand]
+    [isOpen, isLoading, suggestions, executeCommand]
   );
-
-  // Reset selected index when suggestions change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [suggestions]);
 
   // Handle input focus/blur with improved timing
   const handleFocus = useCallback(() => {
@@ -490,9 +469,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                   aria-expanded={isOpen}
                   aria-haspopup="listbox"
                   aria-owns="smart-search-suggestions"
-                  aria-activedescendant={
-                    isOpen && suggestions[selectedIndex] ? `suggestion-${selectedIndex}` : undefined
-                  }
+                  aria-activedescendant={isOpen && suggestions[0] ? `suggestion-0` : undefined}
                   aria-label="Smart search input"
                   aria-describedby={getStatusMessage() ? 'search-status' : undefined}
                 />
@@ -566,22 +543,24 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
             {suggestions.length > 0 && !isLoading && (
               <div role="listbox" id="smart-search-suggestions" aria-label="Search suggestions">
                 {suggestions.map((suggestion, index) => (
-                  <div
+                  <button
                     key={`${suggestion.type}-${suggestion.title}-${index}`}
-                    ref={(el) => {
-                      suggestionRefs.current[index] = el;
-                    }}
                     id={`suggestion-${index}`}
                     role="option"
-                    aria-selected={index === selectedIndex}
-                    className={`flex items-center gap-3 p-3 cursor-pointer transition-all duration-150 ${
-                      index === selectedIndex
+                    aria-selected={index === 0}
+                    className={`w-full flex items-center gap-3 p-3 cursor-pointer transition-all duration-150 text-left ${
+                      index === 0
                         ? 'bg-adamant-accentText/10 border-l-2 border-adamant-accentText'
                         : 'hover:bg-adamant-app-input/50'
                     } ${index > 0 ? 'border-t border-adamant-box-border/30' : ''}`}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                    tabIndex={-1}
+                    onMouseEnter={() => {
+                      // Focus this button to give visual feedback
+                      (
+                        document.getElementById(`suggestion-${index}`) as HTMLButtonElement
+                      )?.focus();
+                    }}
+                    data-suggestion-type={suggestion.type}
                   >
                     {suggestion.token ? (
                       <TokenImageWithFallback
@@ -616,7 +595,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                       suggestion.type === 'pool') && (
                       <ArrowRight className="w-4 h-4 text-adamant-accentText" />
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

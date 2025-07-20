@@ -208,7 +208,14 @@ export function generateSuggestions({
           subtitle: `Deposit into the ${pool.token0}/${pool.token1} pool`,
           pool: pool,
           icon: 'Zap',
-          onSelect: () => void router.push(`/pool/${pool.pairContract}`),
+          onSelect: () => {
+            // Create a command object for the executeCommand function to handle
+            const depositCommand = {
+              ...parsedCommand,
+              target: pool.pairContract,
+            };
+            void executeCommand(depositCommand);
+          },
         });
       });
 

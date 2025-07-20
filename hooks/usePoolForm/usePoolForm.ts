@@ -127,51 +127,53 @@ export function usePoolForm(
   const { hasStakingRewards, stakingInfo, staking, autoStake, setAutoStake, autoStakeLpTokens } =
     poolStaking;
 
-  const initialMountRef = useRef(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
 
   // Effect to pre-fill form from URL query parameters
   useEffect(() => {
     // Ensure this runs only once on the client, after the router is ready
-    if (!router.isReady || initialMountRef.current === false) return;
+    if (!router.isReady || !selectedPool) return;
 
     const { token: tokenSymbol, amount } = router.query;
 
-    if (typeof tokenSymbol === 'string' && typeof amount === 'string' && selectedPool) {
-      const token0 = TOKENS.find((t) => t.symbol === selectedPool.token0);
-      const token1 = TOKENS.find((t) => t.symbol === selectedPool.token1);
+    if (typeof tokenSymbol === 'string') {
+      // Find tokens using the pool's token symbols
       let tokenIdentifier: 'pool.deposit.tokenA' | 'pool.deposit.tokenB' | null = null;
-      if (tokenSymbol === token0?.symbol) {
+
+      if (tokenSymbol === selectedPool.token0) {
         tokenIdentifier = 'pool.deposit.tokenA';
-      } else if (tokenSymbol === token1?.symbol) {
+      } else if (tokenSymbol === selectedPool.token1) {
         tokenIdentifier = 'pool.deposit.tokenB';
       }
 
       if (tokenIdentifier) {
-        setTokenInputAmount(tokenIdentifier, amount);
+        // Pre-fill the amount if provided
+        if (typeof amount === 'string' && amount.trim() !== '') {
+          setTokenInputAmount(tokenIdentifier, amount);
+        }
+
         // Clean the URL to prevent re-filling on refresh
         const newPath = `/pool/${selectedPool.pairContract}`;
         void router.replace(newPath, undefined, { shallow: true });
       }
     }
-    // Mark as mounted to prevent re-running
-    initialMountRef.current = false;
-  }, [router.isReady, router.query, selectedPool, setTokenInputAmount, poolAddress, router]);
+  }, [router.isReady, router.query, selectedPool?.pairContract, setTokenInputAmount, router]);
 
-  // Effect to set the selected pool on initial mount
+  // Effect to set the selected pool and fetch balances
   useEffect(() => {
-    if (!secretjs || !walletAddress) return;
+    if (!secretjs || !walletAddress || !selectedPool) return;
 
-    // Skip the first mount and wait 2 seconds
-    if (initialMountRef.current) {
-      initialMountRef.current = false;
-      const timer = setTimeout(() => {
-        setIsBalanceLoading(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
+    // Start balance loading after a short delay
+    const timer = setTimeout(() => {
+      setIsBalanceLoading(true);
+    }, 2000);
 
-    if (!isBalanceLoading || !selectedPool) return;
+    return () => clearTimeout(timer);
+  }, [secretjs, walletAddress, selectedPool]);
+
+  // Effect to fetch balances with rate limiting
+  useEffect(() => {
+    if (!isBalanceLoading || !selectedPool || !secretjs || !walletAddress) return;
 
     const fetchBalancesWithRateLimit = debounce(async () => {
       try {
@@ -213,10 +215,7 @@ export function usePoolForm(
     }, 2000); // Increased debounce time
 
     void fetchBalancesWithRateLimit();
-
-    // Return empty cleanup function for consistency
-    return () => {};
-  }, [walletAddress, selectedPool, secretjs, isBalanceLoading]);
+  }, [isBalanceLoading, selectedPool, secretjs, walletAddress]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['pool-data', poolAddress],
