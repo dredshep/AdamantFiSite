@@ -14,7 +14,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <div className="px-4 md:px-6 py-6 md:py-8 flex w-full justify-between items-center">
+    <div className="px-4 md:px-6 flex w-full justify-between items-center">
       {/* Left side - Logo and Navigation */}
       <div className="flex items-center gap-4 md:gap-9">
         <Link href="/" passHref>
