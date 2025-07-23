@@ -4,6 +4,7 @@ Adamant Finance is a fully open source secure and privacy-focused DeFi platform 
 
 ## Features
 
+- **Self-host on any device**: Host on any device that supports Nodejs: Windows, Linux, Mac, or even Android with Termux.
 - **Private Token Exchange**: Swap SNIP-20 tokens on Secret Network with privacy.
 - **Liquidity Provision and Staking**: Provide liquidity to earn trading fees and incentives.
 - **Secret Network Token Exploration**: Discover and interact with SNIP-20 tokens.
