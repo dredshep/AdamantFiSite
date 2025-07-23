@@ -1,8 +1,5 @@
-import { MobileSearchButton, SmartSearchBox } from '@/components/app/Global/SmartSearch';
-import {
-  MobileSearchButton as MobileSearchButtonRefactored,
-  SmartSearchBox as SmartSearchBoxRefactored,
-} from '@/components/app/Global/SmartSearchRefactor';
+import { MobileSearchButton } from '@/components/app/Global/SmartSearch';
+import { MobileSearchButton as MobileSearchButtonRefactored } from '@/components/app/Global/SmartSearchRefactor';
 import UserWallet from '@/components/app/Global/UserWallet';
 import AdamantFiLogo from '@/components/SVG/Logo';
 import Link from 'next/link';
@@ -56,22 +53,22 @@ const Navbar: React.FC = () => {
       {/* Center - Desktop Search - COMPARISON VIEW */}
       <div className="hidden lg:flex flex-col gap-3 flex-1 max-w-2xl mx-8">
         {/* Original SmartSearch */}
-        <div className="space-y-1">
+        {/* <div className="space-y-1">
           <div className="text-xs text-white/50 px-2">Original (1022 lines)</div>
           <SmartSearchBox
             className="w-full"
             placeholder="Original: Type a command or press Ctrl+K..."
           />
-        </div>
+        </div> */}
 
         {/* Refactored SmartSearch */}
-        <div className="space-y-1">
+        {/* <div className="space-y-1">
           <div className="text-xs text-white/50 px-2">Refactored (~470 lines)</div>
           <SmartSearchBoxRefactored
             className="w-full"
             placeholder="Refactored: Type a command or press Ctrl+J..."
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Right side - Mobile Search + Wallet */}
