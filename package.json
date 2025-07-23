@@ -48,7 +48,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
-    "decimal.js": "^10.4.3",
+    "decimal.js": "^10.6.0",
     "eslint": "8",
     "framer-motion": "^12.9.4",
     "gray-matter": "^4.0.3",
