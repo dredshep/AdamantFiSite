@@ -26,26 +26,20 @@ cd AdamantFiSite
 bun install
 ```
 
-or if you use Yarn:
-
-```bash
-yarn
-```
-
 3. **Run the Development Server**
 
 ```bash
-yarn dev
+bun run dev
 ```
 
 Visit `http://localhost:3000` in your browser to view the application.
 
 ## Scripts
 
-- `yarn dev`: Runs the Next.js development server.
-- `yarn build`: Builds the application for production usage.
-- `yarn start`: Starts a Next.js production server.
-- `yarn lint`: Runs ESLint to catch linting errors across the project.
+- `bun run dev`: Runs the Next.js development server.
+- `bun run build`: Builds the application for production usage.
+- `bun run start`: Starts a Next.js production server.
+- `bun run lint`: Runs ESLint to catch linting errors across the project.
 
 ## Technologies
 
