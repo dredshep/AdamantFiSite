@@ -88,7 +88,7 @@ const WalletSidebar: React.FC = () => {
     <aside
       ref={sidebarRef}
       className={`
-        fixed top-0 right-0 bottom-0 w-[380px] z-50
+        fixed top-0 right-0 bottom-0 w-[440px] z-50
         bg-gradient-to-b from-adamant-app-input via-adamant-app-input to-adamant-box-veryDark
         backdrop-blur-lg
         transition-transform duration-300 ease-out
@@ -246,16 +246,11 @@ const WalletSidebar: React.FC = () => {
 
             {tokens.length > 0 ? (
               <div
-                className="space-y-3 overflow-y-auto h-full pl-3"
+                className="space-y-3 overflow-y-auto h-full"
                 style={{ scrollbarWidth: 'thin', scrollbarColor: '#8A754A #1a1a2e' }}
               >
                 {tokens.map((token, index) => (
-                  <div
-                    key={index}
-                    className="transform hover:scale-[1.01] transition-transform duration-200"
-                  >
-                    <TokenListItem token={token} />
-                  </div>
+                  <TokenListItem key={index} token={token} />
                 ))}
               </div>
             ) : (

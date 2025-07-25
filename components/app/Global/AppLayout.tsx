@@ -18,7 +18,7 @@ export default function Layout({ children }: LayoutProps) {
     <div
       className={
         // roboto.className +
-        ' bg-adamant-background bg-cover bg-fixed min-h-screen text-white font-sans flex flex-col'
+        ' bg-adamant-background bg-cover bg-fixed min-h-screen text-white font-sans flex flex-col pt-6'
       }
     >
       <Head>

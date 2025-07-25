@@ -42,7 +42,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
     const num = parseFloat(balance);
     if (num === 0) return '0';
     if (num < 0.000001) return '< 0.000001';
-    
+
     // Round certain tokens to 2-3 decimals for better readability
     if (shouldRoundBalance(symbol)) {
       if (num >= 1) {
@@ -51,7 +51,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
         return num.toFixed(3); // 3 decimals for values < 1
       }
     }
-    
+
     return num.toFixed(6); // Default 6 decimals for other tokens
   };
 
@@ -74,12 +74,15 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
 
   const displayBalance = formatBalance(balanceState.balance, tokenSymbol);
   const fullBalance = getFullBalance(balanceState.balance);
-  const showTooltip = shouldRoundBalance(tokenSymbol) && balanceState.balance !== '-' && displayBalance !== fullBalance;
+  const showTooltip =
+    shouldRoundBalance(tokenSymbol) &&
+    balanceState.balance !== '-' &&
+    displayBalance !== fullBalance;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-1.5 ${className}`}>
       <div className="flex items-center gap-1">
-        <span 
+        <span
           className="text-base font-sans text-white font-medium"
           title={showTooltip ? `Full balance: ${fullBalance} ${tokenSymbol}` : undefined}
         >
@@ -95,7 +98,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
       {balanceState.needsViewingKey && !isSettingUpViewingKey && (
         <button
           onClick={() => void openKeplrForViewingKey()}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 hover:text-yellow-300 rounded-md transition-colors border border-yellow-500/30"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 hover:text-yellow-300 rounded transition-colors border border-yellow-500/30 whitespace-nowrap flex-shrink-0"
           title="Click to set viewing key in Keplr"
         >
           <RiKeyLine className="w-3 h-3" />
