@@ -4,6 +4,7 @@ Adamant Finance is a fully open source secure and privacy-focused DeFi platform 
 
 ## Features
 
+- **Self-host on any device**: Host on any device that supports Nodejs: Windows, Linux, Mac, or even Android with Termux.
 - **Private Token Exchange**: Swap SNIP-20 tokens on Secret Network with privacy.
 - **Liquidity Provision and Staking**: Provide liquidity to earn trading fees and incentives.
 - **Secret Network Token Exploration**: Discover and interact with SNIP-20 tokens.
@@ -26,26 +27,20 @@ cd AdamantFiSite
 bun install
 ```
 
-or if you use Yarn:
-
-```bash
-yarn
-```
-
 3. **Run the Development Server**
 
 ```bash
-yarn dev
+bun run dev
 ```
 
 Visit `http://localhost:3000` in your browser to view the application.
 
 ## Scripts
 
-- `yarn dev`: Runs the Next.js development server.
-- `yarn build`: Builds the application for production usage.
-- `yarn start`: Starts a Next.js production server.
-- `yarn lint`: Runs ESLint to catch linting errors across the project.
+- `bun run dev`: Runs the Next.js development server.
+- `bun run build`: Builds the application for production usage.
+- `bun run start`: Starts a Next.js production server.
+- `bun run lint`: Runs ESLint to catch linting errors across the project.
 
 ## Technologies
 
