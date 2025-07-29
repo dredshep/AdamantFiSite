@@ -1,5 +1,6 @@
 import { MobileSearchButton } from '@/components/app/Global/SmartSearch';
 import { MobileSearchButton as MobileSearchButtonRefactored } from '@/components/app/Global/SmartSearchRefactor';
+import SmartSearchBoxRefactored from '@/components/app/Global/SmartSearchRefactor/SmartSearchBox';
 import UserWallet from '@/components/app/Global/UserWallet';
 import AdamantFiLogo from '@/components/SVG/Logo';
 import Link from 'next/link';
@@ -62,13 +63,13 @@ const Navbar: React.FC = () => {
         </div> */}
 
         {/* Refactored SmartSearch */}
-        {/* <div className="space-y-1">
-          <div className="text-xs text-white/50 px-2">Refactored (~470 lines)</div>
+        <div className="space-y-1">
+          {/* <div className="text-xs text-white/50 px-2">Refactored (~470 lines)</div> */}
           <SmartSearchBoxRefactored
             className="w-full"
-            placeholder="Refactored: Type a command or press Ctrl+J..."
+            placeholder="Type a command or press Ctrl+K..."
           />
-        </div> */}
+        </div>
       </div>
 
       {/* Right side - Mobile Search + Wallet */}
@@ -83,9 +84,9 @@ const Navbar: React.FC = () => {
           </div>
           <div className="relative">
             <MobileSearchButtonRefactored />
-            <div className="absolute -bottom-5 left-0 text-xs text-white/50 whitespace-nowrap">
+            {/* <div className="absolute -bottom-5 left-0 text-xs text-white/50 whitespace-nowrap">
               Refactored
-            </div>
+            </div> */}
           </div>
         </div>
 
