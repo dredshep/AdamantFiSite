@@ -24,13 +24,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // Import our extracted utilities
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import {
+  CommandStep,
+  SearchSuggestion,
   SmartSearchBoxProps,
   SpeechRecognition,
   SpeechRecognitionErrorEvent,
   SpeechRecognitionEvent,
 } from './types';
 import { parseCommand } from './utils/commandParser';
-import { generateSuggestions } from './utils/suggestionGenerator';
+import { generateStepSuggestions } from './utils/stepSuggestionGenerator';
 import { processVoiceInput } from './utils/voiceProcessor';
 
 // Icon mapping for string-based icons
@@ -131,18 +133,17 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     setActiveIndex(0);
   }, [query]);
 
-  // Parse the user's input using extracted parser
-  const parsedCommand = useMemo(() => parseCommand(query), [query]);
+  // Execute a command step with proper loading state management
+  const executeCommandStep = useCallback(
+    async (commandStep: CommandStep, mode: 'execute' | 'fill' = 'execute') => {
+      if (!commandStep.action) return;
 
-  // Execute a parsed command with proper loading state management
-  const executeCommand = useCallback(
-    async (command: typeof parsedCommand) => {
       // Handle Deposit action
-      if (command.action === 'deposit' && command.fromToken && command.target) {
+      if (commandStep.action === 'deposit' && commandStep.fromToken && commandStep.target) {
         setIsLoading(true);
         try {
-          // Find the pool from the target string (which is the pool's pairContract)
-          const pool = LIQUIDITY_PAIRS.find((p) => p.pairContract === command.target);
+          // Find the pool from the target string
+          const pool = LIQUIDITY_PAIRS.find((p) => p.pairContract === commandStep.target);
           if (!pool) {
             console.error('Target pool for deposit not found');
             setIsLoading(false);
@@ -150,33 +151,33 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           }
 
           // Navigate to the pool page with query params for pre-filling
-          const { symbol } = command.fromToken;
-          const { amount } = command;
+          const { symbol } = commandStep.fromToken;
+          const { amount } = commandStep;
 
           const queryParams = new URLSearchParams();
           if (symbol) queryParams.append('token', symbol);
           if (amount) queryParams.append('amount', amount);
 
-          await router.push(`/pool/${command.target}?${queryParams.toString()}`);
+          await router.push(`/pool/${commandStep.target}?${queryParams.toString()}`);
           setIsOpen(false);
         } catch (error) {
           console.error('Error executing deposit command:', error);
         } finally {
           setIsLoading(false);
         }
-        return; // End execution here
+        return;
       }
 
-      if (command.action === 'swap' && command.fromToken && command.toToken) {
+      if (commandStep.action === 'swap' && commandStep.fromToken && commandStep.toToken) {
         setIsLoading(true);
 
         try {
           // Set up the swap form first
-          setTokenInputProperty('swap.pay', 'tokenAddress', command.fromToken.address);
-          setTokenInputProperty('swap.receive', 'tokenAddress', command.toToken.address);
+          setTokenInputProperty('swap.pay', 'tokenAddress', commandStep.fromToken.address);
+          setTokenInputProperty('swap.receive', 'tokenAddress', commandStep.toToken.address);
 
-          if (command.amount) {
-            setTokenInputProperty('swap.pay', 'amount', command.amount);
+          if (commandStep.amount) {
+            setTokenInputProperty('swap.pay', 'amount', commandStep.amount);
           }
 
           // Navigate to swap page if not already there
@@ -184,76 +185,154 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
             await router.push('/');
           }
 
-          // Close the dropdown but keep the query
+          // Close the dropdown
           setIsOpen(false);
+          setIsLoading(false);
 
-          // Wait for estimation to complete before executing swap
-          const waitForEstimation = () => {
-            return new Promise<void>((resolve, reject) => {
-              const checkEstimation = () => {
-                // Check if estimation is complete (not estimating and has valid output)
-                if (
-                  !isEstimating &&
-                  estimatedOutput &&
-                  estimatedOutput !== '0' &&
-                  estimatedOutput !== 'Error during swap execution. Please try again.'
-                ) {
-                  console.log('✅ Estimation complete, proceeding with swap');
-                  resolve();
-                } else if (!isEstimating && estimatedOutput === '0') {
-                  // If estimation finished but output is 0, there might be no liquidity
-                  console.log('❌ Estimation complete but output is 0 - possible liquidity issue');
-                  reject(new Error('No liquidity available for this swap'));
-                } else {
-                  // Still estimating, check again in 100ms
-                  setTimeout(checkEstimation, 100);
-                }
-              };
+          // Only execute the swap if mode is 'execute', not 'fill'
+          if (mode === 'execute') {
+            // Wait for estimation to complete before executing swap
+            const waitForEstimation = () => {
+              return new Promise<void>((resolve, reject) => {
+                const checkEstimation = () => {
+                  // Check if estimation is complete (not estimating and has valid output)
+                  if (
+                    !isEstimating &&
+                    estimatedOutput &&
+                    estimatedOutput !== '0' &&
+                    estimatedOutput !== 'Error during swap execution. Please try again.'
+                  ) {
+                    console.log('✅ Estimation complete, proceeding with swap');
+                    resolve();
+                  } else if (!isEstimating && estimatedOutput === '0') {
+                    // If estimation finished but output is 0, there might be no liquidity
+                    console.log(
+                      '❌ Estimation complete but output is 0 - possible liquidity issue'
+                    );
+                    reject(new Error('No liquidity available for this swap'));
+                  } else {
+                    // Still estimating, check again in 100ms
+                    setTimeout(checkEstimation, 100);
+                  }
+                };
 
-              // Start checking after a brief delay to allow the form to update
-              setTimeout(checkEstimation, 200);
+                // Start checking after a brief delay to allow the form to update
+                setTimeout(checkEstimation, 200);
 
-              // Timeout after 10 seconds to prevent infinite waiting
-              setTimeout(() => {
-                reject(new Error('Estimation timeout - please try again'));
-              }, 10000);
-            });
-          };
+                // Timeout after 10 seconds to prevent infinite waiting
+                setTimeout(() => {
+                  reject(new Error('Estimation timeout - please try again'));
+                }, 10000);
+              });
+            };
 
-          try {
-            await waitForEstimation();
-            await handleSwapClick();
-            // Only reset loading state after successful completion
-            setIsLoading(false);
-            setQuery('');
-          } catch (error) {
-            console.error('Swap execution failed:', error);
-            setIsLoading(false);
-            // Show error but don't clear query so user can try again
+            try {
+              await waitForEstimation();
+              await handleSwapClick();
+              // Clear query after successful execution
+              setQuery('');
+            } catch (error) {
+              console.error('Swap execution failed:', error);
+              // Show error but don't clear query so user can try again
+            }
           }
+          // If mode is 'fill', we just pre-fill the form and stop here
         } catch (error) {
           console.error('Error executing command:', error);
           setIsLoading(false);
         }
       }
-      // TODO: Add other command executions (stake, withdraw, send)
+
+      // Handle stake command
+      if (commandStep.action === 'stake' && commandStep.fromToken) {
+        setIsLoading(true);
+        try {
+          // Navigate to pools page for staking
+          await router.push('/pools');
+          setIsOpen(false);
+        } catch (error) {
+          console.error('Error executing stake command:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
     },
     [setTokenInputProperty, router, handleSwapClick, isEstimating, estimatedOutput]
   );
 
-  // Generate suggestions using extracted utility
-  const suggestions = useMemo(
+  // Generate step-based suggestions
+  const stepSuggestions = useMemo(
     () =>
-      generateSuggestions({
+      generateStepSuggestions({
         query,
-        parsedCommand,
         router,
-        executeCommand,
+        executeCommand: executeCommandStep,
         setQuery,
         inputRef,
       }),
-    [query, parsedCommand, router, executeCommand]
+    [query, router, executeCommandStep]
   );
+
+  // Convert StepSuggestion[] to SearchSuggestion[] for compatibility
+  const suggestions = useMemo((): SearchSuggestion[] => {
+    return stepSuggestions.map((stepSuggestion) => {
+      // Map StepSuggestion types to SearchSuggestion types
+      let mappedType: SearchSuggestion['type'];
+      switch (stepSuggestion.type) {
+        case 'completion':
+          mappedType = 'command';
+          break;
+        case 'continuation':
+          mappedType = 'action';
+          break;
+        case 'action':
+          mappedType = 'action';
+          break;
+        case 'token':
+          mappedType = 'token';
+          break;
+        case 'pool':
+          mappedType = 'pool';
+          break;
+        case 'navigation':
+          mappedType = 'navigation';
+          break;
+        case 'social':
+          mappedType = 'social';
+          break;
+        case 'utility':
+          mappedType = 'utility';
+          break;
+        case 'amount':
+          mappedType = 'action'; // Map amount suggestions to action type
+          break;
+        default:
+          mappedType = 'action';
+      }
+
+      const result: SearchSuggestion = {
+        type: mappedType,
+        title: stepSuggestion.title,
+        onSelect: stepSuggestion.onSelect,
+      };
+
+      // Only add optional properties if they have values
+      if (stepSuggestion.subtitle) {
+        result.subtitle = stepSuggestion.subtitle;
+      }
+      if (stepSuggestion.token) {
+        result.token = stepSuggestion.token;
+      }
+      if (stepSuggestion.pool) {
+        result.pool = stepSuggestion.pool;
+      }
+      if (stepSuggestion.icon) {
+        result.icon = stepSuggestion.icon;
+      }
+
+      return result;
+    });
+  }, [stepSuggestions]);
 
   // Voice input functions
   const startListening = useCallback(() => {
@@ -268,36 +347,11 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     }
   }, [recognition, isListening]);
 
-  const handleSuggestionClick = useCallback(
-    (suggestion: (typeof suggestions)[0]) => {
-      if (suggestion.type === 'command' && suggestion.command) {
-        // First complete the query to show full command
-        const fullCommand = `${suggestion.command.action} ${suggestion.command.amount || ''} ${
-          suggestion.command.fromToken?.symbol || ''
-        } for ${suggestion.command.toToken?.symbol || ''}`.trim();
-        setQuery(fullCommand);
+  const handleSuggestionClick = useCallback((suggestion: (typeof suggestions)[0]) => {
+    suggestion.onSelect();
+    // Don't close dropdown automatically - let the onSelect logic handle it
+  }, []);
 
-        // Then execute after a brief delay to show completion
-        setTimeout(() => {
-          void executeCommand(suggestion.command!);
-        }, 100);
-      } else {
-        suggestion.onSelect();
-      }
-      // Keep dropdown open after selection unless it's a command execution or navigation
-      if (
-        suggestion.type !== 'command' &&
-        suggestion.type !== 'navigation' &&
-        suggestion.type !== 'social'
-      ) {
-        setTimeout(() => {
-          setIsOpen(true);
-          inputRef.current?.focus();
-        }, 50);
-      }
-    },
-    [executeCommand, suggestions, setQuery]
-  );
   // Handle keyboard navigation with proper completion
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -330,29 +384,40 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     [isOpen, isLoading, suggestions, activeIndex, handleSuggestionClick]
   );
 
-  // Handle input focus/blur with improved timing
+  // Handle input focus/blur - ensure dropdown stays open while focused
   const handleFocus = useCallback(() => {
     setIsFocused(true);
     setIsOpen(true);
   }, []);
 
-  const handleBlur = useCallback(
-    (e: React.FocusEvent) => {
-      // Don't close if focus is moving to a suggestion
-      const relatedTarget = e.relatedTarget as Element;
-      if (relatedTarget?.closest('[data-suggestions-container]')) {
-        return;
-      }
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // Don't close if focus is moving to a suggestion
+    const relatedTarget = e.relatedTarget as Element;
+    if (relatedTarget?.closest('[data-suggestions-container]')) {
+      return;
+    }
 
-      setIsFocused(false);
-      // Don't close immediately on blur - let click handlers work
-      setTimeout(() => {
-        if (!isLoading) {
-          setIsOpen(false);
+    setIsFocused(false);
+    // Only close when focus is actually lost and not loading
+    setTimeout(() => {
+      if (!inputRef.current || document.activeElement !== inputRef.current) {
+        setIsOpen(false);
+      }
+    }, 150);
+  }, []);
+
+  // Handle input changes
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isLoading) {
+        setQuery(e.target.value);
+        // Always show suggestions when focused and not loading
+        if (isFocused) {
+          setIsOpen(true);
         }
-      }, 150);
+      }
     },
-    [isLoading]
+    [isLoading, isFocused]
   );
 
   // Helper function to render icons
@@ -373,6 +438,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     // Simple syntax highlighting without complex token replacement
     const words = query.split(' ');
     const segments: React.ReactNode[] = [];
+    const parsedCommand = parseCommand(query);
 
     words.forEach((word, index) => {
       const wordLower = word.toLowerCase();
@@ -416,6 +482,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
   // Generate a helpful status message
   const getStatusMessage = () => {
+    const parsedCommand = parseCommand(query);
     if (!parsedCommand.action) return '';
 
     const parts = [];
@@ -458,12 +525,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                   ref={inputRef}
                   type="text"
                   value={query}
-                  onChange={(e) => {
-                    if (!isLoading) {
-                      setQuery(e.target.value);
-                      setIsOpen(true);
-                    }
-                  }}
+                  onChange={handleInputChange}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
                   onKeyDown={handleKeyDown}
@@ -563,7 +625,6 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                     } ${index > 0 ? 'border-t border-adamant-box-border/30' : ''}`}
                     onClick={() => handleSuggestionClick(suggestion)}
                     onMouseEnter={() => {
-                      // Focus this button to give visual feedback
                       setActiveIndex(index);
                     }}
                     data-suggestion-type={suggestion.type}
