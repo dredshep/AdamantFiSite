@@ -57,6 +57,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [isVoiceSupportedState, setIsVoiceSupportedState] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const { setTokenInputProperty } = useSwapStore();
@@ -111,7 +112,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         inputRef.current?.focus();
         setIsOpen(true);
@@ -125,6 +126,10 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query]);
 
   // Parse the user's input using extracted parser
   const parsedCommand = useMemo(() => parseCommand(query), [query]);
@@ -263,41 +268,57 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     }
   }, [recognition, isListening]);
 
+  const handleSuggestionClick = useCallback(
+    (suggestion: (typeof suggestions)[0]) => {
+      if (suggestion.type === 'command' && suggestion.command) {
+        // First complete the query to show full command
+        const fullCommand = `${suggestion.command.action} ${suggestion.command.amount || ''} ${
+          suggestion.command.fromToken?.symbol || ''
+        } for ${suggestion.command.toToken?.symbol || ''}`.trim();
+        setQuery(fullCommand);
+
+        // Then execute after a brief delay to show completion
+        setTimeout(() => {
+          void executeCommand(suggestion.command!);
+        }, 100);
+      } else {
+        suggestion.onSelect();
+      }
+      // Keep dropdown open after selection unless it's a command execution or navigation
+      if (
+        suggestion.type !== 'command' &&
+        suggestion.type !== 'navigation' &&
+        suggestion.type !== 'social'
+      ) {
+        setTimeout(() => {
+          setIsOpen(true);
+          inputRef.current?.focus();
+        }, 50);
+      }
+    },
+    [executeCommand, suggestions, setQuery]
+  );
   // Handle keyboard navigation with proper completion
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!isOpen || isLoading) return;
 
+      const suggestionCount = suggestions.length;
+      if (suggestionCount === 0) return;
+
       switch (e.key) {
         case 'ArrowDown':
+          e.preventDefault();
+          setActiveIndex((prevIndex) => (prevIndex + 1) % suggestionCount);
+          break;
         case 'ArrowUp':
-          // Let Radix handle arrow navigation
+          e.preventDefault();
+          setActiveIndex((prevIndex) => (prevIndex - 1 + suggestionCount) % suggestionCount);
           break;
         case 'Enter':
           e.preventDefault();
-          // Check if there's a focused suggestion, otherwise use the first one
-          const focusedElement = document.activeElement;
-          if (focusedElement && focusedElement.getAttribute('data-suggestion-type')) {
-            (focusedElement as HTMLButtonElement).click();
-          } else if (suggestions[0]) {
-            const suggestion = suggestions[0];
-            if (suggestion.type === 'command' && suggestion.command) {
-              // First complete the query to show full command
-              const fullCommand = `${suggestion.command.action} ${
-                suggestion.command.amount || ''
-              } ${suggestion.command.fromToken?.symbol || ''} for ${
-                suggestion.command.toToken?.symbol || ''
-              }`.trim();
-              setQuery(fullCommand);
-
-              // Then execute after a brief delay to show completion
-              setTimeout(() => {
-                void executeCommand(suggestion.command!);
-              }, 100);
-            } else {
-              // For other suggestions, execute normally
-              suggestion?.onSelect();
-            }
+          if (suggestions[activeIndex]) {
+            handleSuggestionClick(suggestions[activeIndex]);
           }
           break;
         case 'Escape':
@@ -306,7 +327,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           break;
       }
     },
-    [isOpen, isLoading, suggestions, executeCommand]
+    [isOpen, isLoading, suggestions, activeIndex, handleSuggestionClick]
   );
 
   // Handle input focus/blur with improved timing
@@ -333,21 +354,6 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
     },
     [isLoading]
   );
-
-  const handleSuggestionClick = useCallback((suggestion: (typeof suggestions)[0]) => {
-    suggestion.onSelect();
-    // Keep dropdown open after selection unless it's a command execution or navigation
-    if (
-      suggestion.type !== 'command' &&
-      suggestion.type !== 'navigation' &&
-      suggestion.type !== 'social'
-    ) {
-      setTimeout(() => {
-        setIsOpen(true);
-        inputRef.current?.focus();
-      }, 50);
-    }
-  }, []);
 
   // Helper function to render icons
   const renderIcon = (icon: string | React.ReactNode | undefined) => {
@@ -469,7 +475,9 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                   aria-expanded={isOpen}
                   aria-haspopup="listbox"
                   aria-owns="smart-search-suggestions"
-                  aria-activedescendant={isOpen && suggestions[0] ? `suggestion-0` : undefined}
+                  aria-activedescendant={
+                    isOpen && suggestions.length > 0 ? `suggestion-${activeIndex}` : undefined
+                  }
                   aria-label="Smart search input"
                   aria-describedby={getStatusMessage() ? 'search-status' : undefined}
                 />
@@ -505,7 +513,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                 {!isMobile && (
                   <div className="flex items-center gap-1 text-xs text-adamant-text-box-secondary/50">
                     <Command className="w-3 h-3" />
-                    <span>J</span>
+                    <span>K</span>
                   </div>
                 )}
               </div>
@@ -547,18 +555,16 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
                     key={`${suggestion.type}-${suggestion.title}-${index}`}
                     id={`suggestion-${index}`}
                     role="option"
-                    aria-selected={index === 0}
+                    aria-selected={index === activeIndex}
                     className={`w-full flex items-center gap-3 p-3 cursor-pointer transition-all duration-150 text-left ${
-                      index === 0
+                      index === activeIndex
                         ? 'bg-adamant-accentText/10 border-l-2 border-adamant-accentText'
                         : 'hover:bg-adamant-app-input/50'
                     } ${index > 0 ? 'border-t border-adamant-box-border/30' : ''}`}
                     onClick={() => handleSuggestionClick(suggestion)}
                     onMouseEnter={() => {
                       // Focus this button to give visual feedback
-                      (
-                        document.getElementById(`suggestion-${index}`) as HTMLButtonElement
-                      )?.focus();
+                      setActiveIndex(index);
                     }}
                     data-suggestion-type={suggestion.type}
                   >
