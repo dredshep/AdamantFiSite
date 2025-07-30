@@ -178,7 +178,12 @@ export default function PoolPage() {
               </Tabs.List>
 
               <Tabs.Content value="deposit" className="outline-none">
-                <DepositForm />
+                <DepositForm
+                  initialAmount0={router.query.amount0 as string}
+                  initialAmount1={router.query.amount1 as string}
+                  initialToken={router.query.token as string}
+                  initialAmount={router.query.amount as string}
+                />
               </Tabs.Content>
 
               <Tabs.Content value="withdraw" className="outline-none">

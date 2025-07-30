@@ -142,10 +142,10 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
       if (commandStep.action === 'deposit' && commandStep.fromToken && commandStep.target) {
         setIsLoading(true);
         try {
-          // Find the pool from the target string
-          const pool = LIQUIDITY_PAIRS.find((p) => p.pairContract === commandStep.target);
+          // Find the pool from the target string (pool symbol, not pairContract)
+          const pool = LIQUIDITY_PAIRS.find((p) => p.symbol === commandStep.target);
           if (!pool) {
-            console.error('Target pool for deposit not found');
+            console.error('Target pool for deposit not found:', commandStep.target);
             setIsLoading(false);
             return;
           }
@@ -155,11 +155,27 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           const { amount } = commandStep;
 
           const queryParams = new URLSearchParams();
-          if (symbol) queryParams.append('token', symbol);
-          if (amount) queryParams.append('amount', amount);
+          if (symbol && amount) {
+            // Determine which token field to fill based on pool configuration
+            if (pool.token0 === symbol) {
+              queryParams.append('amount0', amount);
+            } else if (pool.token1 === symbol) {
+              queryParams.append('amount1', amount);
+            } else {
+              // Fallback to generic params if token doesn't match pool
+              queryParams.append('token', symbol);
+              queryParams.append('amount', amount);
+            }
+          } else if (symbol) {
+            queryParams.append('token', symbol);
+          } else if (amount) {
+            queryParams.append('amount', amount);
+          }
 
-          await router.push(`/pool/${commandStep.target}?${queryParams.toString()}`);
+          // Use the pairContract for the URL, not the symbol
+          await router.push(`/pool/${pool.pairContract}?${queryParams.toString()}`);
           setIsOpen(false);
+          setQuery('');
         } catch (error) {
           console.error('Error executing deposit command:', error);
         } finally {

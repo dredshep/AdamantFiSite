@@ -178,8 +178,14 @@ function analyzeStakeState(step: CommandStep, words: string[], fullText: string)
       return currentStep;
     }
 
-    // Check for token after amount
-    const tokenText = words.slice(1).join(' ');
+    // Check for token after amount, but stop at connectors
+    const connectors = ['in', 'from', 'to', 'for'];
+    const restWords = words.slice(1);
+    const connectorIndex = restWords.findIndex((word) => connectors.includes(word.toLowerCase()));
+
+    const tokenWords = connectorIndex !== -1 ? restWords.slice(0, connectorIndex) : restWords;
+    const tokenText = tokenWords.join(' ');
+
     const token = findTokenByText(tokenText);
     if (token) {
       currentStep.fromToken = token;
@@ -190,8 +196,13 @@ function analyzeStakeState(step: CommandStep, words: string[], fullText: string)
   } else if (isPartialAmount(words[0]!)) {
     return { ...currentStep, state: 'amount_partial' };
   } else {
-    // Check if it's a token
-    const tokenText = words.join(' ');
+    // Check if it's a token, but stop at connectors
+    const connectors = ['in', 'from', 'to', 'for'];
+    const connectorIndex = words.findIndex((word) => connectors.includes(word.toLowerCase()));
+
+    const tokenWords = connectorIndex !== -1 ? words.slice(0, connectorIndex) : words;
+    const tokenText = tokenWords.join(' ');
+
     const token = findTokenByText(tokenText);
     if (token) {
       currentStep.fromToken = token;

@@ -7,14 +7,55 @@ import { usePoolForm } from '@/hooks/usePoolForm/usePoolForm';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
-import React from 'react';
+import React, { useEffect } from 'react';
 import AutoStakeOption from './AutoStakeOption';
 
-const DepositForm: React.FC = () => {
-  const { selectedPool } = usePoolStore();
+interface DepositFormProps {
+  initialAmount0?: string;
+  initialAmount1?: string;
+  initialToken?: string;
+  initialAmount?: string;
+}
+
+const DepositForm: React.FC<DepositFormProps> = ({
+  initialAmount0,
+  initialAmount1,
+  initialToken,
+  initialAmount,
+}) => {
+  const { selectedPool, setTokenInputAmount } = usePoolStore();
   const { handleClick, hasStakingRewards, pairPoolData, validationWarning } = usePoolForm(
     selectedPool?.pairContract
   );
+
+  // Set initial amounts from query parameters
+  useEffect(() => {
+    if (!selectedPool) return;
+
+    // Handle specific token amounts (amount0/amount1)
+    if (initialAmount0) {
+      setTokenInputAmount('pool.deposit.tokenA', initialAmount0);
+    }
+    if (initialAmount1) {
+      setTokenInputAmount('pool.deposit.tokenB', initialAmount1);
+    }
+
+    // Handle generic token/amount (fallback)
+    if (initialToken && initialAmount && !initialAmount0 && !initialAmount1) {
+      if (selectedPool.token0 === initialToken) {
+        setTokenInputAmount('pool.deposit.tokenA', initialAmount);
+      } else if (selectedPool.token1 === initialToken) {
+        setTokenInputAmount('pool.deposit.tokenB', initialAmount);
+      }
+    }
+  }, [
+    selectedPool,
+    initialAmount0,
+    initialAmount1,
+    initialToken,
+    initialAmount,
+    setTokenInputAmount,
+  ]);
 
   const token0 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token0) : undefined;
   const token1 = selectedPool ? TOKENS.find((t) => t.symbol === selectedPool.token1) : undefined;

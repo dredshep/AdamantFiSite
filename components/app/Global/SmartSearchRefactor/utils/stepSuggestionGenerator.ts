@@ -1,4 +1,4 @@
-import { TOKENS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { NextRouter } from 'next/router';
 import { ACTION_KEYWORDS } from '../constants/actionKeywords';
 import { ActionType, CommandStep, StepSuggestion } from '../types';
@@ -309,18 +309,19 @@ function generateFromTokenSuggestions(
 ): StepSuggestion[] {
   const suggestions: StepSuggestion[] = [];
 
-  // Extract search term
+  // Extract search term (preserve original case)
   const words = query.trim().split(/\s+/);
-  const searchTerm = words[words.length - 1]?.toLowerCase() || '';
+  const originalSearchTerm = words[words.length - 1] || '';
+  const searchTermLower = originalSearchTerm.toLowerCase();
 
-  if (searchTerm.length === 0) {
+  if (originalSearchTerm.length === 0) {
     return generateTokenAfterAmountSuggestions(commandStep, setQuery, inputRef);
   }
 
   // Find matching tokens
   const matchingTokens = TOKENS.filter((token) => {
-    const symbolMatch = token.symbol.toLowerCase().includes(searchTerm);
-    const nameMatch = token.name?.toLowerCase().includes(searchTerm);
+    const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
+    const nameMatch = token.name?.toLowerCase().includes(searchTermLower);
     return symbolMatch || nameMatch;
   }).slice(0, 6);
 
@@ -331,9 +332,17 @@ function generateFromTokenSuggestions(
       subtitle: token.name || '',
       token,
       onSelect: () => {
-        const baseQuery = query.substring(0, query.lastIndexOf(searchTerm));
-        const connector = getConnectorForAction(commandStep.action!);
-        setQuery(`${baseQuery}${token.symbol} ${connector}`);
+        // Find the last occurrence of the original search term (case-sensitive)
+        const lastIndex = query.lastIndexOf(originalSearchTerm);
+        if (lastIndex !== -1) {
+          const baseQuery = query.substring(0, lastIndex);
+          const connector = getConnectorForAction(commandStep.action!);
+          setQuery(`${baseQuery}${token.symbol} ${connector}`);
+        } else {
+          // Fallback: just append the token with connector
+          const connector = getConnectorForAction(commandStep.action!);
+          setQuery(`${query} ${token.symbol} ${connector}`);
+        }
         inputRef.current?.focus();
       },
     });
@@ -408,16 +417,54 @@ function generateAfterConnectorSuggestions(
     });
   } else {
     // For other actions (deposit, withdraw, send), suggest appropriate targets (pools, etc.)
-    suggestions.push({
-      type: 'continuation',
-      title: 'Specify target',
-      subtitle: getTargetDescription(commandStep.action!),
-      icon: 'ArrowRight',
-      isPrimary: true,
-      onSelect: () => {
-        inputRef.current?.focus();
-      },
-    });
+    if (commandStep.action === 'deposit' && commandStep.fromToken) {
+      // Show pools that contain the fromToken
+      const availablePools = LIQUIDITY_PAIRS.filter(
+        (pool) =>
+          pool.token0 === commandStep.fromToken!.symbol ||
+          pool.token1 === commandStep.fromToken!.symbol
+      ).slice(0, 6);
+
+      if (availablePools.length > 0) {
+        availablePools.forEach((pool, index) => {
+          suggestions.push({
+            type: 'pool',
+            title: pool.symbol,
+            subtitle: `Deposit into the ${pool.token0}/${pool.token1} pool`,
+            pool,
+            isPrimary: index === 0,
+            onSelect: () => {
+              const queryWithConnector = getQueryWithConnector(commandStep);
+              setQuery(`${queryWithConnector} ${pool.symbol}`);
+              inputRef.current?.focus();
+            },
+          });
+        });
+      } else {
+        // Fallback if no pools found for this token
+        suggestions.push({
+          type: 'continuation',
+          title: 'No pools available',
+          subtitle: `No liquidity pools found for ${commandStep.fromToken.symbol}`,
+          icon: 'ArrowRight',
+          onSelect: () => {
+            inputRef.current?.focus();
+          },
+        });
+      }
+    } else {
+      // For other actions (withdraw, send), suggest generic target
+      suggestions.push({
+        type: 'continuation',
+        title: 'Specify target',
+        subtitle: getTargetDescription(commandStep.action!),
+        icon: 'ArrowRight',
+        isPrimary: true,
+        onSelect: () => {
+          inputRef.current?.focus();
+        },
+      });
+    }
   }
 
   return suggestions;
