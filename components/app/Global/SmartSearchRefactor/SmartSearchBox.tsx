@@ -263,9 +263,30 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
       if (commandStep.action === 'stake' && commandStep.fromToken) {
         setIsLoading(true);
         try {
-          // Navigate to pools page for staking
-          await router.push('/pools');
+          // For staking, we need to find the pool that corresponds to the LP token
+          // Since LP tokens are named like "sSCRT/USDC.nbl LP", we need to extract the pool symbol
+          const lpTokenSymbol = commandStep.fromToken.symbol;
+          const poolSymbol = lpTokenSymbol.replace(' LP', ''); // Remove " LP" suffix
+
+          // Find the pool from LIQUIDITY_PAIRS
+          const pool = LIQUIDITY_PAIRS.find((p) => p.symbol === poolSymbol);
+          if (!pool) {
+            console.error('Pool not found for LP token:', lpTokenSymbol);
+            setIsLoading(false);
+            return;
+          }
+
+          // Navigate to the pool page with staking tab and amount query params
+          const queryParams = new URLSearchParams();
+          queryParams.append('tab', 'staking'); // Set the active tab to staking
+
+          if (commandStep.amount) {
+            queryParams.append('stakingAmount', commandStep.amount);
+          }
+
+          await router.push(`/pool/${pool.pairContract}?${queryParams.toString()}`);
           setIsOpen(false);
+          setQuery('');
         } catch (error) {
           console.error('Error executing stake command:', error);
         } finally {

@@ -4,6 +4,7 @@ import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { usePoolStore } from '@/store/forms/poolStore';
+import { useStakingStore } from '@/store/staking/stakingStore';
 import { ViewingKeyStatus } from '@/types/staking';
 // import { getCodeHashByAddress } from '@/utils/secretjs/tokens/getCodeHashByAddress';
 import React, { useEffect, useState } from 'react';
@@ -12,11 +13,23 @@ import StakingInput from './StakingInput';
 import StakingOverview from './StakingOverview';
 import StakingPoolSelector from './StakingPoolSelector';
 
-const StakingForm: React.FC = () => {
+interface StakingFormProps {
+  initialStakingAmount?: string;
+}
+
+const StakingForm: React.FC<StakingFormProps> = ({ initialStakingAmount }) => {
   const { selectedPool } = usePoolStore();
+  const { setStakingInputAmount } = useStakingStore();
 
   // Track initial loading state separately from background refreshes
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+
+  // Set initial staking amount from query parameters
+  useEffect(() => {
+    if (initialStakingAmount) {
+      setStakingInputAmount('stakeAmount', initialStakingAmount);
+    }
+  }, [initialStakingAmount, setStakingInputAmount]);
 
   // Get LP token address for this pool
   const pairInfo = selectedPool?.pairContract

@@ -1,4 +1,4 @@
-import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
+import { ConfigToken, LIQUIDITY_PAIRS, STAKING_CONTRACTS, TOKENS } from '@/config/tokens';
 import { NextRouter } from 'next/router';
 import { ACTION_KEYWORDS } from '../constants/actionKeywords';
 import { ActionType, CommandStep, StepSuggestion } from '../types';
@@ -22,7 +22,6 @@ export function generateStepSuggestions({
   setQuery,
   inputRef,
 }: StepSuggestionGeneratorProps): StepSuggestion[] {
-  const suggestions: StepSuggestion[] = [];
   const commandStep = analyzeCommandState(query);
 
   // Generate suggestions based on current state
@@ -178,7 +177,7 @@ function generatePostActionSuggestions(
 
   // Suggest popular tokens
   const relevantTokens = getRelevantTokensForAction(commandStep.action!);
-  relevantTokens.slice(0, 4).forEach((token) => {
+  relevantTokens.slice(0, 4).forEach((token: ConfigToken) => {
     suggestions.push({
       type: 'token',
       title: token.symbol,
@@ -280,7 +279,7 @@ function generateTokenAfterAmountSuggestions(
 
   // Show tokens directly without a placeholder "Select token" option
   const relevantTokens = getRelevantTokensForAction(commandStep.action!);
-  relevantTokens.slice(0, 6).forEach((token, index) => {
+  relevantTokens.slice(0, 6).forEach((token: ConfigToken, index: number) => {
     suggestions.push({
       type: 'token',
       title: token.symbol,
@@ -318,14 +317,17 @@ function generateFromTokenSuggestions(
     return generateTokenAfterAmountSuggestions(commandStep, setQuery, inputRef);
   }
 
-  // Find matching tokens
-  const matchingTokens = TOKENS.filter((token) => {
-    const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
-    const nameMatch = token.name?.toLowerCase().includes(searchTermLower);
-    return symbolMatch || nameMatch;
-  }).slice(0, 6);
+  // Find matching tokens (use appropriate token set based on action)
+  const availableTokens = commandStep.action === 'stake' ? getStakeableTokens() : TOKENS;
+  const matchingTokens = availableTokens
+    .filter((token: ConfigToken) => {
+      const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
+      const nameMatch = token.name?.toLowerCase().includes(searchTermLower);
+      return symbolMatch || nameMatch;
+    })
+    .slice(0, 6);
 
-  matchingTokens.forEach((token) => {
+  matchingTokens.forEach((token: ConfigToken) => {
     suggestions.push({
       type: 'token',
       title: token.symbol,
@@ -397,10 +399,11 @@ function generateAfterConnectorSuggestions(
   if (commandStep.action === 'swap') {
     // For swap, only suggest tokens after "for" (no target amount)
     const availableTokens = TOKENS.filter(
-      (token) => !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
+      (token: ConfigToken) =>
+        !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
     ).slice(0, 6);
 
-    availableTokens.forEach((token, index) => {
+    availableTokens.forEach((token: ConfigToken, index: number) => {
       suggestions.push({
         type: 'token',
         title: token.symbol,
@@ -486,15 +489,18 @@ function generateToTokenSuggestions(
   const originalSearchTerm = words[words.length - 1] || '';
   const searchTermLower = originalSearchTerm.toLowerCase();
 
-  // Find matching tokens (excluding from token)
-  const matchingTokens = TOKENS.filter((token) => {
-    const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
-    const nameMatch = token.name?.toLowerCase().includes(searchTermLower);
-    const notFromToken = !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol;
-    return (symbolMatch || nameMatch) && notFromToken;
-  }).slice(0, 6);
+  // Find matching tokens (excluding from token, use appropriate token set)
+  const availableTokens = commandStep.action === 'stake' ? getStakeableTokens() : TOKENS;
+  const matchingTokens = availableTokens
+    .filter((token: ConfigToken) => {
+      const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
+      const nameMatch = token.name?.toLowerCase().includes(searchTermLower);
+      const notFromToken = !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol;
+      return (symbolMatch || nameMatch) && notFromToken;
+    })
+    .slice(0, 6);
 
-  matchingTokens.forEach((token) => {
+  matchingTokens.forEach((token: ConfigToken) => {
     suggestions.push({
       type: 'token',
       title: token.symbol,
@@ -670,10 +676,41 @@ function getActionIcon(action: ActionType): string {
   }
 }
 
-function getRelevantTokensForAction(action: ActionType) {
-  // Return popular tokens for the action
-  // For now, return a subset of all tokens
-  return TOKENS.slice(0, 8);
+function getRelevantTokensForAction(action: ActionType): ConfigToken[] {
+  switch (action) {
+    case 'stake':
+      // For staking, only return LP tokens that have staking contracts
+      return getStakeableTokens();
+    case 'swap':
+    case 'deposit':
+    case 'withdraw':
+    case 'send':
+    default:
+      // For other actions, return regular tokens
+      return TOKENS.slice(0, 8);
+  }
+}
+
+/**
+ * Get LP tokens that can be staked (have staking contracts)
+ */
+function getStakeableTokens(): ConfigToken[] {
+  const stakeableTokens = STAKING_CONTRACTS.map((stakingContract) => {
+    // Find the LP token for this staking contract
+    const pair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
+    if (!pair) return null;
+
+    // Return the LP token in ConfigToken format
+    return {
+      name: `${pair.symbol} LP Token`,
+      symbol: `${pair.symbol} LP`,
+      address: pair.lpToken,
+      codeHash: pair.lpTokenCodeHash,
+      decimals: 6,
+    } as ConfigToken;
+  }).filter((token): token is ConfigToken => token !== null);
+
+  return stakeableTokens;
 }
 
 function getConnectorForAction(action: ActionType): string {
@@ -691,7 +728,7 @@ function getConnectorForAction(action: ActionType): string {
   }
 }
 
-function getConnectorDescription(action: ActionType, connector: string): string {
+function getConnectorDescription(action: ActionType, _connector: string): string {
   switch (action) {
     case 'swap':
       return 'Specify what token to receive';

@@ -152,7 +152,10 @@ export default function PoolPage() {
           </div>
 
           <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto mb-4">
-            <Tabs.Root className="flex flex-col" defaultValue="deposit">
+            <Tabs.Root
+              className="flex flex-col"
+              defaultValue={(router.query.tab as string) || 'deposit'}
+            >
               <Tabs.List className="flex mb-4 p-2.5 gap-2.5" aria-label="Manage your liquidity">
                 <Tabs.Trigger
                   key="deposit"
@@ -191,7 +194,7 @@ export default function PoolPage() {
               </Tabs.Content>
 
               <Tabs.Content value="staking" className="outline-none">
-                <StakingForm />
+                <StakingForm initialStakingAmount={router.query.stakingAmount as string} />
               </Tabs.Content>
             </Tabs.Root>
           </div>
