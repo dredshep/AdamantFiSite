@@ -82,7 +82,8 @@ function analyzePostActionState(
 }
 
 /**
- * Analyze swap command state: swap [amount] [token] for [amount] [token]
+ * Analyze swap command state: swap [amount] [token] for [token]
+ * Note: For swaps, we only allow tokens after "for", not amounts
  */
 function analyzeSwapState(step: CommandStep, words: string[], fullText: string): CommandStep {
   if (words.length === 0) {
@@ -103,6 +104,7 @@ function analyzeSwapState(step: CommandStep, words: string[], fullText: string):
   } else if (isPartialAmount(words[wordIndex]!)) {
     return { ...currentStep, state: 'amount_partial' };
   }
+  // If first word is not an amount, continue to check for token
 
   // Check for from token
   if (wordIndex < words.length) {
@@ -135,27 +137,20 @@ function analyzeSwapState(step: CommandStep, words: string[], fullText: string):
     }
   }
 
-  // Check for target amount
-  if (wordIndex < words.length && isAmount(words[wordIndex]!)) {
-    currentStep.toAmount = words[wordIndex]!;
-    wordIndex++;
-    currentStep.state = 'to_amount_complete';
-
-    if (wordIndex >= words.length) {
-      return currentStep;
-    }
-  } else if (wordIndex < words.length && isPartialAmount(words[wordIndex]!)) {
-    return { ...currentStep, state: 'to_amount_partial' };
-  }
-
-  // Check for target token
+  // For swap commands, skip amount checking after "for" and go directly to token
+  // Check for target token (no target amount support for swaps)
   if (wordIndex < words.length) {
     const remainingWords = words.slice(wordIndex).join(' ');
     const toToken = findTokenByText(remainingWords) || findTokenByText(words[wordIndex]!);
 
     if (toToken) {
       currentStep.toToken = toToken;
-      currentStep.state = 'command_ready';
+      // Validate that both tokens exist before marking as ready
+      if (currentStep.fromToken && toToken) {
+        currentStep.state = 'command_ready';
+      } else {
+        currentStep.state = 'to_token_complete';
+      }
     } else {
       currentStep.state = 'to_token_partial';
     }
@@ -360,16 +355,10 @@ export function getNextSteps(commandStep: CommandStep): CommandState[] {
 
     case 'connector_added':
       if (commandStep.action === 'swap') {
-        return ['to_amount_partial', 'to_token_partial'];
+        return ['to_token_partial'];
       } else {
         return ['command_ready']; // For pools, validators, addresses
       }
-
-    case 'to_amount_partial':
-      return ['to_amount_complete'];
-
-    case 'to_amount_complete':
-      return ['to_token_partial'];
 
     case 'to_token_partial':
       return ['to_token_complete'];

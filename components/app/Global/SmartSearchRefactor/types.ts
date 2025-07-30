@@ -11,10 +11,8 @@ export type CommandState =
   | 'from_token_partial' // User typing first token (e.g., "swap 10 s")
   | 'from_token_complete' // First token completed (e.g., "swap 10 sSCRT ")
   | 'connector_added' // Connector added (e.g., "swap 10 sSCRT for ")
-  | 'to_amount_partial' // User typing target amount (e.g., "swap 10 sSCRT for 5")
-  | 'to_amount_complete' // Target amount completed (e.g., "swap 10 sSCRT for 5 ")
-  | 'to_token_partial' // User typing target token (e.g., "swap 10 sSCRT for 5 s")
-  | 'to_token_complete' // Target token completed (e.g., "swap 10 sSCRT for 5 sATOM")
+  | 'to_token_partial' // User typing target token (e.g., "swap 10 sSCRT for s")
+  | 'to_token_complete' // Target token completed (e.g., "swap 10 sSCRT for sATOM")
   | 'command_ready'; // Command ready for execution
 
 export type ActionType = 'swap' | 'stake' | 'deposit' | 'withdraw' | 'send' | 'receive';
@@ -25,7 +23,6 @@ export interface CommandStep {
   amount?: string;
   fromToken?: ConfigToken;
   toToken?: ConfigToken;
-  toAmount?: string;
   target?: string; // For pools, validators, etc.
 }
 

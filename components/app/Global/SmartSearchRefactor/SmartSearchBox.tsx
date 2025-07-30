@@ -176,6 +176,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           setTokenInputProperty('swap.pay', 'tokenAddress', commandStep.fromToken.address);
           setTokenInputProperty('swap.receive', 'tokenAddress', commandStep.toToken.address);
 
+          // Only set amount if specified, otherwise leave form fields as they are
           if (commandStep.amount) {
             setTokenInputProperty('swap.pay', 'amount', commandStep.amount);
           }
@@ -185,8 +186,9 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
             await router.push('/');
           }
 
-          // Close the dropdown
+          // Close the dropdown and clear query
           setIsOpen(false);
+          setQuery('');
           setIsLoading(false);
 
           // Only execute the swap if mode is 'execute', not 'fill'
@@ -229,8 +231,6 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
             try {
               await waitForEstimation();
               await handleSwapClick();
-              // Clear query after successful execution
-              setQuery('');
             } catch (error) {
               console.error('Swap execution failed:', error);
               // Show error but don't clear query so user can try again
@@ -496,7 +496,18 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
   };
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+    <Popover.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Allow opening, but prevent closing if input is focused
+        if (open) {
+          setIsOpen(true);
+        } else if (!isFocused) {
+          // Only allow closing if input is not focused
+          setIsOpen(false);
+        }
+      }}
+    >
       <div className={`relative ${className}`}>
         <Popover.Trigger asChild>
           <div

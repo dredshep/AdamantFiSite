@@ -340,19 +340,19 @@ export const useSwapFormLean = () => {
         console.log('🔍 Multihop Contract Return:', JSON.stringify(multihopResult, null, 2));
       }
 
-      // Show success toast instead of changing input value
-      if (swapPath.isDirectPath) {
-        showToastOnce('direct-swap-success', 'Direct swap completed successfully!', 'success');
-      } else {
-        showToastOnce(
-          'multihop-swap-success',
-          'Multihop swap completed successfully via router contract!',
-          'success'
-        );
-      }
-
       // Handle successful swap result
       if (multihopResult.success) {
+        // Only show success toast after confirming the swap succeeded
+        if (swapPath.isDirectPath) {
+          showToastOnce('direct-swap-success', 'Direct swap completed successfully!', 'success');
+        } else {
+          showToastOnce(
+            'multihop-swap-success',
+            'Multihop swap completed successfully via router contract!',
+            'success'
+          );
+        }
+
         // Check if txResponse exists and is valid
         if ('txResponse' in multihopResult && multihopResult.txResponse) {
           setResult(multihopResult.txResponse);

@@ -51,12 +51,6 @@ export function generateStepSuggestions({
     case 'connector_added':
       return generateAfterConnectorSuggestions(commandStep, setQuery, inputRef);
 
-    case 'to_amount_partial':
-      return generateToAmountSuggestions(commandStep, query, setQuery, inputRef);
-
-    case 'to_amount_complete':
-      return generateToTokenAfterAmountSuggestions(commandStep, setQuery, inputRef);
-
     case 'to_token_partial':
       return generateToTokenSuggestions(commandStep, query, setQuery, inputRef);
 
@@ -229,6 +223,25 @@ function generateAmountSuggestions(
     },
   });
 
+  // If they have typed some digits, offer to continue to token selection
+  if (/^\d+\.?$/.test(partialAmount)) {
+    suggestions.push({
+      type: 'continuation',
+      title: 'Continue to token selection',
+      subtitle: 'Choose which token to ' + commandStep.action,
+      icon: 'ArrowRight',
+      onSelect: () => {
+        // Complete the amount by adding a space if needed, then show token suggestions
+        const baseQuery = query.substring(0, query.lastIndexOf(partialAmount));
+        const finalAmount = partialAmount.endsWith('.')
+          ? partialAmount.slice(0, -1)
+          : partialAmount;
+        setQuery(`${baseQuery}${finalAmount} `);
+        inputRef.current?.focus();
+      },
+    });
+  }
+
   // Suggest common amounts if they have some digits
   if (/^\d+$/.test(partialAmount)) {
     const baseAmount = parseInt(partialAmount);
@@ -265,27 +278,15 @@ function generateTokenAfterAmountSuggestions(
   const suggestions: StepSuggestion[] = [];
   const baseQuery = getBaseQuery(commandStep);
 
-  // Suggest selecting a token
-  suggestions.push({
-    type: 'continuation',
-    title: 'Select token',
-    subtitle: 'Choose which token to ' + commandStep.action,
-    icon: 'ArrowRight',
-    isPrimary: true,
-    onSelect: () => {
-      // Just keep cursor ready for typing
-      inputRef.current?.focus();
-    },
-  });
-
-  // Suggest popular tokens
+  // Show tokens directly without a placeholder "Select token" option
   const relevantTokens = getRelevantTokensForAction(commandStep.action!);
-  relevantTokens.slice(0, 5).forEach((token) => {
+  relevantTokens.slice(0, 6).forEach((token, index) => {
     suggestions.push({
       type: 'token',
       title: token.symbol,
       subtitle: token.name || '',
       token,
+      isPrimary: index === 0, // Mark first token as primary
       onSelect: () => {
         const connector = getConnectorForAction(commandStep.action!);
         setQuery(`${baseQuery} ${token.symbol} ${connector}`);
@@ -385,30 +386,18 @@ function generateAfterConnectorSuggestions(
   const suggestions: StepSuggestion[] = [];
 
   if (commandStep.action === 'swap') {
-    // For swap, suggest amount or token
-    suggestions.push({
-      type: 'continuation',
-      title: 'Add target amount (optional)',
-      subtitle: 'Specify how much to receive',
-      icon: 'Plus',
-      isOptional: true,
-      onSelect: () => {
-        // Keep cursor ready for typing
-        inputRef.current?.focus();
-      },
-    });
-
-    // Suggest tokens (excluding the from token)
+    // For swap, only suggest tokens after "for" (no target amount)
     const availableTokens = TOKENS.filter(
       (token) => !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
-    ).slice(0, 5);
+    ).slice(0, 6);
 
-    availableTokens.forEach((token) => {
+    availableTokens.forEach((token, index) => {
       suggestions.push({
         type: 'token',
         title: token.symbol,
         subtitle: token.name || '',
         token,
+        isPrimary: index === 0, // Mark first token as primary
         onSelect: () => {
           const queryWithConnector = getQueryWithConnector(commandStep);
           // Now append the token: "swap sSCRT for" + " " + "sATOM" = "swap sSCRT for sATOM"
@@ -418,7 +407,7 @@ function generateAfterConnectorSuggestions(
       });
     });
   } else {
-    // For other actions, suggest appropriate targets (pools, etc.)
+    // For other actions (deposit, withdraw, send), suggest appropriate targets (pools, etc.)
     suggestions.push({
       type: 'continuation',
       title: 'Specify target',
@@ -435,64 +424,6 @@ function generateAfterConnectorSuggestions(
 }
 
 /**
- * Target amount suggestions for swap
- */
-function generateToAmountSuggestions(
-  commandStep: CommandStep,
-  query: string,
-  setQuery: (query: string) => void,
-  inputRef: React.RefObject<HTMLInputElement>
-): StepSuggestion[] {
-  // Similar to amount suggestions but for target amount
-  return generateAmountSuggestions(commandStep, query, setQuery, inputRef);
-}
-
-/**
- * Token suggestions after target amount
- */
-function generateToTokenAfterAmountSuggestions(
-  commandStep: CommandStep,
-  setQuery: (query: string) => void,
-  inputRef: React.RefObject<HTMLInputElement>
-): StepSuggestion[] {
-  const suggestions: StepSuggestion[] = [];
-  const baseQuery = getBaseQuery(commandStep);
-
-  // Suggest selecting target token
-  suggestions.push({
-    type: 'continuation',
-    title: 'Select target token',
-    subtitle: 'Choose which token to receive',
-    icon: 'ArrowRight',
-    isPrimary: true,
-    onSelect: () => {
-      inputRef.current?.focus();
-    },
-  });
-
-  // Suggest tokens (excluding the from token)
-  const availableTokens = TOKENS.filter(
-    (token) => !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
-  ).slice(0, 5);
-
-  availableTokens.forEach((token) => {
-    suggestions.push({
-      type: 'token',
-      title: token.symbol,
-      subtitle: token.name || '',
-      token,
-      onSelect: () => {
-        const queryWithConnector = getQueryWithConnector(commandStep);
-        setQuery(`${queryWithConnector} ${token.symbol}`);
-        inputRef.current?.focus();
-      },
-    });
-  });
-
-  return suggestions;
-}
-
-/**
  * Target token suggestions for swap
  */
 function generateToTokenSuggestions(
@@ -503,14 +434,15 @@ function generateToTokenSuggestions(
 ): StepSuggestion[] {
   const suggestions: StepSuggestion[] = [];
 
-  // Extract search term
+  // Extract search term (preserve original case)
   const words = query.trim().split(/\s+/);
-  const searchTerm = words[words.length - 1]?.toLowerCase() || '';
+  const originalSearchTerm = words[words.length - 1] || '';
+  const searchTermLower = originalSearchTerm.toLowerCase();
 
   // Find matching tokens (excluding from token)
   const matchingTokens = TOKENS.filter((token) => {
-    const symbolMatch = token.symbol.toLowerCase().includes(searchTerm);
-    const nameMatch = token.name?.toLowerCase().includes(searchTerm);
+    const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
+    const nameMatch = token.name?.toLowerCase().includes(searchTermLower);
     const notFromToken = !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol;
     return (symbolMatch || nameMatch) && notFromToken;
   }).slice(0, 6);
@@ -522,8 +454,16 @@ function generateToTokenSuggestions(
       subtitle: token.name || '',
       token,
       onSelect: () => {
-        const baseQuery = query.substring(0, query.lastIndexOf(searchTerm));
-        setQuery(`${baseQuery}${token.symbol}`);
+        // Find the last occurrence of the original search term (case-sensitive)
+        const lastIndex = query.lastIndexOf(originalSearchTerm);
+        if (lastIndex !== -1) {
+          const baseQuery = query.substring(0, lastIndex);
+          const afterQuery = query.substring(lastIndex + originalSearchTerm.length);
+          setQuery(`${baseQuery}${token.symbol}${afterQuery}`);
+        } else {
+          // Fallback: just append the token
+          setQuery(`${query} ${token.symbol}`);
+        }
         inputRef.current?.focus();
       },
     });
@@ -540,6 +480,25 @@ function generateExecutionSuggestions(
   executeCommand: (commandStep: CommandStep, mode?: 'execute' | 'fill') => Promise<void>
 ): StepSuggestion[] {
   const suggestions: StepSuggestion[] = [];
+
+  // Validate that the command is actually ready and valid
+  if (!commandStep.action || !commandStep.fromToken) {
+    return suggestions; // No suggestions if basic requirements not met
+  }
+
+  // For swap, ensure we have a valid toToken
+  if (commandStep.action === 'swap' && !commandStep.toToken) {
+    return suggestions; // No execution suggestions if toToken is missing for swap
+  }
+
+  // Verify tokens exist in our configuration
+  const fromTokenExists = TOKENS.some((token) => token.symbol === commandStep.fromToken?.symbol);
+  const toTokenExists =
+    !commandStep.toToken || TOKENS.some((token) => token.symbol === commandStep.toToken?.symbol);
+
+  if (!fromTokenExists || !toTokenExists) {
+    return suggestions; // Don't show execution if tokens don't exist
+  }
 
   // Primary execution option
   suggestions.push({
@@ -589,8 +548,6 @@ function getBaseQuery(commandStep: CommandStep): string {
   // Include connector if we're in connector_added state or beyond
   if (
     commandStep.state === 'connector_added' ||
-    commandStep.state === 'to_amount_partial' ||
-    commandStep.state === 'to_amount_complete' ||
     commandStep.state === 'to_token_partial' ||
     commandStep.state === 'to_token_complete' ||
     commandStep.state === 'command_ready'
@@ -599,11 +556,6 @@ function getBaseQuery(commandStep: CommandStep): string {
     if (connector) {
       parts.push(connector.trim()); // Add connector without trailing space
     }
-  }
-
-  // Include target amount if present
-  if (commandStep.toAmount) {
-    parts.push(commandStep.toAmount);
   }
 
   return parts.join(' ');
