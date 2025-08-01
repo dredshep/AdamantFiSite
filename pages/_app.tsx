@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
 // import inter font
+import { GlobalSendTokensDialog } from '@/components/app/Global/UserWallet/GlobalSendTokensDialog';
 import { RadixToastProvider } from '@/components/app/Shared/Toasts/RadixToastProvider';
 import { TokenServiceError, TokenServiceErrorType } from '@/services/secret/TokenService';
 import { getSwappableTokens } from '@/utils/apis/getSwappableTokens';
@@ -126,6 +127,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <Component {...pageProps} />
         {/* <ViewingKeyDebugger /> */}
         <RadixToastProvider />
+        <GlobalSendTokensDialog />
       </div>
     </QueryClientProvider>
   );
