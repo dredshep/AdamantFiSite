@@ -7,7 +7,6 @@ import { findTokenByText } from './tokenMatcher';
  */
 export function analyzeCommandState(input: string): CommandStep {
   const trimmed = input.trim();
-  const words = trimmed.split(/\s+/).filter(Boolean);
   const normalized = trimmed.toLowerCase();
 
   // Initial state - empty or just whitespace
@@ -51,7 +50,7 @@ export function analyzeCommandState(input: string): CommandStep {
   }
 
   // Analyze the content after action based on action type
-  return analyzePostActionState(action, afterActionWords, afterAction);
+  return analyzePostActionState(action, afterActionWords);
 }
 
 /**
@@ -59,23 +58,22 @@ export function analyzeCommandState(input: string): CommandStep {
  */
 function analyzePostActionState(
   action: ActionType,
-  words: string[],
-  fullText: string
+  words: string[]
 ): CommandStep {
   const step: CommandStep = { state: 'action_complete', action };
 
   // Different actions have different patterns
   switch (action) {
     case 'swap':
-      return analyzeSwapState(step, words, fullText);
+      return analyzeSwapState(step, words);
     case 'stake':
-      return analyzeStakeState(step, words, fullText);
+      return analyzeStakeState(step, words);
     case 'deposit':
-      return analyzeDepositState(step, words, fullText);
+      return analyzeDepositState(step, words);
     case 'withdraw':
-      return analyzeWithdrawState(step, words, fullText);
+      return analyzeWithdrawState(step, words);
     case 'send':
-      return analyzeSendState(step, words, fullText);
+      return analyzeSendState(step, words);
     default:
       return step;
   }
@@ -85,7 +83,7 @@ function analyzePostActionState(
  * Analyze swap command state: swap [amount] [token] for [token]
  * Note: For swaps, we only allow tokens after "for", not amounts
  */
-function analyzeSwapState(step: CommandStep, words: string[], fullText: string): CommandStep {
+function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
   if (words.length === 0) {
     return { ...step, state: 'action_complete' };
   }
@@ -162,7 +160,7 @@ function analyzeSwapState(step: CommandStep, words: string[], fullText: string):
 /**
  * Analyze stake command state: stake [amount] [token]
  */
-function analyzeStakeState(step: CommandStep, words: string[], fullText: string): CommandStep {
+function analyzeStakeState(step: CommandStep, words: string[]): CommandStep {
   if (words.length === 0) {
     return { ...step, state: 'action_complete' };
   }
@@ -218,9 +216,9 @@ function analyzeStakeState(step: CommandStep, words: string[], fullText: string)
 /**
  * Analyze deposit command state: deposit [amount] [token] in [pool]
  */
-function analyzeDepositState(step: CommandStep, words: string[], fullText: string): CommandStep {
+function analyzeDepositState(step: CommandStep, words: string[]): CommandStep {
   // Similar to stake but with "in [pool]" at the end
-  const currentStep = analyzeStakeState(step, words, fullText);
+  const currentStep = analyzeStakeState(step, words);
 
   // Look for "in" connector for pool specification
   const inIndex = words.findIndex((word) => word.toLowerCase() === 'in');
@@ -239,8 +237,8 @@ function analyzeDepositState(step: CommandStep, words: string[], fullText: strin
 /**
  * Analyze withdraw command state: withdraw [amount] [token] from [pool]
  */
-function analyzeWithdrawState(step: CommandStep, words: string[], fullText: string): CommandStep {
-  const currentStep = analyzeStakeState(step, words, fullText);
+function analyzeWithdrawState(step: CommandStep, words: string[]): CommandStep {
+  const currentStep = analyzeStakeState(step, words);
 
   // Look for "from" connector
   const fromIndex = words.findIndex((word) => word.toLowerCase() === 'from');
@@ -259,8 +257,8 @@ function analyzeWithdrawState(step: CommandStep, words: string[], fullText: stri
 /**
  * Analyze send command state: send [amount] [token] to [address]
  */
-function analyzeSendState(step: CommandStep, words: string[], fullText: string): CommandStep {
-  const currentStep = analyzeStakeState(step, words, fullText);
+function analyzeSendState(step: CommandStep, words: string[]): CommandStep {
+  const currentStep = analyzeStakeState(step, words);
 
   // Look for "to" connector
   const toIndex = words.findIndex((word) => word.toLowerCase() === 'to');

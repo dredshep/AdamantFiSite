@@ -25,7 +25,7 @@ export const GlobalSendTokensDialog: React.FC = () => {
         }
       }}
       walletAddress={address}
-      prefillData={sendTokensDialog.prefillData}
+      {...(sendTokensDialog.prefillData && { prefillData: sendTokensDialog.prefillData })}
     />
   );
 };

@@ -54,7 +54,7 @@ interface PoolAsset {
   amount: string;
 }
 
-interface PoolDataResponse {
+interface PoolQueryResponse {
   assets: PoolAsset[];
   total_share: string;
 }
@@ -91,7 +91,7 @@ interface GlobalFetcherState {
   // Helper getters
   getTokenBalance: (address: string) => DataState<string>;
   getStakedBalance: (address: string) => DataState<string>;
-  getPoolTvl: (address: string) => DataState<TvlData>;
+  getPoolTvl: (address: string) => DataState<TvlData | null>;
 }
 
 // Default state for any data item
@@ -224,11 +224,14 @@ async function fetchPoolTvl(
     }
 
     // Query the pool contract directly using the existing client
-    const poolData = (await secretjs.query.compute.queryContract({
+    const poolData = await secretjs.query.compute.queryContract<
+      { pool: object },
+      PoolQueryResponse
+    >({
       contract_address: poolAddress,
       code_hash: poolConfig.pairInfo.pairContractCodeHash,
       query: { pool: {} },
-    })) as PoolDataResponse;
+    });
 
     if (!poolData.assets || !Array.isArray(poolData.assets) || poolData.assets.length !== 2) {
       console.warn(`Invalid pool data structure for ${poolAddress}. TVL will be unavailable.`);
