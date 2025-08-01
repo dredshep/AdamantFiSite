@@ -64,7 +64,7 @@ interface GlobalFetcherState {
   // Data maps for each type
   tokenBalances: Record<string, DataState<string>>;
   stakedBalances: Record<string, DataState<string>>;
-  poolTvl: Record<string, DataState<TvlData>>;
+  poolTvl: Record<string, DataState<TvlData | null>>;
 
   // Queue management
   queue: FetcherTask[];
@@ -206,40 +206,34 @@ async function fetchStakedBalance(
   }
 }
 
-async function fetchPoolTvl(poolAddress: string): Promise<TvlData> {
+async function fetchPoolTvl(
+  poolAddress: string,
+  secretjs: SecretNetworkClient
+): Promise<TvlData | null> {
   try {
     // Find the pool configuration
     const poolConfig = getPoolConfigByAddress(poolAddress);
     if (!poolConfig.pairInfo) {
-      throw new Error(`Pool configuration not found for ${poolAddress}`);
+      console.warn(`Pool configuration not found for ${poolAddress}. TVL will be unavailable.`);
+      return null;
     }
 
-    // Query the pool contract for reserves
-    const response = await fetch(
-      `/api/getPairPool?contract_addr=${encodeURIComponent(poolAddress)}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch pool data: ${response.statusText}`);
+    if (!secretjs) {
+      console.warn(`SecretJS client not available for ${poolAddress}. TVL will be unavailable.`);
+      return null;
     }
 
-    const poolData = (await response.json()) as PoolDataResponse;
+    // Query the pool contract directly using the existing client
+    const poolData = (await secretjs.query.compute.queryContract({
+      contract_address: poolAddress,
+      code_hash: poolConfig.pairInfo.pairContractCodeHash,
+      query: { pool: {} },
+    })) as PoolDataResponse;
 
     if (!poolData.assets || !Array.isArray(poolData.assets) || poolData.assets.length !== 2) {
-      throw new Error('Invalid pool data structure');
+      console.warn(`Invalid pool data structure for ${poolAddress}. TVL will be unavailable.`);
+      return null;
     }
-
-    // For now, we'll use a simplified TVL calculation
-    // In a full implementation, we'd need to:
-    // 1. Get the token prices from CoinGecko or other price feeds
-    // 2. Calculate the USD value of each reserve
-    // 3. Sum them up
 
     // For sSCRT/USDC.nbl pairs, we can use USDC as the base since it's ~$1
     if (poolConfig.pairInfo.symbol === 'sSCRT/USDC.nbl') {
@@ -263,12 +257,19 @@ async function fetchPoolTvl(poolAddress: string): Promise<TvlData> {
       }
     }
 
-    // For other pairs, return a placeholder for now
-    // In a full implementation, we'd need proper price feeds
-    return { totalUsd: 0 };
+    // For other pairs, implement basic TVL calculation
+    // This is a simplified approach - in production you'd want real price feeds
+    const reserve0 = parseFloat(poolData.assets[0]?.amount || '0');
+    const reserve1 = parseFloat(poolData.assets[1]?.amount || '0');
+
+    // Use a placeholder calculation for now
+    // TODO: Integrate with proper price feeds (CoinGecko, etc.)
+    const estimatedTvl = Math.max(reserve0, reserve1) / 1_000_000; // Rough estimate using larger reserve
+
+    return { totalUsd: estimatedTvl };
   } catch (error) {
-    console.error(`Error fetching TVL for pool ${poolAddress}:`, error);
-    throw error;
+    console.warn(`Error fetching TVL for pool ${poolAddress}:`, error, 'TVL will be unavailable.');
+    return null;
   }
 }
 
@@ -279,8 +280,8 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
   poolTvl: {},
   queue: [],
   isProcessing: false,
-  fetchDelayMs: 0,
-  maxConcurrentRequests: 100, // Default to 5
+  fetchDelayMs: 30, // 30ms delay between batches to avoid 429 errors
+  maxConcurrentRequests: 1, // Process one at a time to respect rate limits
   currentActiveRequests: 0,
   secretjs: null, // Initialize secretjs
 
@@ -571,11 +572,8 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
             needsSync?: boolean;
           }
 
-          // Step 1: Fetch TVL
-          const tvlPromise = fetchPoolTvl(poolAddress).catch((e) => {
-            console.error(`TVL fetch failed for ${poolAddress}:`, e);
-            return null;
-          });
+          // Step 1: Fetch TVL using the existing SecretJS client
+          const tvlPromise = fetchPoolTvl(poolAddress, get().secretjs!);
 
           // Step 2 & 3: Chained Balance Fetches
           const balancePromises = (async (): Promise<{
@@ -667,7 +665,7 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
               [poolAddress]: {
                 value: tvlResult,
                 loading: false,
-                error: tvlResult ? null : 'Failed to fetch',
+                error: tvlResult ? null : 'TVL unavailable',
                 lastUpdated: Date.now(),
                 needsViewingKey: false,
               },
@@ -785,7 +783,7 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
     get().tokenBalances[address] || createDefaultState<string>(),
   getStakedBalance: (address: string) =>
     get().stakedBalances[address] || createDefaultState<string>(),
-  getPoolTvl: (address: string) => get().poolTvl[address] || createDefaultState<TvlData>(),
+  getPoolTvl: (address: string) => get().poolTvl[address] || createDefaultState<TvlData | null>(),
 }));
 
 // Utility functions for easy configuration

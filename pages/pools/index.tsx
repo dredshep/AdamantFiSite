@@ -118,8 +118,8 @@ function PoolCard({ pool, index }: { pool: ValidatedPool; index: number }) {
           {/* Pool Name with Fee */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3 flex-1">
-              <TokenDisplay 
-                seed={pool.contract_address as SecretString} 
+              <TokenDisplay
+                seed={pool.contract_address as SecretString}
                 name={pool.name}
                 showFee={true}
               />
@@ -140,9 +140,7 @@ function PoolCard({ pool, index }: { pool: ValidatedPool; index: number }) {
               {poolData.isLoading ? (
                 <LoadingPlaceholder size="small" />
               ) : poolData.tvl != null ? (
-                <span className="font-medium text-white">
-                  {formatNumber(poolData.tvl)}
-                </span>
+                <span className="font-medium text-white">{formatNumber(poolData.tvl)}</span>
               ) : (
                 <span className="font-medium text-adamant-text-box-secondary">-</span>
               )}
@@ -265,8 +263,8 @@ function PoolRow({ pool, index }: { pool: ValidatedPool; index: number }) {
             {
               content: (
                 <div className="flex items-center gap-3">
-                  <TokenDisplay 
-                    seed={pool.contract_address as SecretString} 
+                  <TokenDisplay
+                    seed={pool.contract_address as SecretString}
                     name={pool.name}
                     showFee={true}
                   />
