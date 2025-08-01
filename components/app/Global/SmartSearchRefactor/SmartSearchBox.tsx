@@ -1,6 +1,7 @@
 import { INPUT_STYLES } from '@/components/app/Shared/Forms/Input/inputStyles';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useSwapFormLean } from '@/hooks/useSwapFormLean';
+import { useModalStore } from '@/store/modalStore';
 import { useSwapStore } from '@/store/swapStore';
 import * as Popover from '@radix-ui/react-popover';
 import {
@@ -63,6 +64,7 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const { setTokenInputProperty } = useSwapStore();
+  const { openSendTokensDialog } = useModalStore();
   const { handleSwapClick, isEstimating, estimatedOutput } = useSwapFormLean();
   const router = useRouter();
 
@@ -261,17 +263,21 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
       // Handle stake command
       if (commandStep.action === 'stake' && commandStep.fromToken) {
+        console.log('🔥 Executing stake command:', commandStep);
         setIsLoading(true);
         try {
           // For staking, we need to find the pool that corresponds to the LP token
           // Since LP tokens are named like "sSCRT/USDC.nbl LP", we need to extract the pool symbol
           const lpTokenSymbol = commandStep.fromToken.symbol;
+          console.log('🔥 LP Token Symbol:', lpTokenSymbol);
           const poolSymbol = lpTokenSymbol.replace(' LP', ''); // Remove " LP" suffix
+          console.log('🔥 Pool Symbol:', poolSymbol);
 
           // Find the pool from LIQUIDITY_PAIRS
           const pool = LIQUIDITY_PAIRS.find((p) => p.symbol === poolSymbol);
+          console.log('🔥 Found Pool:', pool);
           if (!pool) {
-            console.error('Pool not found for LP token:', lpTokenSymbol);
+            console.error('❌ Pool not found for LP token:', lpTokenSymbol);
             setIsLoading(false);
             return;
           }
@@ -284,17 +290,92 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
             queryParams.append('stakingAmount', commandStep.amount);
           }
 
-          await router.push(`/pool/${pool.pairContract}?${queryParams.toString()}`);
+          const targetUrl = `/pool/${pool.pairContract}?${queryParams.toString()}`;
+          console.log('🔥 Navigating to:', targetUrl);
+          await router.push(targetUrl);
+          console.log('🔥 Navigation completed');
           setIsOpen(false);
           setQuery('');
         } catch (error) {
-          console.error('Error executing stake command:', error);
+          console.error('❌ Error executing stake command:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+
+      // Handle send command
+      if (commandStep.action === 'send' && commandStep.fromToken && commandStep.target) {
+        console.log('💸 Executing send command:', commandStep, 'mode:', mode);
+
+        // If user selected "fill form" or amount is missing, just open the dialog
+        const shouldOpenDialog = mode === 'fill' || !commandStep.amount;
+
+        if (shouldOpenDialog) {
+          try {
+            // Prefill and open dialog
+            const prefillData: { amount?: string; tokenAddress: string; recipientAddress: string } =
+              {
+                tokenAddress: commandStep.fromToken.address,
+                recipientAddress: commandStep.target,
+              };
+            if (commandStep.amount) {
+              prefillData.amount = commandStep.amount;
+            }
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            openSendTokensDialog(prefillData);
+            setIsOpen(false);
+            setQuery('');
+          } catch (error) {
+            console.error('❌ Error filling send form:', error);
+          }
+          return;
+        }
+
+        // Execute transaction directly
+        setIsLoading(true);
+        try {
+          const { walletAddress } = await import('@/utils/wallet/initKeplr').then((m) =>
+            m.initKeplr()
+          );
+          const { sendTokens } = await import('@/utils/wallet/sendTokens');
+          const { showToastOnce } = await import('@/utils/toast/toastManager');
+          const { convertToRawAmount } = await import('@/utils/staking/convertStakingAmount');
+
+          // Convert amount to raw units using token decimals
+          const rawAmount = convertToRawAmount(commandStep.amount!, commandStep.fromToken.decimals);
+
+          await sendTokens({
+            fromAddress: walletAddress as unknown as import('@/types').SecretString,
+            toAddress: commandStep.target as unknown as import('@/types').SecretString,
+            amount: rawAmount,
+            denom: commandStep.fromToken.address,
+          });
+
+          showToastOnce('send-success', 'Transaction submitted successfully', 'success', {
+            message: 'Balances will refresh shortly',
+          });
+
+          setIsOpen(false);
+          setQuery('');
+        } catch (error) {
+          console.error('❌ Error executing send command:', error);
+          const { showToastOnce } = await import('@/utils/toast/toastManager');
+          showToastOnce('send-error', 'Failed to send tokens', 'error', {
+            message: 'Please check your inputs and try again',
+          });
         } finally {
           setIsLoading(false);
         }
       }
     },
-    [setTokenInputProperty, router, handleSwapClick, isEstimating, estimatedOutput]
+    [
+      setTokenInputProperty,
+      router,
+      handleSwapClick,
+      isEstimating,
+      estimatedOutput,
+      openSendTokensDialog,
+    ]
   );
 
   // Generate step-based suggestions

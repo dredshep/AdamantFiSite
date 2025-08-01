@@ -84,6 +84,16 @@ function generateInitialSuggestions(
     },
     {
       type: 'action',
+      title: 'Send tokens',
+      subtitle: 'Transfer tokens to another wallet',
+      icon: 'Send',
+      onSelect: () => {
+        setQuery('send ');
+        inputRef.current?.focus();
+      },
+    },
+    {
+      type: 'action',
       title: 'Stake tokens',
       subtitle: 'Earn rewards by staking',
       icon: 'TrendingUp',
@@ -99,6 +109,16 @@ function generateInitialSuggestions(
       icon: 'Plus',
       onSelect: () => {
         setQuery('deposit ');
+        inputRef.current?.focus();
+      },
+    },
+    {
+      type: 'action',
+      title: 'Withdraw tokens',
+      subtitle: 'Remove liquidity from pools',
+      icon: 'Minus',
+      onSelect: () => {
+        setQuery('withdraw ');
         inputRef.current?.focus();
       },
     },
@@ -318,7 +338,12 @@ function generateFromTokenSuggestions(
   }
 
   // Find matching tokens (use appropriate token set based on action)
-  const availableTokens = commandStep.action === 'stake' ? getStakeableTokens() : TOKENS;
+  const availableTokens =
+    commandStep.action === 'stake'
+      ? getStakeableTokens()
+      : commandStep.action === 'send'
+      ? getAllTokensWithNative()
+      : TOKENS;
   const matchingTokens = availableTokens
     .filter((token: ConfigToken) => {
       const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
@@ -398,10 +423,12 @@ function generateAfterConnectorSuggestions(
 
   if (commandStep.action === 'swap') {
     // For swap, only suggest tokens after "for" (no target amount)
-    const availableTokens = TOKENS.filter(
-      (token: ConfigToken) =>
-        !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
-    ).slice(0, 6);
+    const availableTokens = getAllTokensWithNative()
+      .filter(
+        (token: ConfigToken) =>
+          !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
+      )
+      .slice(0, 6);
 
     availableTokens.forEach((token: ConfigToken, index: number) => {
       suggestions.push({
@@ -490,7 +517,12 @@ function generateToTokenSuggestions(
   const searchTermLower = originalSearchTerm.toLowerCase();
 
   // Find matching tokens (excluding from token, use appropriate token set)
-  const availableTokens = commandStep.action === 'stake' ? getStakeableTokens() : TOKENS;
+  const availableTokens =
+    commandStep.action === 'stake'
+      ? getStakeableTokens()
+      : commandStep.action === 'send'
+      ? getAllTokensWithNative()
+      : TOKENS;
   const matchingTokens = availableTokens
     .filter((token: ConfigToken) => {
       const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
@@ -545,9 +577,12 @@ function generateExecutionSuggestions(
   }
 
   // Verify tokens exist in our configuration
-  const fromTokenExists = TOKENS.some((token) => token.symbol === commandStep.fromToken?.symbol);
+  const fromTokenExists = getAllTokensWithNative().some(
+    (token) => token.symbol === commandStep.fromToken?.symbol
+  );
   const toTokenExists =
-    !commandStep.toToken || TOKENS.some((token) => token.symbol === commandStep.toToken?.symbol);
+    !commandStep.toToken ||
+    getAllTokensWithNative().some((token) => token.symbol === commandStep.toToken?.symbol);
 
   if (!fromTokenExists || !toTokenExists) {
     return suggestions; // Don't show execution if tokens don't exist
@@ -676,15 +711,33 @@ function getActionIcon(action: ActionType): string {
   }
 }
 
+/**
+ * Get all tokens including the native SCRT token for send operations
+ */
+function getAllTokensWithNative(): ConfigToken[] {
+  // Add SCRT as the first option, similar to SendTokensDialog
+  const nativeScrtToken: ConfigToken = {
+    symbol: 'SCRT',
+    address: 'uscrt' as unknown as ConfigToken['address'], // Native denom
+    name: 'Secret Network',
+    codeHash: '', // Native token doesn't need a code hash
+    decimals: 6,
+  };
+
+  return [nativeScrtToken, ...TOKENS];
+}
+
 function getRelevantTokensForAction(action: ActionType): ConfigToken[] {
   switch (action) {
     case 'stake':
       // For staking, only return LP tokens that have staking contracts
       return getStakeableTokens();
+    case 'send':
+      // For sending, include native SCRT token
+      return getAllTokensWithNative().slice(0, 8);
     case 'swap':
     case 'deposit':
     case 'withdraw':
-    case 'send':
     default:
       // For other actions, return regular tokens
       return TOKENS.slice(0, 8);

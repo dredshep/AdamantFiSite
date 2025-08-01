@@ -1,8 +1,24 @@
-import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
+import { ConfigToken, LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { NextRouter } from 'next/router';
 import { ACTION_KEYWORDS } from '../constants/actionKeywords';
 import { SOCIAL_LINKS } from '../constants/socialLinks';
 import { ParsedCommand, SearchSuggestion } from '../types';
+
+/**
+ * Get all tokens including the native SCRT token
+ */
+function getAllTokensWithNative(): ConfigToken[] {
+  // Add SCRT as the first option, similar to SendTokensDialog
+  const nativeScrtToken: ConfigToken = {
+    symbol: 'SCRT',
+    address: 'uscrt' as unknown as ConfigToken['address'], // Native denom
+    name: 'Secret Network',
+    codeHash: '', // Native token doesn't need a code hash
+    decimals: 6,
+  };
+
+  return [nativeScrtToken, ...TOKENS];
+}
 
 interface SuggestionGeneratorProps {
   query: string;
@@ -30,7 +46,7 @@ export function generateSuggestions({
   const queryLower = query.toLowerCase().trim();
 
   if (!queryLower) {
-    // Default suggestions when empty
+    // Default suggestions when empty - increased to 6 suggestions for better desktop experience
     return [
       {
         type: 'action',
@@ -44,11 +60,31 @@ export function generateSuggestions({
       },
       {
         type: 'action',
+        title: 'Send tokens',
+        subtitle: 'Transfer tokens to another wallet',
+        icon: 'Send',
+        onSelect: () => {
+          setQuery('send ');
+          inputRef.current?.focus();
+        },
+      },
+      {
+        type: 'action',
         title: 'Stake tokens',
         subtitle: 'Earn rewards by staking',
         icon: 'TrendingUp',
         onSelect: () => {
           setQuery('stake ');
+          inputRef.current?.focus();
+        },
+      },
+      {
+        type: 'action',
+        title: 'Deposit tokens',
+        subtitle: 'Add liquidity to pools',
+        icon: 'Plus',
+        onSelect: () => {
+          setQuery('deposit ');
           inputRef.current?.focus();
         },
       },
@@ -250,7 +286,7 @@ export function generateSuggestions({
       if (lastWord) {
         // Check if the last word is an incomplete token (not a complete token and not a number)
         const isNumber = /^\d+(\.\d+)?$/.test(lastWord);
-        const isCompleteToken = TOKENS.some(
+        const isCompleteToken = getAllTokensWithNative().some(
           (token) => token.symbol.toLowerCase() === lastWord.toLowerCase()
         );
 
@@ -264,22 +300,24 @@ export function generateSuggestions({
 
     if (searchTerm.length > 0) {
       // FIXED: Filter out tokens that would create same-token swaps
-      const matchingTokens = TOKENS.filter((token) => {
-        const symbolMatch = token.symbol.toLowerCase().includes(searchTerm);
-        const nameMatch = token.name?.toLowerCase().includes(searchTerm);
+      const matchingTokens = getAllTokensWithNative()
+        .filter((token) => {
+          const symbolMatch = token.symbol.toLowerCase().includes(searchTerm);
+          const nameMatch = token.name?.toLowerCase().includes(searchTerm);
 
-        // PREVENT same token suggestions
-        const isFromTokenMatch =
-          parsedCommand.fromToken && token.symbol === parsedCommand.fromToken.symbol;
-        const isToTokenMatch =
-          parsedCommand.toToken && token.symbol === parsedCommand.toToken.symbol;
+          // PREVENT same token suggestions
+          const isFromTokenMatch =
+            parsedCommand.fromToken && token.symbol === parsedCommand.fromToken.symbol;
+          const isToTokenMatch =
+            parsedCommand.toToken && token.symbol === parsedCommand.toToken.symbol;
 
-        if (isFromTokenMatch || isToTokenMatch) {
-          return false;
-        }
+          if (isFromTokenMatch || isToTokenMatch) {
+            return false;
+          }
 
-        return symbolMatch || nameMatch;
-      }).slice(0, 5);
+          return symbolMatch || nameMatch;
+        })
+        .slice(0, 5);
 
       matchingTokens.forEach((token) => {
         // IMPROVED: Build suggestion based on current parsing state while preserving amounts
