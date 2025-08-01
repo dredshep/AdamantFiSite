@@ -7,7 +7,7 @@ import {
   isRewardsResponse,
 } from '@/types/secretswap/lp-staking';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { showToastOnce } from '@/utils/toast/toastManager';
+import { removeToast, showToastOnce } from '@/utils/toast/toastManager';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 /**
@@ -33,7 +33,7 @@ export interface GetRewardsParams {
 /**
  * Get the pending rewards for a wallet address using a viewing key
  */
-export async function getRewards(params: GetRewardsParams): Promise<string> {
+export async function getRewards(params: GetRewardsParams): Promise<string | null> {
   const {
     secretjs,
     lpToken,
@@ -168,6 +168,9 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
 
             const handleCreateKey = async () => {
               try {
+                // Clear any existing error toasts first
+                removeToast('lp-token-vk-error');
+
                 const newKey = generateRandomKey();
                 const setViewingKeyMsg = {
                   set_viewing_key: {
@@ -175,14 +178,56 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
                   },
                 };
 
+                // Step 1: Inform user about the two-step process
                 showToastOnce(
-                  'create-vk-info',
-                  'Please approve the transaction in Keplr to create a new viewing key.',
+                  'create-vk-step1',
+                  'Step 1/2: Creating LP Token Viewing Key',
                   'info',
-                  { autoClose: 10000 }
+                  {
+                    message:
+                      'Please approve the first transaction in Keplr to create your LP token viewing key.',
+                    autoClose: false,
+                  }
                 );
 
-                const result = await secretjs.tx.compute.executeContract(
+                // Step 1: Create viewing key for the LP token (primary source of truth)
+                const lpTokenStakingInfo = getStakingContractInfo(lpToken);
+                if (!lpTokenStakingInfo) {
+                  throw new Error('LP token staking info not found');
+                }
+
+                const lpTokenResult = await secretjs.tx.compute.executeContract(
+                  {
+                    sender: secretjs.address,
+                    contract_address: lpToken,
+                    code_hash: lpTokenStakingInfo.lpTokenCodeHash,
+                    msg: setViewingKeyMsg,
+                    sent_funds: [],
+                  },
+                  {
+                    gasLimit: 150_000,
+                  }
+                );
+
+                if (lpTokenResult.code !== TxResultCode.Success) {
+                  throw new Error(`Failed to set LP token viewing key: ${lpTokenResult.rawLog}`);
+                }
+
+                // Clear step 1 toast and show step 2
+                removeToast('create-vk-step1');
+                showToastOnce(
+                  'create-vk-step2',
+                  'Step 2/2: Syncing with Staking Contract',
+                  'info',
+                  {
+                    message:
+                      'Please approve the second transaction to sync with the staking contract.',
+                    autoClose: false,
+                  }
+                );
+
+                // Step 2: Set the same viewing key on the staking contract to keep them in sync
+                const stakingResult = await secretjs.tx.compute.executeContract(
                   {
                     sender: secretjs.address,
                     contract_address: lpStakingContractAddress,
@@ -195,53 +240,115 @@ export async function getRewards(params: GetRewardsParams): Promise<string> {
                   }
                 );
 
-                if (result.code === TxResultCode.Success) {
-                  useViewingKeyStore.getState().setViewingKey(lpStakingContractAddress, newKey);
-                  showToastOnce('create-vk-success', 'Viewing key created!', 'success', {
-                    message: `Your new key is: ${newKey}. Please copy it and save it securely.`,
-                    actionLabel: 'Copy Key',
-                    onAction: () => {
-                      navigator.clipboard
-                        .writeText(newKey)
-                        .then(() => {
-                          showToastOnce('copy-success', 'Key copied to clipboard!', 'success');
-                        })
-                        .catch((err) => {
-                          console.error('Failed to copy key: ', err);
-                          showToastOnce('copy-error', 'Failed to copy key.', 'error');
-                        });
-                    },
-                    autoClose: false,
-                  });
+                // Clear step 2 toast
+                removeToast('create-vk-step2');
+
+                if (stakingResult.code !== TxResultCode.Success) {
+                  console.warn(
+                    'Failed to sync staking contract viewing key, but LP token key was created successfully'
+                  );
+                  // Show partial success message
+                  showToastOnce(
+                    'create-vk-partial-success',
+                    'LP Token viewing key created!',
+                    'warning',
+                    {
+                      message:
+                        'Your LP token key was created, but staking sync failed. LP functions should still work.',
+                      actionLabel: 'Copy Key',
+                      onAction: () => {
+                        navigator.clipboard
+                          .writeText(newKey)
+                          .then(() => {
+                            showToastOnce('copy-success', 'Key copied!', 'success', {
+                              autoClose: 3000,
+                            });
+                          })
+                          .catch(() => {
+                            showToastOnce('copy-error', 'Failed to copy key.', 'error', {
+                              autoClose: 3000,
+                            });
+                          });
+                      },
+                      autoClose: 8000,
+                    }
+                  );
                 } else {
-                  throw new Error(`Failed to set viewing key: ${result.rawLog}`);
+                  // Full success
+                  showToastOnce(
+                    'create-vk-complete-success',
+                    'Viewing keys setup complete!',
+                    'success',
+                    {
+                      message:
+                        'Your LP token viewing key has been created and synced. You can now use all staking features.',
+                      actionLabel: 'Copy Key',
+                      onAction: () => {
+                        navigator.clipboard
+                          .writeText(newKey)
+                          .then(() => {
+                            showToastOnce('copy-success', 'Key copied!', 'success', {
+                              autoClose: 3000,
+                            });
+                          })
+                          .catch(() => {
+                            showToastOnce('copy-error', 'Failed to copy key.', 'error', {
+                              autoClose: 3000,
+                            });
+                          });
+                      },
+                      autoClose: 8000,
+                    }
+                  );
                 }
+
+                // Store the viewing key for the staking contract (for backward compatibility)
+                useViewingKeyStore.getState().setViewingKey(lpStakingContractAddress, newKey);
               } catch (error) {
+                // Clear any progress toasts on error
+                removeToast('create-vk-step1');
+                removeToast('create-vk-step2');
+                removeToast('lp-token-vk-error');
+
                 console.error('Error creating viewing key:', error);
                 const message = error instanceof Error ? error.message : String(error);
-                showToastOnce(
-                  'create-vk-error',
-                  `Failed to create viewing key: ${message}`,
-                  'error'
-                );
+
+                // Show user-friendly error message
+                let userMessage = 'Failed to create viewing key.';
+                if (message.includes('rejected') || message.includes('denied')) {
+                  userMessage =
+                    'Transaction was rejected. Please try again and approve both transactions.';
+                } else if (message.includes('insufficient')) {
+                  userMessage =
+                    'Insufficient gas fees. Please ensure you have enough SCRT for transaction fees.';
+                }
+
+                showToastOnce('create-vk-final-error', userMessage, 'error', {
+                  message: 'You can try again or contact support if the problem persists.',
+                  actionLabel: 'Retry',
+                  onAction: () => {
+                    removeToast('create-vk-final-error');
+                    void handleCreateKey();
+                  },
+                  autoClose: false,
+                });
               }
             };
             // let's log our old key:
             console.log('🔑 Old viewing key:', viewingKey);
 
-            showToastOnce('staking-vk-error', 'Viewing Key Error', 'error', {
+            showToastOnce('lp-token-vk-error', 'LP Token Viewing Key Required', 'error', {
               message:
-                'The viewing key for this staking pool is invalid or not set. You can create a new one.',
-              actionLabel: 'Create New Key',
+                'Your LP token viewing key is missing or invalid. Click below to create one (requires 2 Keplr approvals).',
+              actionLabel: 'Setup Viewing Key',
               onAction: () => {
                 void handleCreateKey();
               },
               autoClose: false,
             });
 
-            throw new Error(
-              `Viewing key authentication failed: The provided viewing key is incorrect or not authorized for this address.`
-            );
+            // Return null instead of throwing to avoid unhandled runtime errors
+            return null;
           }
 
           // For other errors, try to parse the response

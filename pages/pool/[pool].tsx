@@ -7,6 +7,7 @@ import SparklyTab from '@/components/app/Pages/Pools/SparklyTab';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
+import ErrorBoundary from '@/lib/keplr/components/ErrorBoundary';
 import { usePoolStore } from '@/store/forms/poolStore';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
@@ -194,7 +195,27 @@ export default function PoolPage() {
               </Tabs.Content>
 
               <Tabs.Content value="staking" className="outline-none">
-                <StakingForm initialStakingAmount={router.query.stakingAmount as string} />
+                <ErrorBoundary
+                  fallback={
+                    <div className="p-6 bg-red-900/20 border border-red-500/20 rounded-xl text-white">
+                      <h3 className="text-lg font-semibold mb-2">
+                        Staking temporarily unavailable
+                      </h3>
+                      <p className="text-gray-300 mb-4">
+                        There was an issue loading the staking interface. This is usually related to
+                        viewing key problems.
+                      </p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Refresh Page
+                      </button>
+                    </div>
+                  }
+                >
+                  <StakingForm initialStakingAmount={router.query.stakingAmount as string} />
+                </ErrorBoundary>
               </Tabs.Content>
             </Tabs.Root>
           </div>
