@@ -25,10 +25,10 @@ export const useModalStore = create<ModalStoreState>((set) => ({
   sendTokensDialog: { isOpen: false },
   openSendTokensDialog: (prefillData) =>
     set(() => ({
-      sendTokensDialog: { isOpen: true, prefillData },
+      sendTokensDialog: { isOpen: true, ...(prefillData && { prefillData }) },
     })),
   closeSendTokensDialog: () =>
     set(() => ({
-      sendTokensDialog: { isOpen: false, prefillData: undefined },
+      sendTokensDialog: { isOpen: false },
     })),
 }));
