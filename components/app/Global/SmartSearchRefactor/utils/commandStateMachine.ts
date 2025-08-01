@@ -56,10 +56,7 @@ export function analyzeCommandState(input: string): CommandStep {
 /**
  * Analyze the state after an action has been determined
  */
-function analyzePostActionState(
-  action: ActionType,
-  words: string[]
-): CommandStep {
+function analyzePostActionState(action: ActionType, words: string[]): CommandStep {
   const step: CommandStep = { state: 'action_complete', action };
 
   // Different actions have different patterns
