@@ -1,5 +1,6 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
 import { showToastOnce } from '@/utils/toast/toastManager';
+import { waitForKeplr } from '@/utils/wallet/keplrDetection';
 import { useEffect, useState } from 'react';
 
 interface ChainInfo {
@@ -131,7 +132,8 @@ export default function NetworkSwitcher() {
       return;
     }
 
-    if (!window.keplr) {
+    const keplr = await waitForKeplr(5000);
+    if (!keplr) {
       showToastOnce('keplr-not-installed', 'Please install Keplr extension', 'error', {
         message: 'Keplr wallet extension is required to use this application.',
         actionLabel: 'Install Keplr',
@@ -154,20 +156,20 @@ export default function NetworkSwitcher() {
       console.log('Suggesting chain info to Keplr:', chainInfo);
 
       // Suggest the chain to Keplr
-      await window.keplr.experimentalSuggestChain(chainInfo);
+      await keplr.experimentalSuggestChain(chainInfo);
 
       // Re-enable the chain to apply the changes
-      await window.keplr.enable(chainDetails.chainId);
+      await keplr.enable(chainDetails.chainId);
 
       // Disconnect and reconnect to refresh the connection
       try {
-        await window.keplr.disable(chainDetails.chainId);
+        await keplr.disable(chainDetails.chainId);
         console.log('Disabled Keplr connection');
 
         // Wait a moment before re-enabling
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        await window.keplr.enable(chainDetails.chainId);
+        await keplr.enable(chainDetails.chainId);
         console.log('Re-enabled Keplr connection');
 
         showToastOnce('network-refreshed', 'Network connection refreshed', 'success', {
@@ -199,13 +201,9 @@ export default function NetworkSwitcher() {
       return;
     }
 
-    if (!window.keplr) {
-      showToastOnce('keplr-not-installed-2', 'Please install Keplr extension', 'error', {
-        message: 'Keplr wallet extension is required to use this application.',
-        actionLabel: 'Install Keplr',
-        onAction: () => window.open('https://www.keplr.app/download', '_blank'),
-        autoClose: false,
-      });
+    const keplr = await waitForKeplr(5000);
+    if (!keplr) {
+      // Don't show duplicate toast - user already saw it from the first function
       return;
     }
 
@@ -222,20 +220,20 @@ export default function NetworkSwitcher() {
       console.log('Suggesting chain info to Keplr:', chainInfo);
 
       // Suggest the chain to Keplr
-      await window.keplr.experimentalSuggestChain(chainInfo);
+      await keplr.experimentalSuggestChain(chainInfo);
 
       // Re-enable the chain to apply the changes
-      await window.keplr.enable(chainDetails.chainId);
+      await keplr.enable(chainDetails.chainId);
 
       // Disconnect and reconnect to refresh the connection
       try {
-        await window.keplr.disable(chainDetails.chainId);
+        await keplr.disable(chainDetails.chainId);
         console.log('Disabled Keplr connection');
 
         // Wait a moment before re-enabling
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        await window.keplr.enable(chainDetails.chainId);
+        await keplr.enable(chainDetails.chainId);
         console.log('Re-enabled Keplr connection');
 
         // Try to register the incentives token with code hash
@@ -245,7 +243,7 @@ export default function NetworkSwitcher() {
             console.log(
               `Re-suggesting token ${env.INCENTIVES_CONTRACT_ADDRESS} with code hash: ${env.INCENTIVES_CONTRACT_HASH}`
             );
-            await window.keplr.suggestToken(
+            await keplr.suggestToken(
               chainDetails.chainId,
               env.INCENTIVES_CONTRACT_ADDRESS,
               env.INCENTIVES_CONTRACT_HASH

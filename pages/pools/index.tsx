@@ -1,6 +1,7 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import FilterButton from '@/components/app/Pages/Pools/FilterButton';
 import SparklyButton from '@/components/app/Pages/Pools/SparklyButton';
+import LiquidityPromoBox from '@/components/app/Shared/LiquidityPromoBox';
 import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import {
   FinancialDataRow,
@@ -561,6 +562,9 @@ export default function PoolsPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto mt-12 px-4">
+        {/* Promo box */}
+        <LiquidityPromoBox />
+
         {/* Header and filters */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">

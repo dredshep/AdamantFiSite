@@ -1,5 +1,7 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { ConfigToken } from '@/config/tokens';
+import { isPricingEnabled } from '@/utils/features';
+import TokenPriceDisplay from './TokenPriceDisplay';
 import WalletBalance from './WalletBalance';
 
 interface TokenListItemProps {
@@ -31,6 +33,9 @@ export const TokenListItem = ({ token }: TokenListItemProps) => {
           tokenSymbol={token.symbol}
           className="text-right"
         />
+        {isPricingEnabled() && (
+          <TokenPriceDisplay coingeckoId={token.coingeckoId} className="text-right" />
+        )}
       </div>
     </div>
   );

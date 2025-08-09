@@ -1,10 +1,12 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { useLoadBalancePreference } from '@/hooks/useLoadBalancePreference';
+import { useWalletTotalValue } from '@/hooks/useWalletTotalValue';
 import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { useModalStore } from '@/store/modalStore';
 import { useTokenStore } from '@/store/tokenStore';
 import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
+import { isPricingEnabled } from '@/utils/features';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import React, { useEffect, useRef, useState } from 'react';
 import { HiQrCode } from 'react-icons/hi2';
@@ -28,6 +30,7 @@ const WalletSidebar: React.FC = () => {
   const { listAllTokens } = useTokenStore();
   const { fetchAllBalances, isProcessingQueue } = useBalanceFetcherStore();
   const loadBalanceConfig = useLoadBalancePreference();
+  const walletTotal = isPricingEnabled() ? useWalletTotalValue() : null;
   const tokens = listAllTokens() ?? [];
   const sidebarRef = useRef<HTMLElement>(null);
 
@@ -154,6 +157,34 @@ const WalletSidebar: React.FC = () => {
                 </div>
               </div>
 
+              {/* Wallet Balance Display - Only show if pricing is enabled */}
+              {isPricingEnabled() && walletTotal && (
+                <div className="text-center py-4">
+                  <div className="text-4xl font-bold text-white mb-2">
+                    {walletTotal.loading ? (
+                      <span className="text-2xl">Loading...</span>
+                    ) : (
+                      `$${walletTotal.totalUSD.toFixed(2)}`
+                    )}
+                  </div>
+                  {!walletTotal.loading && walletTotal.totalUSD > 0 && (
+                    <div
+                      className={`text-sm flex items-center justify-center gap-1 ${
+                        walletTotal.change24hUSD >= 0 ? 'text-green-400' : 'text-red-400'
+                      }`}
+                    >
+                      {walletTotal.change24hUSD >= 0 ? '+' : ''}$
+                      {walletTotal.change24hUSD.toFixed(2)} (
+                      {walletTotal.change24hPercent >= 0 ? '+' : ''}
+                      {walletTotal.change24hPercent.toFixed(2)}%)
+                    </div>
+                  )}
+                  {walletTotal.error && (
+                    <div className="text-sm text-red-400">Error loading price data</div>
+                  )}
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="flex gap-3 pt-2">
                 <button
@@ -167,7 +198,7 @@ const WalletSidebar: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentView('receive')}
-                  className="flex-1 group bg-adamant-box-dark hover:bg-adamant-box-regular text-white font-bold py-3 px-4 rounded-lg border border-adamant-gradientBright/30 hover:border-adamant-gradientBright/60 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex-1 group bg-white hover:bg-gray-100 text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <HiQrCode className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />

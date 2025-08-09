@@ -1,31 +1,9 @@
-import { Window as KeplrWindow } from '@keplr-wallet/types';
+import { Keplr } from '@keplr-wallet/types';
 
 declare global {
-  type Window = KeplrWindow;
-}
-
-interface OfflineSigner {
-  getAccounts(): Promise<readonly { address: string; algo: string; pubkey: Uint8Array }[]>;
-  signDirect(signerAddress: string, signDoc: unknown): Promise<unknown>;
-}
-
-interface EnigmaUtils {
-  decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array>;
-  encrypt(plaintext: Uint8Array): Promise<{ ciphertext: Uint8Array; nonce: Uint8Array }>;
-}
-
-interface Window {
-  keplr?: {
-    enable(chainId: string): Promise<void>;
-    getOfflineSigner(chainId: string): OfflineSigner;
-    getEnigmaUtils(chainId: string): EnigmaUtils;
-    // Add other Keplr methods as needed
-  };
-  getOfflineSigner?: (chainId: string) => OfflineSigner;
-  getEnigmaUtils?: (chainId: string) => EnigmaUtils;
-  // Web Speech API
-  SpeechRecognition?: new () => SpeechRecognition;
-  webkitSpeechRecognition?: new () => SpeechRecognition;
+  interface Window {
+    keplr?: Keplr;
+  }
 }
 
 interface SpeechRecognition extends EventTarget {

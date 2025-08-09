@@ -11,6 +11,10 @@ interface SecretNetworkEnvVars {
   INCENTIVES_CONTRACT_ADDRESS: string;
   INCENTIVES_CONTRACT_HASH: string;
   LOAD_BALANCE_PREFERENCE: LoadBalancePreference;
+  ENABLE_PRICING: boolean;
+  COINGECKO_API_KEY?: string;
+  COINGECKO_API_URL?: string;
+  COINGECKO_AUTH_HEADER?: string;
 }
 
 export class EnvVarError extends Error {
@@ -52,9 +56,16 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
       value: process.env['NEXT_PUBLIC_LOAD_BALANCE_PREFERENCE'],
       description: 'Load balance preference (None, All, or Pair)',
     },
+    ENABLE_PRICING: {
+      envKey: 'NEXT_PUBLIC_ENABLE_PRICING',
+      value: process.env['NEXT_PUBLIC_ENABLE_PRICING'],
+      description: 'Enable pricing features (true/false) - defaults to false',
+    },
   } as const;
 
-  const missingVars = Object.entries(requiredVars)
+  // Check for missing core variables (excluding optional pricing ones)
+  const coreVars = Object.entries(requiredVars)
+    .filter(([key]) => key !== 'ENABLE_PRICING') // ENABLE_PRICING can be missing (defaults to false)
     .filter((entry) => {
       const { value } = entry[1];
       return typeof value !== 'string' || value.trim() === '';
@@ -64,10 +75,10 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
       return `${envKey}: ${description}`;
     });
 
-  if (missingVars.length > 0) {
+  if (coreVars.length > 0) {
     const errorMessage = [
       'Missing required Secret Network environment variables:',
-      ...missingVars,
+      ...coreVars,
       '\nPlease check your .env.local file and ensure all required variables are set.',
     ].join('\n');
 
@@ -84,7 +95,34 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
     );
   }
 
-  // At this point, we're sure all values exist and are non-empty strings
+  // Parse pricing feature flag - defaults to false if not set
+  const enablePricing = requiredVars.ENABLE_PRICING.value?.toLowerCase() === 'true';
+
+  // Validate pricing environment variables only if pricing is enabled
+  if (enablePricing) {
+    const pricingVars = [
+      { key: 'COINGECKO_API_KEY', env: 'COINGECKO_API_KEY' },
+      { key: 'COINGECKO_API_URL', env: 'COINGECKO_API_URL' },
+      { key: 'COINGECKO_AUTH_HEADER', env: 'COINGECKO_AUTH_HEADER' },
+    ];
+
+    const missingPricingVars = pricingVars.filter(({ env }) => {
+      const value = process.env[env];
+      return !value || value.trim() === '';
+    });
+
+    if (missingPricingVars.length > 0) {
+      const errorMessage = [
+        'Pricing is enabled but missing required CoinGecko environment variables:',
+        ...missingPricingVars.map(({ env }) => `${env}: Required for CoinGecko API access`),
+        '\nSet NEXT_PUBLIC_ENABLE_PRICING=false to disable pricing, or add the missing variables.',
+      ].join('\n');
+
+      throw new EnvVarError(errorMessage);
+    }
+  }
+
+  // At this point, we're sure all values exist and are valid
   return {
     RPC_URL: requiredVars.RPC_URL.value as string,
     CHAIN_ID: requiredVars.CHAIN_ID.value as string,
@@ -92,6 +130,12 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
     INCENTIVES_CONTRACT_ADDRESS: requiredVars.INCENTIVES_CONTRACT_ADDRESS.value as string,
     INCENTIVES_CONTRACT_HASH: requiredVars.INCENTIVES_CONTRACT_HASH.value as string,
     LOAD_BALANCE_PREFERENCE: loadBalanceValue as LoadBalancePreference,
+    ENABLE_PRICING: enablePricing,
+    COINGECKO_API_KEY: enablePricing ? (process.env.COINGECKO_API_KEY as string) : undefined,
+    COINGECKO_API_URL: enablePricing ? (process.env.COINGECKO_API_URL as string) : undefined,
+    COINGECKO_AUTH_HEADER: enablePricing
+      ? (process.env.COINGECKO_AUTH_HEADER as string)
+      : undefined,
   };
 }
 

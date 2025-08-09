@@ -1,42 +1,33 @@
-import { Keplr } from '@keplr-wallet/types';
+import { createWalletClient } from '@/hooks/useSecretNetwork';
+import { getSecretNetworkEnvVars } from '@/utils/env';
 import { SecretNetworkClient } from 'secretjs';
+import { waitForKeplr } from './keplrDetection';
 
-declare global {
-  interface Window {
-    keplr?: Keplr;
-  }
-}
-
-export const initKeplr = async () => {
-  const keplr = window.keplr;
+export const initKeplr = async (): Promise<{
+  secretjs: SecretNetworkClient;
+  walletAddress: string;
+}> => {
+  const keplr = await waitForKeplr(2300);
   if (!keplr) {
     throw new Error('Please install Keplr extension');
   }
 
-  await keplr.enable('secret-4');
-  const offlineSigner = keplr.getOfflineSignerOnlyAmino('secret-4');
-  const enigmaUtils = keplr.getEnigmaUtils('secret-4');
-  const accounts = await offlineSigner.getAccounts();
+  // Reuse centralized wallet client creation for consistent config/env
+  const secretjs = await createWalletClient();
+  if (!secretjs) {
+    throw new Error('Failed to initialize Keplr');
+  }
 
-  if (accounts.length === 0) {
+  // Resolve wallet address via Keplr to avoid relying on client internals
+  const { CHAIN_ID } = getSecretNetworkEnvVars();
+  const offlineSigner = keplr.getOfflineSignerOnlyAmino(CHAIN_ID);
+  const accounts = await offlineSigner.getAccounts();
+  if (!accounts.length || !accounts[0]?.address) {
     throw new Error('No account found in Keplr');
   }
 
-  const [firstAccount] = accounts;
-  if (!firstAccount || typeof firstAccount.address !== 'string' || !firstAccount.address) {
-    throw new Error('Invalid account data from Keplr');
-  }
-
-  const secretjs = new SecretNetworkClient({
-    chainId: 'secret-4',
-    url: 'https://rpc.ankr.com/http/scrt_cosmos',
-    wallet: offlineSigner,
-    walletAddress: firstAccount.address,
-    encryptionUtils: enigmaUtils,
-  });
-
   return {
     secretjs,
-    walletAddress: firstAccount.address,
+    walletAddress: accounts[0].address,
   };
 };

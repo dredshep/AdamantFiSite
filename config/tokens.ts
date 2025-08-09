@@ -7,6 +7,7 @@ export type ConfigToken = {
   codeHash: string;
   decimals: number;
   isStablecoin?: boolean;
+  coingeckoId?: string;
 };
 
 export type LiquidityPair = {
@@ -40,6 +41,7 @@ export const TOKENS: ConfigToken[] = [
     address: 'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek',
     codeHash: 'af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e',
     decimals: 6,
+    coingeckoId: 'secret',
   },
   {
     name: 'Secret ATOM',
@@ -47,6 +49,7 @@ export const TOKENS: ConfigToken[] = [
     address: 'secret19e75l25r6sa6nhdf4lggjmgpw0vmpfvsw5cnpe',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
     decimals: 6,
+    coingeckoId: 'cosmos',
   },
   {
     name: 'Silk Stablecoin',
@@ -55,6 +58,7 @@ export const TOKENS: ConfigToken[] = [
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
     decimals: 6,
     isStablecoin: true,
+    coingeckoId: 'silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2',
   },
   {
     name: 'Secret Axelar WETH',
@@ -62,6 +66,7 @@ export const TOKENS: ConfigToken[] = [
     address: 'secret139qfh3nmuzfgwsx2npnmnjl4hrvj3xq5rmq8a0',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
     decimals: 18,
+    coingeckoId: 'ethereum',
   },
   {
     name: 'Secret Noble USDC',
@@ -70,6 +75,7 @@ export const TOKENS: ConfigToken[] = [
     codeHash: '5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042',
     decimals: 6,
     isStablecoin: true,
+    coingeckoId: 'usd-coin',
   },
   {
     name: 'Secret Jackal',
@@ -77,6 +83,7 @@ export const TOKENS: ConfigToken[] = [
     address: 'secret1sgaz455pmtgld6dequqayrdseq8vy2fc48n8y3',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
     decimals: 6,
+    coingeckoId: 'jackal-protocol',
   },
   {
     name: 'bonded ADMT',
@@ -84,6 +91,7 @@ export const TOKENS: ConfigToken[] = [
     address: 'secret1cu5gvrvu24hm36fzyq46vca7u25llrymj6ntek',
     codeHash: '638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e',
     decimals: 6,
+    coingeckoId: 'adamant-finance',
   },
 ];
 
