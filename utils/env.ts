@@ -98,8 +98,9 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
   // Parse pricing feature flag - defaults to false if not set
   const enablePricing = requiredVars.ENABLE_PRICING.value?.toLowerCase() === 'true';
 
-  // Validate pricing environment variables only if pricing is enabled
-  if (enablePricing) {
+  // Only validate pricing environment variables on the server side (API routes)
+  // Client-side code doesn't need CoinGecko env vars, they're handled by API routes
+  if (enablePricing && typeof window === 'undefined') {
     const pricingVars = [
       { key: 'COINGECKO_API_KEY', env: 'COINGECKO_API_KEY' },
       { key: 'COINGECKO_API_URL', env: 'COINGECKO_API_URL' },
@@ -123,7 +124,7 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
   }
 
   // At this point, we're sure all values exist and are valid
-  return {
+  const result: SecretNetworkEnvVars = {
     RPC_URL: requiredVars.RPC_URL.value as string,
     CHAIN_ID: requiredVars.CHAIN_ID.value as string,
     LCD_URL: requiredVars.LCD_URL.value as string,
@@ -131,12 +132,16 @@ export function getSecretNetworkEnvVars(): SecretNetworkEnvVars {
     INCENTIVES_CONTRACT_HASH: requiredVars.INCENTIVES_CONTRACT_HASH.value as string,
     LOAD_BALANCE_PREFERENCE: loadBalanceValue as LoadBalancePreference,
     ENABLE_PRICING: enablePricing,
-    COINGECKO_API_KEY: enablePricing ? (process.env.COINGECKO_API_KEY as string) : undefined,
-    COINGECKO_API_URL: enablePricing ? (process.env.COINGECKO_API_URL as string) : undefined,
-    COINGECKO_AUTH_HEADER: enablePricing
-      ? (process.env.COINGECKO_AUTH_HEADER as string)
-      : undefined,
   };
+
+  // Only include CoinGecko properties when pricing is enabled
+  if (enablePricing && typeof window === 'undefined') {
+    result.COINGECKO_API_KEY = process.env.COINGECKO_API_KEY as string;
+    result.COINGECKO_API_URL = process.env.COINGECKO_API_URL as string;
+    result.COINGECKO_AUTH_HEADER = process.env.COINGECKO_AUTH_HEADER as string;
+  }
+
+  return result;
 }
 
 // example usage:

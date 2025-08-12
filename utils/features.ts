@@ -25,3 +25,4 @@ export function getFeatureFlags(): Record<string, boolean> {
     pricing: isPricingEnabled(),
   };
 }
+

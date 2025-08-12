@@ -137,7 +137,7 @@ class CoinGeckoService {
         return null;
       }
 
-      const data: CoinGeckoPriceResponse = await response.json();
+      const data = (await response.json()) as CoinGeckoPriceResponse;
 
       const coinData = data[coinId];
       if (!coinData) {
@@ -230,7 +230,7 @@ class CoinGeckoService {
         return result;
       }
 
-      const data: CoinGeckoPriceResponse = await response.json();
+      const data = (await response.json()) as CoinGeckoPriceResponse;
 
       // Process each requested coin ID
       coinIds.forEach((coinId) => {

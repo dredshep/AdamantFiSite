@@ -86,7 +86,7 @@ export const useCoinGeckoPricing = (
   // Auto-fetch on mount and when dependencies change
   useEffect(() => {
     if (autoFetch) {
-      fetchPricing();
+      void fetchPricing();
     }
   }, [autoFetch, JSON.stringify(coingeckoIds), JSON.stringify(tokenSymbols)]);
 
@@ -95,14 +95,14 @@ export const useCoinGeckoPricing = (
     if (!autoFetch || refreshInterval <= 0) return;
 
     const interval = setInterval(() => {
-      fetchPricing();
+      void fetchPricing();
     }, refreshInterval);
 
     return () => clearInterval(interval);
   }, [autoFetch, refreshInterval, JSON.stringify(coingeckoIds)]);
 
   const refreshPricing = () => {
-    fetchPricing();
+    void fetchPricing();
   };
 
   const getPriceForSymbol = (symbol: string): TokenPriceInfo | null => {
