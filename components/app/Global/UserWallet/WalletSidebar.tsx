@@ -91,13 +91,16 @@ const WalletSidebar: React.FC = () => {
   };
 
   return (
-    <div className="relative ">
-      {/* Underlay behind the sidebar */}
+    <div className="relative">
+      {/* Underlay behind the sidebar - with individual hover detection */}
       <div
         className={`
-          fixed right-0 top-2.5 w-[490px] h-full -translate-x-0 z-40
-          bg-[rgba(255,255,255,0.025)] rounded-l-xl pointer-events-none
-          transition-transform duration-300 ease-out
+          fixed right-2.5 top-2.5 w-[440px] h-full z-40
+          bg-[rgba(255,255,255,0.025)] rounded-l-xl
+          transition-all duration-200 ease-out cursor-pointer
+          hover:bg-[rgba(255,255,255,0.04)]
+          hover:translate-x-[-8px]
+          hover:shadow-lg
           ${isWalletModalOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       />
@@ -106,11 +109,12 @@ const WalletSidebar: React.FC = () => {
       <aside
         ref={sidebarRef}
         className={`
-          fixed top-2.5 right-0 bottom-0 w-[440px] z-50
+          fixed top-2.5 right-2.5 bottom-0 w-[390px] z-50
           bg-gradient-to-b from-adamant-app-input via-adamant-app-input to-adamant-box-veryDark
           backdrop-blur-lg
           transition-transform duration-300 ease-out
           shadow-2xl border-l border-t rounded-l-xl border-adamant-box-border
+          border-r rounded-r-xl
           flex flex-col h-screen
           ${isWalletModalOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -226,19 +230,19 @@ const WalletSidebar: React.FC = () => {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setCurrentView('send')}
-                    className="flex-1 group relative bg-white hover:bg-gray-100 text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+                    className="flex-1 group relative bg-white hover:bg-gray-200 text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 active:scale-[0.98] shadow-lg hover:shadow-xl hover:ring-2 hover:ring-adamant-gradientBright/30"
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <RiSendPlaneLine className="w-4 h-4 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+                      <RiSendPlaneLine className="w-4 h-4" />
                       <span className="text-sm uppercase tracking-wide font-black">Send</span>
                     </div>
                   </button>
                   <button
                     onClick={() => setCurrentView('receive')}
-                    className="flex-1 group bg-white hover:bg-gray-100 text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+                    className="flex-1 group bg-white hover:bg-gray-200 text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 active:scale-[0.98] shadow-lg hover:shadow-xl hover:ring-2 hover:ring-adamant-gradientBright/30"
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <HiQrCode className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                      <HiQrCode className="w-4 h-4" />
                       <span className="text-sm uppercase tracking-wide">Receive</span>
                     </div>
                   </button>
@@ -319,7 +323,7 @@ const WalletSidebar: React.FC = () => {
               <div className="flex-1 overflow-y-auto min-h-0">
                 {tokens.length > 0 ? (
                   <div
-                    className="space-y-3 p-6"
+                    className=""
                     style={{ scrollbarWidth: 'thin', scrollbarColor: '#8A754A #1a1a2e' }}
                   >
                     {tokens.map((token, index) => (
