@@ -18,7 +18,7 @@ const TokenImageWithFallback: React.FC<TokenImageWithFallbackProps> = ({
   alt = 'Token',
 }) => {
   const [imageError, setImageError] = useState(false);
-  const customImagePath = getTokenImagePath(tokenAddress);
+  const customImagePath = getTokenImagePath(tokenAddress, size);
 
   // If no custom image or image failed to load, use placeholder
   if (!customImagePath || imageError) {
@@ -34,6 +34,7 @@ const TokenImageWithFallback: React.FC<TokenImageWithFallbackProps> = ({
       className={`rounded-full ${className}`}
       onError={() => setImageError(true)}
       priority={false}
+      unoptimized
     />
   );
 };

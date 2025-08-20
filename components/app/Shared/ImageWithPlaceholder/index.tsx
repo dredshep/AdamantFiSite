@@ -1,5 +1,5 @@
-import Image from "next/image";
-import { useState } from "react";
+import Image from 'next/image';
+import { useState } from 'react';
 
 interface ImageWithPlaceholderProps {
   imageUrl: string;
@@ -10,12 +10,7 @@ interface ImageWithPlaceholderProps {
   size: number; // Size in pixels
 }
 
-function ImageWithPlaceholder({
-  imageUrl,
-  placeholderUrl,
-  alt,
-  size,
-}: ImageWithPlaceholderProps) {
+function ImageWithPlaceholder({ imageUrl, placeholderUrl, alt, size }: ImageWithPlaceholderProps) {
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl);
 
   const handleError = () => {
