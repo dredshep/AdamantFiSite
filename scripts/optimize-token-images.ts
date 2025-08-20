@@ -1,9 +1,14 @@
-const sharp = require('sharp');
-const fs = require('fs').promises;
-const path = require('path');
+import { promises as fs } from 'fs';
+import path from 'path';
+import sharp from 'sharp';
 
 // Image sizes we need for different use cases
-const SIZES = [
+interface ImageSize {
+  size: number;
+  suffix: string;
+}
+
+const SIZES: ImageSize[] = [
   { size: 24, suffix: '24' },
   { size: 32, suffix: '32' },
   { size: 40, suffix: '40' },
@@ -14,7 +19,7 @@ const SIZES = [
 const INPUT_DIR = path.join(__dirname, '../public/images/tokens');
 const OUTPUT_BASE_DIR = path.join(__dirname, '../public/images/tokens/optimized');
 
-async function ensureDirectory(dirPath) {
+async function ensureDirectory(dirPath: string): Promise<void> {
   try {
     await fs.access(dirPath);
   } catch {
@@ -23,7 +28,7 @@ async function ensureDirectory(dirPath) {
   }
 }
 
-async function resizeImage(inputPath, outputPath, size) {
+async function resizeImage(inputPath: string, outputPath: string, size: number): Promise<void> {
   try {
     await sharp(inputPath)
       .resize(size, size, {
@@ -41,11 +46,11 @@ async function resizeImage(inputPath, outputPath, size) {
     const sizeKB = (stats.size / 1024).toFixed(2);
     console.log(`✓ Resized ${path.basename(inputPath)} to ${size}x${size} (${sizeKB}KB)`);
   } catch (error) {
-    console.error(`✗ Failed to resize ${inputPath}:`, error.message);
+    console.error(`✗ Failed to resize ${inputPath}:`, (error as Error).message);
   }
 }
 
-async function optimizeTokenImages() {
+async function optimizeTokenImages(): Promise<void> {
   console.log('🖼️  Starting token image optimization...\n');
 
   try {
@@ -102,9 +107,10 @@ async function optimizeTokenImages() {
   }
 }
 
-// Run if called directly
-if (require.main === module) {
-  optimizeTokenImages();
+// Run if called directly (ES module equivalent)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  void optimizeTokenImages();
 }
 
-module.exports = { optimizeTokenImages, SIZES };
+export { optimizeTokenImages, SIZES };
+export type { ImageSize };
