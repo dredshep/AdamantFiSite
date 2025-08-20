@@ -18,7 +18,7 @@ function getBestOptimizedSize(requestedSize: number): number {
   if (exactOrLarger) return exactOrLarger;
 
   // If no larger size available, use the largest available
-  return AVAILABLE_SIZES[AVAILABLE_SIZES.length - 1];
+  return AVAILABLE_SIZES[AVAILABLE_SIZES.length - 1] ?? 32;
 }
 
 /**
