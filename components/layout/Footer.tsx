@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react';
 import { FaBlog, FaBook, FaGithub, FaTelegramPlane, FaTwitter } from 'react-icons/fa';
 
@@ -44,7 +45,7 @@ const Footer: React.FC = () => {
             {socialLinks.map((social) => {
               const IconComponent = social.icon;
               return (
-                <a
+                <Link
                   key={social.name}
                   href={social.url}
                   target="_blank"
@@ -53,7 +54,7 @@ const Footer: React.FC = () => {
                   aria-label={social.name}
                 >
                   <IconComponent className="w-5 h-5" />
-                </a>
+                </Link>
               );
             })}
           </div>
@@ -72,12 +73,12 @@ const Footer: React.FC = () => {
 
           {/* Additional Links */}
           <div className="flex items-center space-x-4 text-xs">
-            <a
+            <Link
               href="/privacy"
               className="text-adamant-text-box-secondary/50 hover:text-adamant-accentText/70 transition-colors duration-200"
             >
               Privacy Policy
-            </a>
+            </Link>
           </div>
         </div>
       </div>
