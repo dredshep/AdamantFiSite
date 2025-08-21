@@ -69,11 +69,13 @@
  * RECOMMENDATION: Use StakingInput2 approach for production
  */
 
+import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import { InfoContainer } from '@/components/app/Shared/Forms/Input/InputWrappers';
 import StakingPoolSelectionModal from '@/components/app/Shared/Forms/Select/StakingPoolSelectionModal';
 import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { getActiveStakingPools } from '@/config/staking';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useStakingStore } from '@/store/staking/stakingStore';
 import { SecretString } from '@/types';
@@ -126,6 +128,15 @@ const StakingInput: React.FC<StakingInputProps> = ({
   const shouldShowEstimates =
     operation === 'stake' && amount && parseFloat(amount) > 0 && !isInvalid;
   const estimates = shouldShowEstimates ? rewardEstimates.estimateRewardsForAmount(amount) : null;
+
+  // Get LP token information for proper dual icon display
+  const lpTokenInfo = lpTokenAddress
+    ? LIQUIDITY_PAIRS.find((pair) => pair.lpToken === lpTokenAddress)
+    : null;
+
+  // Get token information for dual icons
+  const token0 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token0) : undefined;
+  const token1 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token1) : undefined;
 
   // Helper to format numbers cleanly
   const formatBalance = (value: number): string => {
@@ -213,11 +224,21 @@ const StakingInput: React.FC<StakingInputProps> = ({
               className="flex gap-3 items-center rounded-xl text-base font-medium py-1 px-3 bg-adamant-app-selectTrigger min-w-max cursor-pointer hover:bg-adamant-app-selectTrigger/80 transition-colors"
               onClick={handleTokenSelectorClick}
             >
-              <TokenImageWithFallback
-                tokenAddress={stakingContractAddress as SecretString}
-                size={24}
-                alt={tokenSymbol}
-              />
+              {token0 && token1 ? (
+                <DualTokenIcon
+                  token0Address={token0.address}
+                  token1Address={token1.address}
+                  token0Symbol={token0.symbol}
+                  token1Symbol={token1.symbol}
+                  size={24}
+                />
+              ) : (
+                <TokenImageWithFallback
+                  tokenAddress={stakingContractAddress as SecretString}
+                  size={24}
+                  alt={tokenSymbol}
+                />
+              )}
               {tokenSymbol}
             </div>
           </Dialog.Trigger>

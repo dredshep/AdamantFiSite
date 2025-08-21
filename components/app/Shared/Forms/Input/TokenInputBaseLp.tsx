@@ -1,8 +1,10 @@
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useLpTokenBalance } from '@/hooks/useLpTokenBalance';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
 import { usePoolStore } from '@/store/forms/poolStore';
 import { SecretString } from '@/types';
 import React, { useEffect } from 'react';
+import DualTokenIcon from '../../DualTokenIcon';
 import TokenImageWithFallback from '../../TokenImageWithFallback';
 import TopRightBalanceLp from '../../TopRightBalanceLp';
 import InputLabel from './InputLabel';
@@ -48,6 +50,13 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
     }
   }, [lpTokenData.amount, inputIdentifier, setTokenInputBalance]);
 
+  // Get LP token information for proper dual icon display
+  const lpTokenInfo = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+
+  // Get token information for dual icons
+  const token0 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token0) : undefined;
+  const token1 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token1) : undefined;
+
   return (
     <div className={INPUT_STYLES.container}>
       <div className={INPUT_STYLES.header}>
@@ -81,7 +90,17 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
           )}
         </div>
         <div className={INPUT_STYLES.tokenSelectorStatic}>
-          <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
+          {token0 && token1 ? (
+            <DualTokenIcon
+              token0Address={token0.address}
+              token1Address={token1.address}
+              token0Symbol={token0.symbol}
+              token1Symbol={token1.symbol}
+              size={24}
+            />
+          ) : (
+            <TokenImageWithFallback tokenAddress={tokenAddress} size={24} />
+          )}
           {tokenSymbol}
         </div>
       </div>

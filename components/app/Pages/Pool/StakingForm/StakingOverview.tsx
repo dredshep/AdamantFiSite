@@ -1,5 +1,7 @@
+import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { SecretString } from '@/types';
@@ -102,6 +104,18 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
     hasStakedTokens && stakedBalance && rewardEstimates.poolData.lpTokenPrice
       ? (parseFloat(stakedBalance) / 1_000_000) * rewardEstimates.poolData.lpTokenPrice
       : undefined;
+
+  // Get LP token information for proper dual icon display
+  const lpTokenInfo = resolvedLpTokenAddress
+    ? LIQUIDITY_PAIRS.find((pair) => pair.lpToken === resolvedLpTokenAddress)
+    : null;
+
+  // Get token information for dual icons
+  const token0 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token0) : undefined;
+  const token1 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token1) : undefined;
+
+  // Get bADMT token for reward display
+  const rewardToken = TOKENS.find((t) => t.symbol === 'bADMT');
 
   // Update allocation function to trigger reward initialization
   const handleUpdateAllocation = async () => {
@@ -286,12 +300,23 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
       <div className="bg-adamant-box-dark/50 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <TokenImageWithFallback
-              tokenAddress={stakingContractAddress as SecretString}
-              size={32}
-              alt={`${pairSymbol} staking`}
-              className="rounded-lg"
-            />
+            {token0 && token1 ? (
+              <DualTokenIcon
+                token0Address={token0.address}
+                token1Address={token1.address}
+                token0Symbol={token0.symbol}
+                token1Symbol={token1.symbol}
+                size={32}
+                className="rounded-lg"
+              />
+            ) : (
+              <TokenImageWithFallback
+                tokenAddress={stakingContractAddress as SecretString}
+                size={32}
+                alt={`${pairSymbol} staking`}
+                className="rounded-lg"
+              />
+            )}
             <div>
               <p className="text-sm font-medium text-adamant-text-box-main">Staked</p>
               <p className="text-xs text-adamant-text-box-secondary">{pairSymbol} LP</p>
@@ -323,7 +348,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <TokenImageWithFallback
-                tokenAddress={stakingContractAddress as SecretString}
+                tokenAddress={rewardToken?.address || (stakingContractAddress as SecretString)}
                 size={32}
                 alt={`${rewardSymbol} rewards`}
                 className="rounded-lg opacity-80"

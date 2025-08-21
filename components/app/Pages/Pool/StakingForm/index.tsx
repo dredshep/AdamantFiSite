@@ -1,3 +1,4 @@
+import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import ViewingKeyStatusComponent from '@/components/common/ViewingKeyStatus';
 import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
@@ -193,11 +194,21 @@ const StakingForm: React.FC<StakingFormProps> = ({ initialStakingAmount }) => {
       {/* Header Section - Compact */}
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2">
-          <TokenImageWithFallback
-            tokenAddress={stakingInfo?.stakingAddress}
-            size={24}
-            alt={`${lpPairName} staking pool`}
-          />
+          {token0 && token1 ? (
+            <DualTokenIcon
+              token0Address={token0.address}
+              token1Address={token1.address}
+              token0Symbol={token0.symbol}
+              token1Symbol={token1.symbol}
+              size={24}
+            />
+          ) : (
+            <TokenImageWithFallback
+              tokenAddress={stakingInfo?.stakingAddress}
+              size={24}
+              alt={`${lpPairName} staking pool`}
+            />
+          )}
           <h2 className="text-xl font-semibold text-adamant-text-box-main">
             Staking {lpPairName} LP
           </h2>
