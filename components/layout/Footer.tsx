@@ -1,42 +1,36 @@
 import React from 'react';
-import { FaBook, FaDiscord, FaGithub, FaMedium, FaTelegramPlane, FaTwitter } from 'react-icons/fa';
+import { FaBlog, FaBook, FaGithub, FaTelegramPlane, FaTwitter } from 'react-icons/fa';
 
 const Footer: React.FC = () => {
   const socialLinks = [
     {
-      name: 'Twitter',
+      name: 'X (Twitter)',
       icon: FaTwitter,
-      url: 'https://twitter.com/adamantfi',
+      url: 'https://x.com/AdamantFi',
       color: 'hover:text-blue-400',
     },
     {
       name: 'Telegram',
       icon: FaTelegramPlane,
-      url: 'https://t.me/adamantfi',
+      url: 'https://t.me/adamant_fi',
       color: 'hover:text-blue-500',
-    },
-    {
-      name: 'Discord',
-      icon: FaDiscord,
-      url: 'https://discord.gg/adamantfi',
-      color: 'hover:text-indigo-400',
     },
     {
       name: 'GitHub',
       icon: FaGithub,
-      url: 'https://github.com/adamantfi',
+      url: 'https://github.com/AdamantFi',
       color: 'hover:text-gray-300',
     },
     {
-      name: 'Medium',
-      icon: FaMedium,
-      url: 'https://medium.com/@adamantfi',
+      name: 'Blog',
+      icon: FaBlog,
+      url: 'https://x.com/AdamantFi/articles',
       color: 'hover:text-green-400',
     },
     {
       name: 'Documentation',
       icon: FaBook,
-      url: 'https://docs.adamantfi.com',
+      url: 'https://adamantfi.gitbook.io/adamantfi/',
       color: 'hover:text-yellow-400',
     },
   ];
@@ -79,24 +73,10 @@ const Footer: React.FC = () => {
           {/* Additional Links */}
           <div className="flex items-center space-x-4 text-xs">
             <a
-              href="/terms"
-              className="text-adamant-text-box-secondary/50 hover:text-adamant-accentText/70 transition-colors duration-200"
-            >
-              Terms of Service
-            </a>
-            <span className="text-adamant-text-box-secondary/30">•</span>
-            <a
               href="/privacy"
               className="text-adamant-text-box-secondary/50 hover:text-adamant-accentText/70 transition-colors duration-200"
             >
               Privacy Policy
-            </a>
-            <span className="text-adamant-text-box-secondary/30">•</span>
-            <a
-              href="/security"
-              className="text-adamant-text-box-secondary/50 hover:text-adamant-accentText/70 transition-colors duration-200"
-            >
-              Security
             </a>
           </div>
         </div>
