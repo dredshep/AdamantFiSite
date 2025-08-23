@@ -280,12 +280,9 @@ const SwapForm: React.FC = () => {
                   rawTxFee: txFee,
                   parsedTxFee: parseFloat(txFee),
                   isValidNumber: !isNaN(parseFloat(txFee)),
-                  feePercentage:
-                    payDetails.amount &&
-                    !isNaN(parseFloat(txFee)) &&
-                    !isNaN(parseFloat(payDetails.amount))
-                      ? ((parseFloat(txFee) / parseFloat(payDetails.amount)) * 100).toFixed(4)
-                      : 'N/A',
+                  feeInScrt: txFee,
+                  swapType: swapPath?.isDirectPath ? 'Direct' : 'Multihop',
+                  totalHops: swapPath?.totalHops || 1,
                 }}
               >
                 <div className="text-sm text-gray-300">
@@ -293,20 +290,18 @@ const SwapForm: React.FC = () => {
                     <strong>Status:</strong> {isEstimating ? 'Calculating...' : 'Ready'}
                   </p>
                   <p>
-                    <strong>Raw Value:</strong> {txFee || 'undefined'}
+                    <strong>Transaction Fee:</strong> {txFee || 'undefined'} SCRT
                   </p>
                   <p>
-                    <strong>Is Valid Number:</strong> {!isNaN(parseFloat(txFee)) ? 'Yes' : 'No'}
+                    <strong>Swap Type:</strong> {swapPath?.isDirectPath ? 'Direct' : 'Multihop'}
                   </p>
                   <p>
-                    <strong>Pay Amount:</strong> {payDetails.amount || 'Not set'}
+                    <strong>Total Hops:</strong> {swapPath?.totalHops || 1}
                   </p>
-                  {!isNaN(parseFloat(txFee)) && payDetails.amount && (
-                    <p>
-                      <strong>Fee Percentage:</strong>{' '}
-                      {((parseFloat(txFee) / parseFloat(payDetails.amount)) * 100).toFixed(4)}%
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-400 mt-2">
+                    This is the estimated blockchain gas fee for executing the swap transaction,
+                    paid in SCRT.
+                  </p>
                 </div>
               </InfoDialog>
             </div>
@@ -319,10 +314,7 @@ const SwapForm: React.FC = () => {
                 ) : isNaN(parseFloat(txFee)) ? (
                   <span className="text-amber-400 text-xs">⚠️ Unable to calculate</span>
                 ) : (
-                  <>
-                    {txFee} {payToken.symbol} ≈{' '}
-                    {((parseFloat(txFee) / parseFloat(payDetails.amount)) * 100).toFixed(2)}%
-                  </>
+                  <>{txFee} SCRT</>
                 )
               ) : (
                 <span className="text-gray-500">Enter amount</span>

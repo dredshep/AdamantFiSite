@@ -178,7 +178,7 @@ export const useSwapFormLean = () => {
             const txFeeInScrt = routingPath.isDirectPath
               ? DIRECT_SWAP_FEE
               : MULTIHOP_SWAP_FEE_PER_HOP * routingPath.totalHops;
-            setTxFee(txFeeInScrt.toFixed(6));
+            setTxFee(parseFloat(txFeeInScrt.toFixed(6)).toString());
 
             // Calculate min receive based on output and slippage
             const minReceiveAmount = output.mul(new Decimal(1).sub(slippage / 100)).toFixed(6);

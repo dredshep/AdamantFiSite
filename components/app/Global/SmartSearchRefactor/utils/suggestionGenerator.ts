@@ -286,7 +286,8 @@ export function generateSuggestions({
       if (lastWord) {
         // Check if the last word is an incomplete token (not a complete token and not a number)
         const isNumber = /^\d+(\.\d+)?$/.test(lastWord);
-        const isCompleteToken = getAllTokensWithNative().some(
+        const tokenList = parsedCommand.action === 'send' ? getAllTokensWithNative() : TOKENS;
+        const isCompleteToken = tokenList.some(
           (token) => token.symbol.toLowerCase() === lastWord.toLowerCase()
         );
 
@@ -300,7 +301,8 @@ export function generateSuggestions({
 
     if (searchTerm.length > 0) {
       // FIXED: Filter out tokens that would create same-token swaps
-      const matchingTokens = getAllTokensWithNative()
+      const tokenList = parsedCommand.action === 'send' ? getAllTokensWithNative() : TOKENS;
+      const matchingTokens = tokenList
         .filter((token) => {
           const symbolMatch = token.symbol.toLowerCase().includes(searchTerm);
           const nameMatch = token.name?.toLowerCase().includes(searchTerm);

@@ -2,10 +2,10 @@ import { ConfigToken, TOKENS } from '@/config/tokens';
 import { ACTION_KEYWORDS, ActionType } from '../constants/actionKeywords';
 
 /**
- * Get all tokens including the native SCRT token
+ * Get all tokens including the native SCRT token (only for send operations)
  */
 function getAllTokensWithNative(): ConfigToken[] {
-  // Add SCRT as the first option, similar to SendTokensDialog
+  // Add SCRT as the first option, only for send operations
   const nativeScrtToken: ConfigToken = {
     symbol: 'SCRT',
     address: 'uscrt' as unknown as ConfigToken['address'], // Native denom
@@ -18,13 +18,23 @@ function getAllTokensWithNative(): ConfigToken[] {
 }
 
 /**
+ * Get tokens for swap operations (only swappable tokens from TOKENS array)
+ */
+function getSwappableTokens(): ConfigToken[] {
+  return TOKENS; // Only tokens with liquidity pools
+}
+
+/**
  * Find token by text input with fuzzy matching
  * Extracted from original SmartSearchBox findTokenByText function
  * FIXED: Less aggressive matching for very short inputs
  */
-export function findTokenByText(text: string): ConfigToken | null {
+export function findTokenByText(
+  text: string,
+  context: 'swap' | 'send' = 'swap'
+): ConfigToken | null {
   const normalized = text.toLowerCase().replace(/[^a-z0-9.]/g, '');
-  const allTokens = getAllTokensWithNative();
+  const allTokens = context === 'send' ? getAllTokensWithNative() : getSwappableTokens();
 
   // Don't match very short inputs (1-2 characters) unless it's an exact match
   if (normalized.length <= 2) {

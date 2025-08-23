@@ -54,7 +54,8 @@ export function parseCommand(input: string): ParsedCommand {
       if (!word || /^\d+(\.\d+)?$/.test(word)) continue; // Skip standalone numbers
 
       // Try single word first
-      const singleToken = findTokenByText(word);
+      const context = command.action === 'send' ? 'send' : 'swap';
+      const singleToken = findTokenByText(word, context);
       if (singleToken && !foundTokens.find((t) => t.token.symbol === singleToken.symbol)) {
         const precedingAmount =
           i > 0 && /^\d+(\.\d+)?$/.test(words[i - 1]!) ? words[i - 1]! : undefined;
@@ -86,7 +87,7 @@ export function parseCommand(input: string): ParsedCommand {
         const nextWord = words[i + 1];
         if (nextWord && word && !/^\d+(\.\d+)?$/.test(nextWord)) {
           const twoWords = `${word} ${nextWord}`;
-          const compoundToken = findTokenByText(twoWords);
+          const compoundToken = findTokenByText(twoWords, context);
           if (compoundToken && !foundTokens.find((t) => t.token.symbol === compoundToken.symbol)) {
             const precedingAmount =
               i > 0 && /^\d+(\.\d+)?$/.test(words[i - 1]!) ? words[i - 1]! : undefined;

@@ -343,7 +343,7 @@ function generateFromTokenSuggestions(
       ? getStakeableTokens()
       : commandStep.action === 'send'
       ? getAllTokensWithNative()
-      : TOKENS;
+      : getSwappableTokens();
   const matchingTokens = availableTokens
     .filter((token: ConfigToken) => {
       const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
@@ -423,7 +423,7 @@ function generateAfterConnectorSuggestions(
 
   if (commandStep.action === 'swap') {
     // For swap, only suggest tokens after "for" (no target amount)
-    const availableTokens = getAllTokensWithNative()
+    const availableTokens = getSwappableTokens()
       .filter(
         (token: ConfigToken) =>
           !commandStep.fromToken || token.symbol !== commandStep.fromToken.symbol
@@ -522,7 +522,7 @@ function generateToTokenSuggestions(
       ? getStakeableTokens()
       : commandStep.action === 'send'
       ? getAllTokensWithNative()
-      : TOKENS;
+      : getSwappableTokens();
   const matchingTokens = availableTokens
     .filter((token: ConfigToken) => {
       const symbolMatch = token.symbol.toLowerCase().includes(searchTermLower);
@@ -577,12 +577,10 @@ function generateExecutionSuggestions(
   }
 
   // Verify tokens exist in our configuration
-  const fromTokenExists = getAllTokensWithNative().some(
-    (token) => token.symbol === commandStep.fromToken?.symbol
-  );
+  const tokenList = commandStep.action === 'send' ? getAllTokensWithNative() : getSwappableTokens();
+  const fromTokenExists = tokenList.some((token) => token.symbol === commandStep.fromToken?.symbol);
   const toTokenExists =
-    !commandStep.toToken ||
-    getAllTokensWithNative().some((token) => token.symbol === commandStep.toToken?.symbol);
+    !commandStep.toToken || tokenList.some((token) => token.symbol === commandStep.toToken?.symbol);
 
   if (!fromTokenExists || !toTokenExists) {
     return suggestions; // Don't show execution if tokens don't exist
@@ -727,6 +725,13 @@ function getAllTokensWithNative(): ConfigToken[] {
   return [nativeScrtToken, ...TOKENS];
 }
 
+/**
+ * Get tokens for swap operations (only swappable tokens from TOKENS array)
+ */
+function getSwappableTokens(): ConfigToken[] {
+  return TOKENS; // Only tokens with liquidity pools
+}
+
 function getRelevantTokensForAction(action: ActionType): ConfigToken[] {
   switch (action) {
     case 'stake':
@@ -736,11 +741,13 @@ function getRelevantTokensForAction(action: ActionType): ConfigToken[] {
       // For sending, include native SCRT token
       return getAllTokensWithNative().slice(0, 8);
     case 'swap':
+      // For swapping, only use swappable tokens (no native SCRT)
+      return getSwappableTokens().slice(0, 8);
     case 'deposit':
     case 'withdraw':
     default:
       // For other actions, return regular tokens
-      return TOKENS.slice(0, 8);
+      return getSwappableTokens().slice(0, 8);
   }
 }
 

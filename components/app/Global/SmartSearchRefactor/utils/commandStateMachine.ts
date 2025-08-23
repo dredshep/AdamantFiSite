@@ -107,7 +107,9 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
     const possibleToken = words.slice(wordIndex).join(' ');
 
     // Try single word first (more accurate), then full phrase
-    const token = findTokenByText(singleWord) || findTokenByText(possibleToken);
+    // Pass context based on action type
+    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const token = findTokenByText(singleWord, context) || findTokenByText(possibleToken, context);
 
     if (token) {
       currentStep.fromToken = token;
@@ -144,7 +146,10 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
     const remainingWords = words.slice(wordIndex).join(' ');
 
     // Try single word first (more accurate), then full phrase
-    const toToken = findTokenByText(singleWord) || findTokenByText(remainingWords);
+    // Pass context based on action type
+    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const toToken =
+      findTokenByText(singleWord, context) || findTokenByText(remainingWords, context);
 
     if (toToken) {
       currentStep.toToken = toToken;
@@ -190,7 +195,8 @@ function analyzeStakeState(step: CommandStep, words: string[]): CommandStep {
     const tokenWords = connectorIndex !== -1 ? restWords.slice(0, connectorIndex) : restWords;
     const tokenText = tokenWords.join(' ');
 
-    const token = findTokenByText(tokenText);
+    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const token = findTokenByText(tokenText, context);
     if (token) {
       currentStep.fromToken = token;
       currentStep.state = 'command_ready';
@@ -207,7 +213,8 @@ function analyzeStakeState(step: CommandStep, words: string[]): CommandStep {
     const tokenWords = connectorIndex !== -1 ? words.slice(0, connectorIndex) : words;
     const tokenText = tokenWords.join(' ');
 
-    const token = findTokenByText(tokenText);
+    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const token = findTokenByText(tokenText, context);
     if (token) {
       currentStep.fromToken = token;
       currentStep.state = 'command_ready';
