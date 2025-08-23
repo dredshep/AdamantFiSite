@@ -103,11 +103,15 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
 
   // Check for from token
   if (wordIndex < words.length) {
+    const singleWord = words[wordIndex]!;
     const possibleToken = words.slice(wordIndex).join(' ');
-    const token = findTokenByText(possibleToken) || findTokenByText(words[wordIndex]!);
+
+    // Try single word first (more accurate), then full phrase
+    const token = findTokenByText(singleWord) || findTokenByText(possibleToken);
 
     if (token) {
       currentStep.fromToken = token;
+
       // Skip the token words
       if (possibleToken === token.symbol || possibleToken === token.name) {
         wordIndex = words.length;
@@ -118,6 +122,7 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
       currentStep.state = 'from_token_complete';
     } else {
       // User is typing a token
+
       return { ...currentStep, state: 'from_token_partial' };
     }
   }
@@ -135,11 +140,15 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
   // For swap commands, skip amount checking after "for" and go directly to token
   // Check for target token (no target amount support for swaps)
   if (wordIndex < words.length) {
+    const singleWord = words[wordIndex]!;
     const remainingWords = words.slice(wordIndex).join(' ');
-    const toToken = findTokenByText(remainingWords) || findTokenByText(words[wordIndex]!);
+
+    // Try single word first (more accurate), then full phrase
+    const toToken = findTokenByText(singleWord) || findTokenByText(remainingWords);
 
     if (toToken) {
       currentStep.toToken = toToken;
+
       // Validate that both tokens exist before marking as ready
       if (currentStep.fromToken && toToken) {
         currentStep.state = 'command_ready';

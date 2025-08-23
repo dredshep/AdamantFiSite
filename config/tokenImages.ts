@@ -62,6 +62,11 @@ export const TOKEN_IMAGES: TokenImageConfig[] = [
     imagePath: 'bADMT.png',
     hasCustomImage: true,
   },
+  {
+    address: 'uscrt' as SecretString, // uSCRT (native token)
+    imagePath: 'sSCRT.png',
+    hasCustomImage: true,
+  },
   // Staking contract images (not optimized, kept as-is)
   {
     address: 'secret15rlkcn54mjkwfl6s735zjx3v7zcry6g499t5ev',

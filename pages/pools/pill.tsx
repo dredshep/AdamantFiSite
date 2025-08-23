@@ -1,1 +1,1 @@
-export { default } from '@/components/app/Global/SmartSearch/TokenPill';
+export { default } from '@/components/app/Global/SmartSearchRefactor/components/TokenPill';

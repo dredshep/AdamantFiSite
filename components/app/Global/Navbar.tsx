@@ -1,5 +1,7 @@
-import { MobileSearchButton } from '@/components/app/Global/SmartSearch';
-import { MobileSearchButton as MobileSearchButtonRefactored } from '@/components/app/Global/SmartSearchRefactor';
+import {
+  MobileSearchButton,
+  MobileSearchButton as MobileSearchButtonRefactored,
+} from '@/components/app/Global/SmartSearchRefactor';
 import SmartSearchBoxRefactored from '@/components/app/Global/SmartSearchRefactor/SmartSearchBox';
 import UserWallet from '@/components/app/Global/UserWallet';
 import AdamantFiLogo from '@/components/SVG/Logo';

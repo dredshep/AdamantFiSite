@@ -30,17 +30,22 @@ export function findTokenByText(text: string): ConfigToken | null {
   if (normalized.length <= 2) {
     // Only exact symbol match for very short inputs
     const exactMatch = allTokens.find((token) => token.symbol.toLowerCase() === normalized);
-    if (exactMatch) return exactMatch;
+    if (exactMatch) {
+      return exactMatch;
+    }
 
     // Check special mappings for short inputs
     const specialMappings: Record<string, string> = {
-      secret: 'SCRT', // Map to native SCRT instead of sSCRT
-      scrt: 'SCRT', // Map to native SCRT
-      native: 'SCRT', // Map native to SCRT
+      secret: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
+      scrt: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
+      sscrt: 'sSCRT', // Map sSCRT properly
+      native: 'SCRT', // Map native to SCRT only when explicitly requested
       atom: 'sATOM',
+      satom: 'sATOM',
       eth: 'ETH.axl',
       ethereum: 'ETH.axl',
       usdc: 'USDC.nbl',
+      usdcnbl: 'USDC.nbl',
       dollar: 'USDC.nbl',
       usd: 'USDC.nbl',
       silk: 'SILK',
@@ -53,10 +58,13 @@ export function findTokenByText(text: string): ConfigToken | null {
 
     const mappedSymbol = specialMappings[normalized];
     if (mappedSymbol) {
-      return allTokens.find((token) => token.symbol === mappedSymbol) || null;
+      const foundToken = allTokens.find((token) => token.symbol === mappedSymbol) || null;
+
+      return foundToken;
     }
 
     // Don't match partial inputs that are too short
+
     return null;
   }
 
@@ -64,7 +72,9 @@ export function findTokenByText(text: string): ConfigToken | null {
 
   // Exact symbol match (highest priority)
   const exactMatch = allTokens.find((token) => token.symbol.toLowerCase() === normalized);
-  if (exactMatch) return exactMatch;
+  if (exactMatch) {
+    return exactMatch;
+  }
 
   // Partial symbol match
   const symbolMatch = allTokens.find(
@@ -72,7 +82,9 @@ export function findTokenByText(text: string): ConfigToken | null {
       token.symbol.toLowerCase().includes(normalized) ||
       normalized.includes(token.symbol.toLowerCase())
   );
-  if (symbolMatch) return symbolMatch;
+  if (symbolMatch) {
+    return symbolMatch;
+  }
 
   // Name match
   const nameMatch = allTokens.find(
@@ -80,18 +92,23 @@ export function findTokenByText(text: string): ConfigToken | null {
       token.name?.toLowerCase().includes(normalized) ||
       (token.name && normalized.includes(token.name.toLowerCase().split(' ')[0]!))
   );
-  if (nameMatch) return nameMatch;
+  if (nameMatch) {
+    return nameMatch;
+  }
 
   // Special mappings for common terms (already checked above for short inputs)
   const specialMappings2: Record<string, string> = {
-    secret: 'SCRT', // Map to native SCRT
-    scrt: 'SCRT', // Map to native SCRT
-    native: 'SCRT', // Map native to SCRT
+    secret: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
+    scrt: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
+    sscrt: 'sSCRT', // Map sSCRT properly
+    native: 'SCRT', // Map native to SCRT only when explicitly requested
     uscrt: 'SCRT',
     atom: 'sATOM',
+    satom: 'sATOM',
     eth: 'ETH.axl',
     ethereum: 'ETH.axl',
     usdc: 'USDC.nbl',
+    usdcnbl: 'USDC.nbl',
     dollar: 'USDC.nbl',
     usd: 'USDC.nbl',
     silk: 'SILK',
@@ -104,7 +121,9 @@ export function findTokenByText(text: string): ConfigToken | null {
 
   const mappedSymbol = specialMappings2[normalized];
   if (mappedSymbol) {
-    return allTokens.find((token) => token.symbol === mappedSymbol) || null;
+    const foundToken = allTokens.find((token) => token.symbol === mappedSymbol) || null;
+
+    return foundToken;
   }
 
   return null;
