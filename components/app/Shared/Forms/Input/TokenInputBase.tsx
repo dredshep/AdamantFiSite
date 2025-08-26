@@ -50,8 +50,9 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
     }
   }, [secretjs, connect]);
 
-  // Don't convert null to 0 - pass it through as null
-  const balance = tokenData.amount !== null ? Number(tokenData.amount) : null;
+  // Don't convert null or "-" to 0 - pass it through as null
+  const balance =
+    tokenData.amount !== null && tokenData.amount !== '-' ? Number(tokenData.amount) : null;
 
   const isSwapInput = typeof inputIdentifier === 'string' && inputIdentifier.startsWith('swap.');
 

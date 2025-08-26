@@ -460,6 +460,15 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
               },
             }));
             console.log('💰 TOKEN_BALANCE task - state updated successfully');
+
+            // Sync to balanceFetcherStore for consistency
+            try {
+              const { useBalanceFetcherStore } = await import('./balanceFetcherStore');
+              useBalanceFetcherStore.getState().syncFromGlobalStore(task.key, balance);
+              console.log('💰 Synced balance to balanceFetcherStore:', task.key, balance);
+            } catch (syncError) {
+              console.warn('Failed to sync balance to balanceFetcherStore:', syncError);
+            }
           } catch (tokenError) {
             const errorMessage = tokenError instanceof Error ? tokenError.message : 'Unknown error';
             const needsViewingKey = errorMessage.toLowerCase().includes('viewing key');
@@ -696,6 +705,24 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
                 }
               : s.stakedBalances,
           }));
+
+          // Sync LP balance to balanceFetcherStore for consistency
+          if (lp.balance && !lp.error) {
+            try {
+              const { useBalanceFetcherStore } = await import('./balanceFetcherStore');
+              useBalanceFetcherStore
+                .getState()
+                .syncFromGlobalStore(poolConfig.lpTokenAddress, lp.balance);
+              console.log(
+                '🏊 Synced LP balance to balanceFetcherStore:',
+                poolConfig.lpTokenAddress,
+                lp.balance
+              );
+            } catch (syncError) {
+              console.warn('Failed to sync LP balance to balanceFetcherStore:', syncError);
+            }
+          }
+
           break;
         }
       }

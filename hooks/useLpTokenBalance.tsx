@@ -50,14 +50,23 @@ interface LpTokenBalanceHookReturn {
  * This is just a wrapper around useTokenBalance for LP tokens
  */
 export function useLpTokenBalance(
-  poolAddress: SecretString | undefined,
+  poolOrLpTokenAddress: SecretString | undefined,
   autoFetch = true
 ): LpTokenBalanceHookReturn {
-  const lpTokenAddress = LIQUIDITY_PAIRS.find((pair) => pair.pairContract === poolAddress)?.lpToken;
+  // Check if the address is a pool address or LP token address
+  const lpTokenFromPool = LIQUIDITY_PAIRS.find(
+    (pair) => pair.pairContract === poolOrLpTokenAddress
+  )?.lpToken;
+  const lpTokenFromToken = LIQUIDITY_PAIRS.find(
+    (pair) => pair.lpToken === poolOrLpTokenAddress
+  )?.lpToken;
+
+  // Use the appropriate LP token address
+  const lpTokenAddress = lpTokenFromPool || lpTokenFromToken;
 
   const tokenBalance = useTokenBalance(
     lpTokenAddress,
-    `useLpTokenBalance:${poolAddress?.slice(-6) ?? 'unknown'}`,
+    `useLpTokenBalance:${poolOrLpTokenAddress?.slice(-6) ?? 'unknown'}`,
     autoFetch
   );
 

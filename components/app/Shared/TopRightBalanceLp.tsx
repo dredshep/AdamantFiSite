@@ -80,7 +80,7 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
             <FetchButton
               loading={loading}
               error={!!error}
-              hasBalance={balance !== null}
+              hasBalance={balance !== null && balance !== '-'}
               errorMessage={error ? getErrorMessage(error) : 'Error'}
               showAddToken={!!shouldShowAddToken}
               onFetch={handleFetchClick}

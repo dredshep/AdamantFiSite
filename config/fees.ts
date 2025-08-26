@@ -15,14 +15,30 @@ export const POOL_FEE: Fee = {
 export const SCRT_TX_FEE = 0.0001;
 
 /**
- * Direct swap transaction fee (based on ~300k gas limit)
+ * Gas limits for different transaction types
  */
-export const DIRECT_SWAP_FEE = 0.04;
+export const GAS_LIMITS = {
+  DIRECT_SWAP: 400_000,
+  MULTIHOP_BASE: 150_000,
+  MULTIHOP_PER_HOP: 400_000,
+  MAX_MULTIHOP: 1_200_000,
+} as const;
 
 /**
- * Multihop swap transaction fee per hop (based on ~400k additional gas per hop)
+ * Estimated gas price in uscrt per gas unit (Secret Network typically uses ~0.1 uscrt/gas)
  */
-export const MULTIHOP_SWAP_FEE_PER_HOP = 0.0325;
+export const GAS_PRICE_USCRT = 0.1;
+
+/**
+ * Direct swap transaction fee for UI display (estimated based on gas limit and price)
+ */
+export const DIRECT_SWAP_FEE = (GAS_LIMITS.DIRECT_SWAP * GAS_PRICE_USCRT) / 1_000_000; // Convert to SCRT
+
+/**
+ * Multihop swap transaction fee per hop for UI display
+ */
+export const MULTIHOP_SWAP_FEE_PER_HOP =
+  (GAS_LIMITS.MULTIHOP_PER_HOP * GAS_PRICE_USCRT) / 1_000_000; // Convert to SCRT
 
 /**
  * Staking transaction fee (based on actual transaction: AA20CD986813DC894D96752BBD50EEA445693CCFDD58E0FF495D9C2335D91DE6)

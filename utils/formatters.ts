@@ -21,7 +21,7 @@ export const truncateAddress = (
 ): string => {
   // Type guard to ensure we have a valid string
   if (!address || typeof address !== 'string' || address.trim().length === 0) {
-    return String(address || '');
+    return typeof address === 'string' ? address : '';
   }
 
   // If address is shorter than total chars to show, return as-is

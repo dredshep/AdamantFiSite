@@ -1,6 +1,6 @@
 import { truncateAddress } from '@/utils/formatters';
 import React, { useState } from 'react';
-import { HiClipboard, HiClipboardCheck } from 'react-icons/hi2';
+import { HiCheck, HiClipboard } from 'react-icons/hi2';
 
 interface CopyableAddressProps {
   address: string;
@@ -58,7 +58,11 @@ const CopyableAddress: React.FC<CopyableAddressProps> = ({
 
   return (
     <button
-      onClick={handleCopy}
+      onClick={(e) => {
+        handleCopy(e).catch((error) => {
+          console.error('Error in handleCopy:', error);
+        });
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
@@ -80,7 +84,7 @@ const CopyableAddress: React.FC<CopyableAddressProps> = ({
       {showIcon && (
         <span className="flex-shrink-0">
           {copied ? (
-            <HiClipboardCheck className="w-3.5 h-3.5 text-green-400" />
+            <HiCheck className="w-3.5 h-3.5 text-green-400" />
           ) : (
             <HiClipboard className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
           )}

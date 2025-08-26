@@ -66,6 +66,7 @@ export function useTokenBalance(
 
   // Memoized refetch function
   const refetch = useCallback(() => {
+    console.log('🔄 useTokenBalance refetch called:', { tokenAddress, caller });
     if (tokenAddress) {
       addToQueue(tokenAddress, caller);
     }
@@ -97,10 +98,69 @@ export function useTokenBalance(
 
   // Auto-fetch balance when component mounts (if enabled)
   useEffect(() => {
+    console.log('🔍 useTokenBalance effect triggered:', {
+      autoFetch,
+      tokenAddress,
+      caller,
+      balanceState: {
+        balance: balanceState.balance,
+        lastUpdated: balanceState.lastUpdated,
+        loading: balanceState.loading,
+        error: balanceState.error,
+      },
+    });
+
     if (autoFetch && tokenAddress) {
-      addToQueue(tokenAddress, caller);
+      // First check if globalFetcherStore has this balance already
+      import('../store/globalFetcherStore')
+        .then(({ useGlobalFetcherStore }) => {
+          const globalState = useGlobalFetcherStore.getState();
+          const globalBalance = globalState.tokenBalances[tokenAddress];
+
+          console.log('🔍 useTokenBalance: Checking globalFetcherStore for:', tokenAddress, {
+            globalBalance: globalBalance
+              ? {
+                  value: globalBalance.value,
+                  error: globalBalance.error,
+                  lastUpdated: globalBalance.lastUpdated,
+                  needsViewingKey: globalBalance.needsViewingKey,
+                }
+              : null,
+            currentBalanceState: {
+              balance: balanceState.balance,
+              lastUpdated: balanceState.lastUpdated,
+            },
+          });
+
+          // If global store has a fresh balance and we don't, sync it immediately
+          if (
+            globalBalance?.value &&
+            !globalBalance.error &&
+            globalBalance.lastUpdated > 0 &&
+            (!balanceState.lastUpdated || balanceState.balance === '-')
+          ) {
+            console.log(
+              '🔄 useTokenBalance: Found existing balance in globalFetcherStore, syncing immediately:',
+              tokenAddress,
+              globalBalance.value
+            );
+            const balanceFetcherStore = useBalanceFetcherStore.getState();
+            balanceFetcherStore.syncFromGlobalStore(tokenAddress, globalBalance.value);
+          } else {
+            console.log(
+              '🔄 useTokenBalance: No existing balance found, proceeding with normal fetch'
+            );
+            // No existing balance, proceed with normal fetch
+            addToQueue(tokenAddress, caller);
+          }
+        })
+        .catch((error) => {
+          console.warn('🔄 useTokenBalance: Failed to import globalFetcherStore:', error);
+          // Fallback to normal fetch if import fails
+          addToQueue(tokenAddress, caller);
+        });
     }
-  }, [autoFetch, tokenAddress, addToQueue, caller]);
+  }, [autoFetch, tokenAddress, addToQueue, caller, balanceState.lastUpdated, balanceState.balance]);
 
   // Convert balance format for backward compatibility
   const amount = balanceState.balance;

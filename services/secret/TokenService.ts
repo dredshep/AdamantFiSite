@@ -55,10 +55,19 @@ export class TokenService {
   private readonly ERROR_THRESHOLD = 2000; // 2 seconds
   private rejectedViewingKeys: Set<string> = new Set(); // Track rejected viewing key requests
 
-  // Rate limit to 2 requests per second
+  // Rate limiting and circuit breaker state
+  private static isRateLimited = false;
+  private static rateLimitUntil = 0;
+  private static consecutiveRateLimitErrors = 0;
+
+  private static readonly RATE_LIMIT_COOLDOWN_BASE = 30000; // 30 seconds base
+  private static readonly RATE_LIMIT_MAX_COOLDOWN = 300000; // 5 minutes max
+
+  // More conservative rate limit - 1 request per second with burst of 2
   private throttledQuery = pThrottle({
-    limit: 2,
+    limit: 1,
     interval: 1000,
+    strict: true, // Enforce strict timing
   })(async (params: QueryParams) => {
     interface QueryArgs {
       balance: {
@@ -73,14 +82,67 @@ export class TokenService {
       };
     }
 
-    // Create wallet client on demand
-    const secretjs = secretClient;
+    // Check circuit breaker before making request
+    if (TokenService.isRateLimited && Date.now() < TokenService.rateLimitUntil) {
+      const remainingTime = Math.ceil((TokenService.rateLimitUntil - Date.now()) / 1000);
+      throw new Error(`Rate limited by circuit breaker. Retry in ${remainingTime} seconds.`);
+    }
 
-    return secretjs.query.compute.queryContract<QueryArgs, QueryResult>({
-      contract_address: params.contract.address,
-      code_hash: params.contract.code_hash,
-      query: { balance: { address: params.address, key: params.auth.key } },
-    });
+    try {
+      // Create wallet client on demand
+      const secretjs = secretClient;
+
+      const result = await secretjs.query.compute.queryContract<QueryArgs, QueryResult>({
+        contract_address: params.contract.address,
+        code_hash: params.contract.code_hash,
+        query: { balance: { address: params.address, key: params.auth.key } },
+      });
+
+      // Reset circuit breaker on successful request
+      TokenService.consecutiveRateLimitErrors = 0;
+      TokenService.isRateLimited = false;
+
+      return result;
+    } catch (error) {
+      // Check if this is a rate limit error (429 or JSON parse error which indicates HTML response)
+      const isRateLimitError =
+        (error instanceof Error && error.message.includes('429')) ||
+        (error instanceof Error && error.message.includes('JSON.parse')) ||
+        (error instanceof SyntaxError && error.message.includes('JSON.parse'));
+
+      if (isRateLimitError) {
+        TokenService.consecutiveRateLimitErrors++;
+
+        // Implement exponential backoff
+        const cooldownTime = Math.min(
+          TokenService.RATE_LIMIT_COOLDOWN_BASE *
+            Math.pow(2, TokenService.consecutiveRateLimitErrors - 1),
+          TokenService.RATE_LIMIT_MAX_COOLDOWN
+        );
+
+        TokenService.isRateLimited = true;
+        TokenService.rateLimitUntil = Date.now() + cooldownTime;
+
+        console.warn(
+          `Rate limit detected. Circuit breaker activated for ${Math.ceil(
+            cooldownTime / 1000
+          )} seconds.`,
+          {
+            consecutiveErrors: TokenService.consecutiveRateLimitErrors,
+            cooldownTime,
+            error: error.message,
+          }
+        );
+
+        throw new Error(
+          `API rate limited. Service will retry automatically in ${Math.ceil(
+            cooldownTime / 1000
+          )} seconds.`
+        );
+      }
+
+      throw error;
+    }
   });
 
   async getBalance(
@@ -397,6 +459,30 @@ export class TokenService {
     console.log('TokenService.clearCachedError - Clearing cached error state');
     this.lastError = null;
     this.errorTimestamp = 0;
+  }
+
+  // Static method to check if service is currently rate limited
+  static isCurrentlyRateLimited(): boolean {
+    return TokenService.isRateLimited && Date.now() < TokenService.rateLimitUntil;
+  }
+
+  // Static method to get remaining cooldown time in seconds
+  static getRemainingCooldownTime(): number {
+    if (!TokenService.isCurrentlyRateLimited()) return 0;
+    return Math.ceil((TokenService.rateLimitUntil - Date.now()) / 1000);
+  }
+
+  // Static method to get consecutive error count
+  static getConsecutiveErrors(): number {
+    return TokenService.consecutiveRateLimitErrors;
+  }
+
+  // Static method to manually reset circuit breaker (for testing/recovery)
+  static resetCircuitBreaker(): void {
+    TokenService.isRateLimited = false;
+    TokenService.rateLimitUntil = 0;
+    TokenService.consecutiveRateLimitErrors = 0;
+    console.log('TokenService circuit breaker manually reset');
   }
 
   // Method to help reset viewing key when it's invalid

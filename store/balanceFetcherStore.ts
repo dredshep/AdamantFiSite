@@ -47,10 +47,11 @@ interface BalanceFetcherState {
   retryWithViewingKey: (tokenAddress: string) => Promise<void>;
   suggestToken: (tokenAddress: string) => Promise<void>;
   processQueue: () => Promise<void>;
+  syncFromGlobalStore: (tokenAddress: string, balance: string) => void;
 }
 
 export const DEFAULT_BALANCE_STATE: TokenBalanceState = {
-  balance: '0',
+  balance: '-', // "-" means unfetched, not zero balance
   loading: false,
   error: null,
   lastUpdated: 0,
@@ -88,11 +89,34 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
     caller: string,
     priority: 'high' | 'normal' | 'low' = 'normal'
   ) => {
+    console.log('🔄 balanceFetcherStore.addToQueue called:', { tokenAddress, caller, priority });
     const state = get();
     const currentBalance = state.balances[tokenAddress];
+    console.log('🔄 Current balance state:', currentBalance);
+
+    // FIRST: Check if service is globally rate limited
+    if (TokenService.isCurrentlyRateLimited()) {
+      const remainingTime = TokenService.getRemainingCooldownTime();
+      console.log(
+        `🚫 Skipping addToQueue for ${tokenAddress} - rate limited for ${remainingTime}s`
+      );
+      // Set error state to indicate rate limiting
+      set((s) => ({
+        balances: {
+          ...s.balances,
+          [tokenAddress]: {
+            ...(s.balances[tokenAddress] || DEFAULT_BALANCE_STATE),
+            loading: false,
+            error: `Rate limited. Retry in ${remainingTime}s`,
+          },
+        },
+      }));
+      return;
+    }
 
     // Skip if already loading or in queue
     if (currentBalance?.loading || state.queue.some((item) => item.tokenAddress === tokenAddress)) {
+      console.log(`🔄 Skipping ${tokenAddress} - already loading or in queue`);
       return;
     }
 
@@ -103,6 +127,11 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       !currentBalance.error &&
       !currentBalance.needsViewingKey
     ) {
+      console.log(
+        `🔄 Skipping ${tokenAddress} - balance is fresh (${
+          Date.now() - currentBalance.lastUpdated
+        }ms old)`
+      );
       return;
     }
 
@@ -162,6 +191,16 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
     const walletAddress = useWalletStore.getState().address;
     if (!walletAddress) {
       get().setError(tokenAddress, 'Wallet not connected');
+      return;
+    }
+
+    // Check if TokenService is rate limited before attempting
+    if (TokenService.isCurrentlyRateLimited()) {
+      const remainingTime = TokenService.getRemainingCooldownTime();
+      get().setError(tokenAddress, `Rate limited. Retry in ${remainingTime}s`);
+      console.log(
+        `🚫 Skipping balance fetch for ${tokenAddress} - rate limited for ${remainingTime}s`
+      );
       return;
     }
 
@@ -232,7 +271,18 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         get().setError(tokenAddress, errorMessage);
-        toastManager.balanceFetchError();
+
+        // Check if this is a rate limit error from circuit breaker
+        if (errorMessage.includes('Rate limited') || errorMessage.includes('rate limited')) {
+          console.warn(`🚫 Rate limit error for ${tokenAddress}:`, errorMessage);
+          // Show a consolidated toast for rate limiting (only once per minute)
+          showToastOnce('rate-limit-global', 'API Rate Limited', 'warning', {
+            message:
+              'Reducing request frequency to prevent errors. Balances will load automatically when available.',
+          });
+        } else {
+          toastManager.balanceFetchError();
+        }
       }
     } finally {
       get().setLoading(tokenAddress, false);
@@ -598,6 +648,17 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       return;
     }
 
+    // Check if service is rate limited before processing
+    if (TokenService.isCurrentlyRateLimited()) {
+      const remainingTime = TokenService.getRemainingCooldownTime();
+      console.log(`🚫 Queue processing paused - rate limited for ${remainingTime}s`);
+      // Schedule retry after cooldown
+      setTimeout(() => {
+        void get().processQueue();
+      }, remainingTime * 1000);
+      return;
+    }
+
     set({ isProcessingQueue: true });
 
     try {
@@ -605,12 +666,19 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         const queueItem = get().queue[0];
         if (!queueItem) break;
 
+        // Check rate limit before each request
+        if (TokenService.isCurrentlyRateLimited()) {
+          console.log(`🚫 Stopping queue processing - rate limited during batch`);
+          break;
+        }
+
         get().removeFromQueue(queueItem.tokenAddress);
 
         await get().fetchBalance(queueItem.tokenAddress, queueItem.caller);
 
         if (get().queue.length > 0) {
-          await new Promise((resolve) => setTimeout(resolve, FETCH_DELAY_MS));
+          // Increase delay to be more conservative with rate limits
+          await new Promise((resolve) => setTimeout(resolve, FETCH_DELAY_MS * 3)); // 300ms instead of 100ms
         }
       }
     } catch (error) {
@@ -622,9 +690,36 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       set({ isProcessingQueue: false });
     }
   },
+
+  syncFromGlobalStore: (tokenAddress: string, balance: string) => {
+    // Only update if we don't have fresher data
+    const state = get();
+    const currentBalance = state.balances[tokenAddress];
+
+    // Don't overwrite if we have recent data or are currently loading
+    if (
+      currentBalance?.loading ||
+      (currentBalance?.lastUpdated && Date.now() - currentBalance.lastUpdated < STALE_TIME_MS)
+    ) {
+      return;
+    }
+
+    set((s) => ({
+      balances: {
+        ...s.balances,
+        [tokenAddress]: {
+          balance,
+          loading: false,
+          error: null,
+          lastUpdated: Date.now(),
+          needsViewingKey: false,
+        },
+      },
+    }));
+  },
 }));
 
-// Auto-fetch balances when wallet connects
+// Auto-fetch balances when wallet connects (limited to essential tokens only)
 let lastWalletAddress: string | null = null;
 
 useWalletStore.subscribe((state) => {
@@ -632,22 +727,26 @@ useWalletStore.subscribe((state) => {
 
   // If wallet just connected (address changed from null to something)
   if (lastWalletAddress === null && currentAddress !== null) {
-    console.log('Wallet connected, starting auto-fetch of balances');
-    // Fetch priority tokens first (commonly used tokens)
-    const priorityTokens = [
-      'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek', // sSCRT
-      'secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2', // USDC
-      'secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd', // USDT
+    console.log('Wallet connected, starting conservative auto-fetch of essential balances only');
+
+    // Only fetch the most essential tokens to reduce RPC load
+    const essentialTokens = [
+      'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek', // sSCRT (native token)
     ];
 
-    useBalanceFetcherStore
-      .getState()
-      .fetchPriorityBalances(priorityTokens, 'wallet-connect-priority');
+    // Check if service is rate limited before auto-fetching
+    if (!TokenService.isCurrentlyRateLimited()) {
+      useBalanceFetcherStore
+        .getState()
+        .fetchPriorityBalances(essentialTokens, 'wallet-connect-essential');
+    } else {
+      console.log('🚫 Skipping auto-fetch on wallet connect - service is rate limited');
+    }
 
-    // Then fetch all other balances with lower priority
-    setTimeout(() => {
-      useBalanceFetcherStore.getState().fetchAllBalances();
-    }, 1000);
+    // Remove aggressive auto-fetch of all balances - let components fetch as needed
+    // setTimeout(() => {
+    //   useBalanceFetcherStore.getState().fetchAllBalances();
+    // }, 1000);
   }
 
   // If wallet disconnected

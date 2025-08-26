@@ -32,6 +32,10 @@ interface UseStakingParams {
 const globalLastCallTimestamps = new Map<string, number>(); // Key: contract-wallet-operation
 const RATE_LIMIT_WINDOW_MS = 5000; // 5 seconds minimum between calls for the same resource
 
+// Global coordination to prevent multiple simultaneous fetches
+const globalFetchState = new Map<string, { isActive: boolean; lastFetch: number }>();
+const FETCH_COORDINATION_WINDOW_MS = 2000; // 2 seconds
+
 /**
  * Checks if an API call can proceed based on rate limiting rules.
  * @param stakingContractAddress The address of the staking contract.
@@ -68,7 +72,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
   const [stakedBalance, setStakedBalance] = useState<string | null>(null);
   const [pendingRewards, setPendingRewards] = useState<string | null>(null);
   const [viewingKey, setViewingKey] = useState<string | null>(null);
-  const { getViewingKey: getStoreViewingKey } = useViewingKeyStore();
+  const getStoreViewingKey = useViewingKeyStore((state) => state.getViewingKey);
   const { setPending, setResult } = useTxStore();
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingRef = useRef<Record<string, boolean>>({});
@@ -91,25 +95,52 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
       return null;
     }
 
-    const keyToUse = getStoreViewingKey(stakingInfo.stakingAddress) || viewingKey;
+    // Global coordination check - prevent multiple components from fetching simultaneously
+    const coordinationKey = `${stakingInfo.stakingAddress}-${walletAddress}`;
+    const now = Date.now();
+    const existingState = globalFetchState.get(coordinationKey);
 
-    console.log('🔧 Fixed key priority:');
-    console.log('  - Store key:', getStoreViewingKey(stakingInfo.stakingAddress));
-    console.log('  - Local key:', viewingKey);
+    if (existingState) {
+      // If another component is already fetching, skip
+      if (existingState.isActive) {
+        console.log('🔄 Skipping fetchStakedBalance - another component is already fetching');
+        return null;
+      }
+      // If fetched recently, skip
+      if (now - existingState.lastFetch < FETCH_COORDINATION_WINDOW_MS) {
+        console.log('🔄 Skipping fetchStakedBalance - fetched recently by another component');
+        return null;
+      }
+    }
+
+    // Mark as active
+    globalFetchState.set(coordinationKey, { isActive: true, lastFetch: now });
+
+    // Use LP token viewing key for staking operations (proven to work in tests)
+    const keyToUse = getStoreViewingKey(stakingInfo.lpTokenAddress) || viewingKey;
+
+    console.log('🔧 Using LP token VK for staking:');
+    console.log('  - LP Token Address:', stakingInfo.lpTokenAddress);
+    console.log('  - LP Store key:', getStoreViewingKey(stakingInfo.lpTokenAddress));
+    console.log('  - Local key fallback:', viewingKey);
     console.log('  - Final keyToUse:', keyToUse);
-    console.log('  - Looking for address:', stakingInfo.stakingAddress);
     console.log('  - All keys in store:', useViewingKeyStore.getState().viewingKeys);
-    console.log('  - Store addresses:', Object.keys(useViewingKeyStore.getState().viewingKeys));
 
     if (!isNotNullish(keyToUse)) {
+      // Mark as no longer active
+      globalFetchState.set(coordinationKey, { isActive: false, lastFetch: now });
       return null;
     }
 
     if (loadingRef.current.fetchBalance) {
+      // Mark as no longer active
+      globalFetchState.set(coordinationKey, { isActive: false, lastFetch: now });
       return null;
     }
 
     if (!canCallApi(stakingInfo?.stakingAddress, walletAddress, 'fetchStakedBalance')) {
+      // Mark as no longer active
+      globalFetchState.set(coordinationKey, { isActive: false, lastFetch: now });
       return null;
     }
 
@@ -130,6 +161,8 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
       return null;
     } finally {
       setLoadingState('fetchBalance', false);
+      // Mark as no longer active
+      globalFetchState.set(coordinationKey, { isActive: false, lastFetch: now });
     }
   }, [secretjs, walletAddress, stakingInfo, viewingKey, getStoreViewingKey]);
 
@@ -139,7 +172,8 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
       return null;
     }
 
-    const keyToUse = getStoreViewingKey(stakingInfo.stakingAddress) || viewingKey;
+    // Use LP token viewing key for staking operations (proven to work in tests)
+    const keyToUse = getStoreViewingKey(stakingInfo.lpTokenAddress) || viewingKey;
 
     if (!isNotNullish(keyToUse)) {
       return null;
@@ -364,28 +398,25 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         return false;
       }
 
-      // Try to get existing viewing key for the STAKING CONTRACT (not LP token)
+      // Try to get existing viewing key for the LP TOKEN (required for staking operations)
       try {
-        const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.stakingAddress);
+        const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.lpTokenAddress);
         if (key) {
           setViewingKey(key);
           return true;
         }
       } catch (e) {
-        console.log(
-          'No existing viewing key found for staking contract, will try to create one',
-          e
-        );
+        console.log('No existing viewing key found for LP token, will try to create one', e);
       }
 
-      // Suggest the STAKING CONTRACT to Keplr (not LP token)
-      await keplr.suggestToken('secret-4', stakingInfo.stakingAddress, stakingInfo.stakingCodeHash);
+      // Suggest the LP TOKEN to Keplr (required for staking operations)
+      await keplr.suggestToken('secret-4', stakingInfo.lpTokenAddress, stakingInfo.lpTokenCodeHash);
 
       // Need to wait a bit for Keplr to register the token
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Try to get viewing key again for the STAKING CONTRACT
-      const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.stakingAddress);
+      // Try to get viewing key again for the LP TOKEN
+      const key = await keplr.getSecret20ViewingKey('secret-4', stakingInfo.lpTokenAddress);
       if (key) {
         setViewingKey(key);
         return true;
