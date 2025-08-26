@@ -1,4 +1,4 @@
-import { LP_TOKENS, TOKENS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
 import {
   TokenService,
   TokenServiceError,
@@ -212,6 +212,14 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
             get().setNeedsViewingKey(tokenAddress, true);
+            toastManager.viewingKeyCorrupted();
+            break;
+          case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
+            get().setNeedsViewingKey(tokenAddress, true);
+            // Extract token symbol for better error message
+            const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+            const tokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1}` : undefined;
+            toastManager.lpTokenViewingKeyCorrupted(tokenSymbol);
             break;
           case TokenServiceErrorType.NETWORK_ERROR:
             toastManager.networkError();
@@ -330,22 +338,238 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       throw error;
     }
 
-    try {
-      // The core action is just to ask Keplr to suggest the token.
-      // This will pop up the Keplr window for the user.
-      await keplr.suggestToken('secret-4', tokenAddress);
-    } catch (error) {
-      // This catch block handles cases where the user rejects the request in Keplr.
-      const message =
-        error instanceof Error && error.message.toLowerCase().includes('rejected')
-          ? 'Token suggestion rejected'
-          : 'Failed to suggest token';
+    // Get token info for better error messages
+    const isLpToken = LIQUIDITY_PAIRS.some((pair) => pair.lpToken === tokenAddress);
+    const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+    const tokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1} LP` : 'Token';
 
-      showToastOnce(`suggest-token-failed-${tokenAddress}`, message, 'error');
+    try {
+      // Step 1: Show initial toast
+      showToastOnce(`suggest-token-start-${tokenAddress}`, 'Setting up viewing key...', 'info', {
+        message: `Please approve the Keplr popup to set up viewing key for ${tokenSymbol}`,
+        autoClose: 8000,
+      });
+
+      // Step 2: Ask Keplr to suggest the token (this pops up Keplr UI)
+      await keplr.suggestToken('secret-4', tokenAddress);
+
+      // Step 3: Give Keplr a moment to process the viewing key
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Step 4: Validate that the viewing key was actually created and works
+      let viewingKey: string | null = null;
+      let keyRetrievalError: string | null = null;
+      try {
+        viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress);
+      } catch (keyError) {
+        console.warn('Failed to retrieve viewing key after suggestion:', keyError);
+        keyRetrievalError = keyError instanceof Error ? keyError.message : String(keyError);
+      }
+
+      // Step 5: Validate the key by testing it with TokenService
+      if (!viewingKey || viewingKey.length === 0) {
+        const keyStatus = !viewingKey ? 'null/undefined' : 'empty';
+        const errorSuffix = keyRetrievalError ? ` Retrieval error: ${keyRetrievalError}` : '';
+        throw new Error(
+          `Keplr did not create a valid viewing key for ${tokenSymbol}. The viewing key is ${keyStatus}.${errorSuffix}`
+        );
+      }
+
+      // Step 6: Test the viewing key by attempting to fetch balance
+      const token = getTokenInfo(tokenAddress);
+      if (token) {
+        try {
+          const tokenService = new TokenService();
+          await tokenService.getBalance(
+            tokenAddress,
+            token.codeHash,
+            `suggestToken-validation:${Date.now()}`
+          );
+
+          // If we get here, the viewing key works
+          showToastOnce(
+            `suggest-token-success-${tokenAddress}`,
+            'Viewing key created successfully!',
+            'success',
+            {
+              message: `${tokenSymbol} viewing key is now active and working`,
+              autoClose: 5000,
+            }
+          );
+
+          // Clear any previous errors and refresh the balance
+          get().setNeedsViewingKey(tokenAddress, false);
+          get().clearError(tokenAddress);
+          void get().fetchBalance(tokenAddress, `suggestToken-refresh:${Date.now()}`);
+        } catch (validationError) {
+          // The viewing key exists but doesn't work - this is the "false success" case
+          console.error('Viewing key validation failed:', validationError);
+
+          // Add inline truncate function for proper address handling
+          const safeTruncateAddress = (address: string): string => {
+            const startChars = 8;
+            const endChars = 6;
+            if (address.length <= startChars + endChars + 3) {
+              return address;
+            }
+            return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+          };
+
+          // Extract specific error details and handle TokenServiceError properly
+          let errorDetails = 'Unknown validation error';
+
+          if (validationError instanceof TokenServiceError) {
+            // Handle TokenServiceError specifically to prevent unhandled errors
+            errorDetails = validationError.message;
+            console.log(
+              `[TokenServiceError] Type: ${validationError.type}, Message: ${errorDetails}`
+            );
+
+            // For specific error types, use the existing error handling logic
+            if (validationError.type === TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED) {
+              get().setNeedsViewingKey(tokenAddress, true);
+              get().setError(tokenAddress, 'LP Token Viewing Key Corrupted');
+              // Don't return, let it fall through to the detailed toast logic below
+            } else if (validationError.type === TokenServiceErrorType.VIEWING_KEY_INVALID) {
+              get().setNeedsViewingKey(tokenAddress, true);
+              get().setError(tokenAddress, 'Viewing Key Invalid');
+              // Don't return, let it fall through to the detailed toast logic below
+            }
+            // For other TokenServiceError types, continue with custom validation error handling below
+          } else if (validationError instanceof Error) {
+            errorDetails = validationError.message;
+          } else if (typeof validationError === 'string') {
+            errorDetails = validationError;
+          }
+
+          // Clean up the error message to remove duplicate address mention and fix formatting
+          const cleanErrorDetails = errorDetails
+            .replace(/for secret1[a-z0-9\.]+/g, '') // Remove "for secret1abc...xyz"
+            .replace(/LP token viewing key is corrupted\s*/i, '') // Remove redundant prefix
+            .replace(/:\s*$/, '') // Remove trailing colon
+            .replace(/:\s+/g, ': ') // Fix double colons
+            .replace(/\(called from:.*?\)/g, '') // Remove caller info
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
+
+          const truncatedAddress = safeTruncateAddress(tokenAddress);
+
+          if (isLpToken) {
+            showToastOnce(
+              `lp-key-validation-failed-${tokenAddress}`,
+              'LP Token Viewing Key Failed',
+              'error',
+              {
+                message: `${tokenSymbol} viewing key failed: ${cleanErrorDetails}. Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet, find the LP token, and set a new viewing key.`,
+                actionLabel: 'Copy Address',
+                onAction: () => {
+                  navigator.clipboard
+                    .writeText(tokenAddress)
+                    .then(() => {
+                      showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
+                        autoClose: 2000,
+                      });
+                    })
+                    .catch(() => {
+                      showToastOnce(
+                        `copy-failed-${tokenAddress}`,
+                        'Failed to copy address',
+                        'error',
+                        { autoClose: 3000 }
+                      );
+                    });
+                },
+                autoClose: false,
+              }
+            );
+          } else {
+            showToastOnce(`key-validation-failed-${tokenAddress}`, 'Viewing Key Failed', 'error', {
+              message: `Token viewing key failed: ${cleanErrorDetails}. Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet and set a new viewing key.`,
+              actionLabel: 'Copy Address',
+              onAction: () => {
+                navigator.clipboard
+                  .writeText(tokenAddress)
+                  .then(() => {
+                    showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
+                      autoClose: 2000,
+                    });
+                  })
+                  .catch(() => {
+                    showToastOnce(
+                      `copy-failed-${tokenAddress}`,
+                      'Failed to copy address',
+                      'error',
+                      { autoClose: 3000 }
+                    );
+                  });
+              },
+              autoClose: false,
+            });
+          }
+
+          // Update state and return early - don't throw to avoid duplicate toast in outer catch
+          get().setError(tokenAddress, 'LP Token Viewing Key Validation Failed');
+          return;
+        }
+      } else {
+        // Token not in our config, assume success since we can't validate
+        showToastOnce(
+          `suggest-token-success-${tokenAddress}`,
+          'Token suggested successfully',
+          'success',
+          {
+            message: 'Please check if the viewing key is working properly',
+            autoClose: 5000,
+          }
+        );
+      }
+    } catch (error) {
+      console.error('suggestToken error:', error);
+
+      // Extract detailed error information
+      let errorDetails = 'Unknown error';
+      let userFriendlyTitle = 'Failed to set up viewing key';
+      let userFriendlyMessage = 'Please try again or manually set the viewing key in Keplr';
+
+      if (error instanceof Error) {
+        errorDetails = error.message;
+
+        if (error.message.toLowerCase().includes('rejected')) {
+          userFriendlyTitle = 'Token suggestion rejected';
+          userFriendlyMessage =
+            'You rejected the Keplr popup. Please try again and approve the request.';
+        } else if (error.message.toLowerCase().includes('null/undefined')) {
+          userFriendlyTitle = 'Keplr did not create viewing key';
+          userFriendlyMessage = `Keplr failed to create a viewing key for ${tokenSymbol}. This might be because: 1) The token was already suggested, 2) Keplr is having issues, or 3) You need to manually add the token. Try refreshing the page or manually adding the token in Keplr.`;
+        } else if (error.message.toLowerCase().includes('empty')) {
+          userFriendlyTitle = 'Empty viewing key created';
+          userFriendlyMessage = `Keplr created an empty viewing key for ${tokenSymbol}. Please go to Keplr, find the token, and manually set a viewing key.`;
+        } else if (error.message.toLowerCase().includes('validation failed')) {
+          // This case should no longer happen since validation errors now return early
+          console.warn('Unexpected validation error in outer catch:', error);
+          userFriendlyTitle = 'Viewing key validation failed';
+          userFriendlyMessage = `The viewing key was created but doesn't work: ${errorDetails}. Please manually set a new viewing key in Keplr.`;
+        } else if (error.message.toLowerCase().includes('invalid viewing key')) {
+          // This case should no longer happen since validation errors now return early
+          console.warn('Unexpected invalid viewing key error in outer catch:', error);
+          userFriendlyTitle = 'Invalid viewing key';
+          userFriendlyMessage = `The created viewing key is invalid: ${errorDetails}. Please manually set a new viewing key in Keplr.`;
+        } else {
+          userFriendlyTitle = `Failed to set up viewing key for ${tokenSymbol}`;
+          userFriendlyMessage = `Error details: ${errorDetails}. Please try again or manually set the viewing key in Keplr.`;
+        }
+      }
+
+      showToastOnce(`suggest-token-failed-${tokenAddress}`, userFriendlyTitle, 'error', {
+        message: userFriendlyMessage,
+        autoClose: false, // Keep error messages visible until user dismisses
+      });
 
       // Update the state to reflect the error and re-throw to notify the caller.
-      get().setError(tokenAddress, message);
-      throw error;
+      get().setError(tokenAddress, userFriendlyTitle);
+      // IMPORTANT: Do not re-throw the error here as it causes unhandled promise rejection.
+      // The UI is notified via toast and state update.
+      // throw error;
     }
   },
 

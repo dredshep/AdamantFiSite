@@ -1,3 +1,4 @@
+import { DIRECT_SWAP_FEE, MULTIHOP_SWAP_FEE_PER_HOP } from '@/config/fees';
 import { LIQUIDITY_PAIRS, MULTIHOP_ENABLED, ROUTER, TOKENS } from '@/config/tokens';
 import Decimal from 'decimal.js';
 import { SecretNetworkClient, TxResponse } from 'secretjs';
@@ -202,7 +203,7 @@ async function executeDirectSwap(params: MultihopSwapParams): Promise<SwapResult
       },
     },
     {
-      gasLimit: 300_000,
+      gasLimit: Math.floor(DIRECT_SWAP_FEE * 1_000_000), // Convert SCRT to uscrt (gas units)
     }
   );
 
@@ -276,8 +277,10 @@ async function executeRouterSwap(params: MultihopSwapParams): Promise<SwapResult
   });
 
   // Send tokens to router with route instructions
-  // Dynamically estimate gas limit: base + per-hop allowance
-  const estimatedGasLimit = Math.min(1_200_000, 150_000 + routerHops.length * 400_000); // 150k base + 400k per hop buffer, cap at 1.2M
+  // Calculate gas limit based on configured fees: base direct swap + per-hop fees
+  const baseGasLimit = Math.floor(DIRECT_SWAP_FEE * 1_000_000); // Convert SCRT to uscrt
+  const perHopGasLimit = Math.floor(MULTIHOP_SWAP_FEE_PER_HOP * 1_000_000); // Convert SCRT to uscrt
+  const estimatedGasLimit = Math.min(1_200_000, baseGasLimit + routerHops.length * perHopGasLimit); // Cap at 1.2M
 
   const tx = await params.client.tx.snip20.send(
     {

@@ -3,6 +3,8 @@ export const GLOBAL_TOAST_IDS = {
   KEPLR_NOT_INSTALLED: 'global-keplr-not-installed',
   VIEWING_KEY_REQUIRED: 'global-viewing-key-required',
   VIEWING_KEY_REJECTED: 'global-viewing-key-rejected',
+  VIEWING_KEY_CORRUPTED: 'global-viewing-key-corrupted',
+  LP_TOKEN_VIEWING_KEY_CORRUPTED: 'global-lp-token-viewing-key-corrupted',
   NETWORK_ERROR: 'global-network-error',
   BALANCE_FETCH_ERROR: 'global-balance-fetch-error',
   CONNECTION_ERROR: 'global-connection-error',
@@ -182,4 +184,36 @@ export const toastManager = {
     showToastOnce(GLOBAL_TOAST_IDS.CONNECTION_ERROR, 'Connection error', 'error', {
       message: 'Failed to connect to the service. Please refresh the page and try again.',
     }),
+
+  viewingKeyCorrupted: () =>
+    showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_CORRUPTED, 'Viewing Key Corrupted', 'error', {
+      message: 'The viewing key for this token is corrupted. Please reset it in Keplr wallet.',
+      autoClose: false,
+    }),
+
+  lpTokenViewingKeyCorrupted: (tokenSymbol?: string) =>
+    showToastOnce(
+      GLOBAL_TOAST_IDS.LP_TOKEN_VIEWING_KEY_CORRUPTED,
+      'LP Token Viewing Key Corrupted',
+      'error',
+      {
+        message: tokenSymbol
+          ? `The viewing key for ${tokenSymbol} LP token is corrupted. Please reset it in Keplr wallet.`
+          : 'The LP token viewing key is corrupted. Please reset it in Keplr wallet.',
+        autoClose: false,
+      }
+    ),
+
+  viewingKeyErrorWithAddress: (
+    title: string,
+    messageTemplate: string,
+    tokenAddress: string,
+    toastId: string
+  ) => {
+    const message = messageTemplate.replace('{address}', tokenAddress);
+    showToastOnce(toastId, title, 'error', {
+      message,
+      autoClose: false,
+    });
+  },
 };

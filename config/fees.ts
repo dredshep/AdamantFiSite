@@ -17,7 +17,7 @@ export const SCRT_TX_FEE = 0.0001;
 /**
  * Direct swap transaction fee (based on ~300k gas limit)
  */
-export const DIRECT_SWAP_FEE = 0.03;
+export const DIRECT_SWAP_FEE = 0.04;
 
 /**
  * Multihop swap transaction fee per hop (based on ~400k additional gas per hop)

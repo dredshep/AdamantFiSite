@@ -1,6 +1,16 @@
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { secretClient } from '@/hooks/useSecretNetwork';
 import { Window } from '@keplr-wallet/types';
 import pThrottle from 'p-throttle';
+// Inline truncate function to avoid linter issues
+const safeTruncateAddress = (address: string): string => {
+  const startChars = 8;
+  const endChars = 6;
+  if (address.length <= startChars + endChars + 3) {
+    return address;
+  }
+  return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+};
 
 interface QueryParams {
   contract: {
@@ -18,6 +28,7 @@ export enum TokenServiceErrorType {
   VIEWING_KEY_REQUIRED = 'VIEWING_KEY_REQUIRED',
   VIEWING_KEY_INVALID = 'VIEWING_KEY_INVALID',
   VIEWING_KEY_REJECTED = 'VIEWING_KEY_REJECTED',
+  LP_TOKEN_VIEWING_KEY_CORRUPTED = 'LP_TOKEN_VIEWING_KEY_CORRUPTED',
   NETWORK_ERROR = 'NETWORK_ERROR',
   CONTRACT_ERROR = 'CONTRACT_ERROR',
   WALLET_ERROR = 'WALLET_ERROR',
@@ -130,8 +141,9 @@ export class TokenService {
     });
 
     if (this.rejectedViewingKeys.has(tokenAddress)) {
+      const truncatedAddress = safeTruncateAddress(tokenAddress);
       throw new TokenServiceError(
-        `Viewing key request for token ${tokenAddress} was rejected (called from: ${caller})`,
+        `Viewing key request for token ${truncatedAddress} was rejected (called from: ${caller})`,
         TokenServiceErrorType.VIEWING_KEY_REJECTED,
         true,
         'Try again and approve the viewing key request',
@@ -181,8 +193,9 @@ export class TokenService {
         // DO NOT try to suggest a token here. This is a non-interactive function.
         // The UI layer should handle the interactive part of setting a key.
         // We just report that it's required.
+        const truncatedAddress = safeTruncateAddress(tokenAddress);
         throw new TokenServiceError(
-          `Viewing key required for token ${tokenAddress} (called from: ${caller}).`,
+          `Viewing key required for token ${truncatedAddress} (called from: ${caller}).`,
           TokenServiceErrorType.VIEWING_KEY_REQUIRED,
           true,
           'Set a viewing key for this token',
@@ -265,12 +278,29 @@ export class TokenService {
 
       if ('viewing_key_error' in response) {
         const errorResponse = response as { viewing_key_error: { msg?: string } };
-        errorMsg = errorResponse.viewing_key_error.msg || 'Viewing key error';
+        const msg = errorResponse.viewing_key_error.msg;
+
+        // Presence of viewing_key_error indicates an error, regardless of message content
+        // Use the provided message if available, otherwise use a generic message
+        errorMsg =
+          msg && typeof msg === 'string' && msg.trim().length > 0
+            ? msg
+            : 'Viewing key authentication failed';
         hasViewingKeyError = true;
+
+        // Log for debugging purposes to understand the protocol behavior
+        console.log('[DEBUG] Contract returned viewing_key_error:', {
+          hasMessage: !!msg,
+          messageType: typeof msg,
+          messageContent: msg,
+          fullError: errorResponse.viewing_key_error,
+        });
       } else if ('query_error' in response) {
         const errorResponse = response as { query_error: { msg?: string } };
-        const msg = errorResponse.query_error.msg || 'Query error';
-        if (msg.toLowerCase().includes('viewing key')) {
+        const msg = errorResponse.query_error.msg;
+
+        // Only treat as viewing key error if there's a message containing "viewing key"
+        if (msg && typeof msg === 'string' && msg.toLowerCase().includes('viewing key')) {
           errorMsg = msg;
           hasViewingKeyError = true;
         }
@@ -290,9 +320,25 @@ export class TokenService {
           fullResponse: response,
         });
 
+        // Check if this is an LP token to provide specific error type
+        const isLpToken = LIQUIDITY_PAIRS.some((pair) => pair.lpToken === tokenAddress);
+
+        if (isLpToken) {
+          const truncatedAddress = safeTruncateAddress(tokenAddress);
+          throw new TokenServiceError(
+            `LP token viewing key is corrupted for ${truncatedAddress}: ${errorMsg} (called from: ${caller})`,
+            TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED,
+            true,
+            'Reset the LP token viewing key in Keplr',
+            caller,
+            traceId
+          );
+        }
+
         // We successfully retrieved a key from Keplr, but the contract rejected it. It's INVALID.
+        const truncatedAddress = safeTruncateAddress(tokenAddress);
         throw new TokenServiceError(
-          `Invalid viewing key for token ${tokenAddress}: ${errorMsg} (called from: ${caller})`,
+          `Invalid viewing key for token ${truncatedAddress}: ${errorMsg} (called from: ${caller})`,
           TokenServiceErrorType.VIEWING_KEY_INVALID,
           true,
           'Reset the viewing key for this token',
@@ -308,8 +354,9 @@ export class TokenService {
       response.balance === null ||
       typeof response.balance.amount !== 'string'
     ) {
+      const truncatedAddress = safeTruncateAddress(tokenAddress);
       throw new TokenServiceError(
-        `Invalid balance response from contract for token ${tokenAddress} (called from: ${caller}).`,
+        `Invalid balance response from contract for token ${truncatedAddress} (called from: ${caller}).`,
         TokenServiceErrorType.CONTRACT_ERROR,
         true,
         'Check if the token contract is working properly',
@@ -393,8 +440,9 @@ export class TokenService {
       // cannot override existing viewing keys according to Keplr's design
     } catch (error) {
       console.error('Error resetting viewing key:', error);
+      const truncatedAddress = safeTruncateAddress(tokenAddress);
       throw new TokenServiceError(
-        `Failed to reset viewing key for token ${tokenAddress} (called from: ${caller}). You may need to manually remove and re-add this token in Keplr wallet settings.`,
+        `Failed to reset viewing key for token ${truncatedAddress} (called from: ${caller}). You may need to manually remove and re-add this token in Keplr wallet settings.`,
         TokenServiceErrorType.VIEWING_KEY_INVALID,
         true,
         'Manually remove and re-add token in Keplr settings',
