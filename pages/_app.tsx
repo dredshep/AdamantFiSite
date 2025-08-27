@@ -11,7 +11,7 @@ import { GlobalSendTokensDialog } from '@/components/app/Global/UserWallet/Globa
 import { RadixToastProvider } from '@/components/app/Shared/Toasts/RadixToastProvider';
 import { TokenServiceError, TokenServiceErrorType } from '@/services/secret/TokenService';
 import { getSwappableTokens } from '@/utils/apis/getSwappableTokens';
-import { toastManager } from '@/utils/toast/toastManager';
+import { toastManager, viewingKeyErrorAggregator } from '@/utils/toast/toastManager';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -60,19 +60,43 @@ export default function App({ Component, pageProps }: AppProps) {
 
         console.log('Caught unhandled TokenServiceError:', error.message, error.type);
 
-        // Show appropriate toast based on error type
+        // Show appropriate toast based on error type using aggregation for viewing key errors
         switch (error.type) {
           case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
-            toastManager.viewingKeyRequired();
+            viewingKeyErrorAggregator.addError({
+              tokenAddress: 'unknown',
+              tokenSymbol: undefined,
+              errorType: 'required',
+              isLpToken: false,
+              timestamp: Date.now(),
+            });
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
-            toastManager.viewingKeyMismatch();
+            viewingKeyErrorAggregator.addError({
+              tokenAddress: 'unknown',
+              tokenSymbol: undefined,
+              errorType: 'invalid',
+              isLpToken: false,
+              timestamp: Date.now(),
+            });
             break;
           case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
-            toastManager.lpTokenViewingKeyMismatch();
+            viewingKeyErrorAggregator.addError({
+              tokenAddress: 'unknown',
+              tokenSymbol: undefined,
+              errorType: 'corrupted',
+              isLpToken: true,
+              timestamp: Date.now(),
+            });
             break;
           case TokenServiceErrorType.VIEWING_KEY_REJECTED:
-            toastManager.viewingKeyRejected();
+            viewingKeyErrorAggregator.addError({
+              tokenAddress: 'unknown',
+              tokenSymbol: undefined,
+              errorType: 'rejected',
+              isLpToken: false,
+              timestamp: Date.now(),
+            });
             break;
           case TokenServiceErrorType.NETWORK_ERROR:
             toastManager.networkError();

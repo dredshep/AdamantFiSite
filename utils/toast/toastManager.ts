@@ -5,6 +5,7 @@ export const GLOBAL_TOAST_IDS = {
   VIEWING_KEY_REJECTED: 'global-viewing-key-rejected',
   VIEWING_KEY_CORRUPTED: 'global-viewing-key-corrupted',
   LP_TOKEN_VIEWING_KEY_CORRUPTED: 'global-lp-token-viewing-key-corrupted',
+  VIEWING_KEY_ERRORS_AGGREGATE: 'global-viewing-key-errors-aggregate',
   NETWORK_ERROR: 'global-network-error',
   BALANCE_FETCH_ERROR: 'global-balance-fetch-error',
   CONNECTION_ERROR: 'global-connection-error',
@@ -36,6 +37,172 @@ const globalToastState: ToastState = {
 
 // Minimum time between showing the same toast (in milliseconds)
 const TOAST_COOLDOWN = 10000; // 10 seconds
+
+// Viewing Key Error Aggregation System
+interface ViewingKeyError {
+  tokenAddress: string;
+  tokenSymbol: string | undefined;
+  errorType: 'invalid' | 'corrupted' | 'required' | 'rejected' | 'failed';
+  isLpToken: boolean;
+  timestamp: number;
+}
+
+class ViewingKeyErrorAggregator {
+  private errorBuffer: Map<string, ViewingKeyError> = new Map();
+  private timeoutId: NodeJS.Timeout | null = null;
+  private readonly DEBOUNCE_DELAY = 500; // Wait 500ms for more errors
+  private sessionShown = new Set<string>();
+
+  addError(error: ViewingKeyError) {
+    console.log('🔄 ViewingKeyErrorAggregator.addError:', error);
+
+    this.errorBuffer.set(error.tokenAddress, error);
+
+    // Reset debounce timer
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+    }
+
+    this.timeoutId = setTimeout(() => {
+      this.flushErrors();
+    }, this.DEBOUNCE_DELAY);
+  }
+
+  private flushErrors() {
+    const errors = Array.from(this.errorBuffer.values());
+    console.log('🔄 ViewingKeyErrorAggregator.flushErrors:', errors);
+
+    if (errors.length === 0) return;
+
+    // Create signature for session suppression
+    const errorSignature = errors
+      .map((e) => e.tokenAddress)
+      .sort()
+      .join(',');
+
+    if (this.sessionShown.has(errorSignature)) {
+      console.log('🔄 Skipping aggregate toast - already shown this session:', errorSignature);
+      this.errorBuffer.clear();
+      return;
+    }
+
+    this.sessionShown.add(errorSignature);
+
+    // Always show aggregate toast to prevent spam, even for single errors
+    this.showAggregateError(errors);
+
+    this.errorBuffer.clear();
+  }
+
+  // Removed showIndividualError method since we always use aggregate now
+
+  private showAggregateError(errors: ViewingKeyError[]) {
+    const tokenCount = errors.length;
+
+    console.log('🔄 Showing aggregate toast for errors:', { tokenCount });
+
+    // Always show table format for consistency
+    this.showTokenAddressTable(errors);
+  }
+
+  private showTokenAddressTable(errors: ViewingKeyError[]) {
+    const tokenCount = errors.length;
+    const title =
+      tokenCount === 1
+        ? `${errors[0]?.tokenSymbol ?? 'Token'} Viewing Key Error`
+        : `${tokenCount} Tokens Need Viewing Keys`;
+
+    // Remove HTML approach since it gets escaped
+
+    // Create a clean text-based table with sequential copy
+    const createFormattedList = () => {
+      let message =
+        tokenCount === 1
+          ? 'The viewing key for this token is incorrect or missing:\n\n'
+          : 'These tokens require viewing keys:\n\n';
+
+      errors.forEach((error, index) => {
+        const symbol = error.tokenSymbol ?? 'Unknown';
+        const truncatedAddr = error.tokenAddress
+          ? `${error.tokenAddress.slice(0, 12)}...${error.tokenAddress.slice(-8)}`
+          : 'Unknown address';
+
+        message += `${index + 1}. ${symbol}\n   ${truncatedAddr}\n\n`;
+      });
+
+      message += '💡 Click "Copy Next Address" to copy each address individually.\n';
+      message += '🔧 After copying, set viewing keys in Keplr wallet.';
+
+      return message;
+    };
+
+    let currentIndex = 0;
+
+    const showCopyInterface = () => {
+      const currentError = errors[currentIndex];
+
+      showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_ERRORS_AGGREGATE, title, 'error', {
+        message: createFormattedList(),
+        actionLabel: currentError
+          ? `Copy ${currentError.tokenSymbol ?? 'Next'} (${currentIndex + 1}/${tokenCount})`
+          : 'All Done',
+        onAction: () => {
+          if (currentError?.tokenAddress) {
+            navigator.clipboard
+              .writeText(currentError.tokenAddress)
+              .then(() => {
+                // Show success feedback
+                showToastOnce(
+                  `copied-${currentIndex}`,
+                  `${currentError.tokenSymbol ?? 'Address'} copied!`,
+                  'success',
+                  { autoClose: 2000 }
+                );
+
+                currentIndex++;
+
+                // Continue to next or finish
+                setTimeout(() => {
+                  if (currentIndex < errors.length) {
+                    showCopyInterface();
+                  } else {
+                    showToastOnce('viewing-keys-complete', 'All addresses copied!', 'success', {
+                      message: `Successfully copied all ${tokenCount} token addresses. You can now set viewing keys in Keplr wallet.`,
+                      autoClose: 5000,
+                    });
+                  }
+                }, 1000);
+              })
+              .catch(() => {
+                showToastOnce('copy-failed', 'Failed to copy address', 'error', {
+                  autoClose: 3000,
+                });
+              });
+          } else {
+            // No more addresses to copy
+            return;
+          }
+        },
+        autoClose: false,
+      });
+    };
+
+    showCopyInterface();
+  }
+
+  // Method to clear session data on wallet disconnect
+  clearSession() {
+    this.sessionShown.clear();
+    this.errorBuffer.clear();
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+  }
+}
+
+// Global instance
+const viewingKeyErrorAggregator = new ViewingKeyErrorAggregator();
 
 // Event system for toast management
 type ToastListener = (toasts: ToastItem[]) => void;
@@ -135,6 +302,11 @@ export function resetAllToastCooldowns(): void {
 }
 
 /**
+ * Export the aggregator for use in other modules
+ */
+export { viewingKeyErrorAggregator };
+
+/**
  * Predefined toast functions for common scenarios
  */
 export const toastManager = {
@@ -146,11 +318,16 @@ export const toastManager = {
       autoClose: false,
     }),
 
-  viewingKeyRequired: () =>
-    showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_REQUIRED, 'Viewing Key Required', 'warning', {
-      message: 'Please open the Keplr extension to set or fix the viewing key for this token.',
-      autoClose: 8000,
-    }),
+  viewingKeyRequired: () => {
+    // Use aggregation system instead of individual toasts
+    viewingKeyErrorAggregator.addError({
+      tokenAddress: 'unknown',
+      tokenSymbol: undefined,
+      errorType: 'required',
+      isLpToken: false,
+      timestamp: Date.now(),
+    });
+  },
 
   viewingKeyRejected: (onRetry?: () => void) => {
     const options = {
@@ -186,71 +363,40 @@ export const toastManager = {
     }),
 
   viewingKeyMismatch: (tokenSymbol?: string, tokenAddress?: string) => {
-    const truncatedAddress = tokenAddress
-      ? `${tokenAddress.slice(0, 12)}...${tokenAddress.slice(-8)}`
-      : 'Unknown token';
-
-    const title = tokenSymbol ? `${tokenSymbol} Viewing Key Mismatch` : 'Viewing Key Mismatch';
-    const baseMessage = tokenSymbol
-      ? `The viewing key for ${tokenSymbol} is incorrect or missing.`
-      : 'The viewing key for this token is incorrect or missing.';
-
-    showToastOnce(
-      tokenAddress
-        ? `viewing-key-mismatch-${tokenAddress}`
-        : GLOBAL_TOAST_IDS.VIEWING_KEY_CORRUPTED,
-      title,
-      'error',
-      tokenAddress
-        ? {
-            message: `${baseMessage} Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet and set a new viewing key.`,
-            actionLabel: 'Copy Address',
-            onAction: () => {
-              navigator.clipboard
-                .writeText(tokenAddress)
-                .then(() => {
-                  showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
-                    autoClose: 2000,
-                  });
-                })
-                .catch(() => {
-                  showToastOnce(`copy-failed-${tokenAddress}`, 'Failed to copy address', 'error', {
-                    autoClose: 3000,
-                  });
-                });
-            },
-            autoClose: false,
-          }
-        : {
-            message: `${baseMessage} Please go to Keplr wallet and set a new viewing key.`,
-            autoClose: false,
-          }
-    );
+    // Use aggregation system instead of individual toasts
+    viewingKeyErrorAggregator.addError({
+      tokenAddress: tokenAddress || 'unknown',
+      tokenSymbol,
+      errorType: 'invalid',
+      isLpToken: false,
+      timestamp: Date.now(),
+    });
   },
 
-  lpTokenViewingKeyMismatch: (tokenSymbol?: string) =>
-    showToastOnce(
-      GLOBAL_TOAST_IDS.LP_TOKEN_VIEWING_KEY_CORRUPTED,
-      'LP Token Viewing Key Mismatch',
-      'error',
-      {
-        message: tokenSymbol
-          ? `The viewing key for ${tokenSymbol} LP token is incorrect or missing. Please reset it in Keplr wallet.`
-          : 'The LP token viewing key is incorrect or missing. Please reset it in Keplr wallet.',
-        autoClose: false,
-      }
-    ),
+  lpTokenViewingKeyMismatch: (tokenSymbol?: string) => {
+    // Use aggregation system instead of individual toasts
+    viewingKeyErrorAggregator.addError({
+      tokenAddress: 'unknown',
+      tokenSymbol,
+      errorType: 'corrupted',
+      isLpToken: true,
+      timestamp: Date.now(),
+    });
+  },
 
   viewingKeyErrorWithAddress: (
-    title: string,
-    messageTemplate: string,
+    _title: string,
+    _messageTemplate: string,
     tokenAddress: string,
-    toastId: string
+    _toastId: string
   ) => {
-    const message = messageTemplate.replace('{address}', tokenAddress);
-    showToastOnce(toastId, title, 'error', {
-      message,
-      autoClose: false,
+    // Use aggregation system instead of individual toasts
+    viewingKeyErrorAggregator.addError({
+      tokenAddress,
+      tokenSymbol: undefined,
+      errorType: 'failed',
+      isLpToken: false,
+      timestamp: Date.now(),
     });
   },
 };

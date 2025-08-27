@@ -7,7 +7,7 @@ import {
   isRewardsResponse,
 } from '@/types/secretswap/lp-staking';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { removeToast, showToastOnce } from '@/utils/toast/toastManager';
+import { removeToast, showToastOnce, viewingKeyErrorAggregator } from '@/utils/toast/toastManager';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 /**
@@ -337,15 +337,17 @@ export async function getRewards(params: GetRewardsParams): Promise<string | nul
             // let's log our old key:
             console.log('🔑 Old viewing key:', viewingKey);
 
-            showToastOnce('lp-token-vk-error', 'LP Token Viewing Key Required', 'error', {
-              message:
-                'Your LP token viewing key is missing or invalid. Click below to create one (requires 2 Keplr approvals).',
-              actionLabel: 'Setup Viewing Key',
-              onAction: () => {
-                void handleCreateKey();
-              },
-              autoClose: false,
+            // Use aggregation system instead of individual toast
+            viewingKeyErrorAggregator.addError({
+              tokenAddress: lpToken || 'unknown',
+              tokenSymbol: 'LP Token',
+              errorType: 'required',
+              isLpToken: true,
+              timestamp: Date.now(),
             });
+
+            // Still automatically try to create the key
+            void handleCreateKey();
 
             // Return null instead of throwing to avoid unhandled runtime errors
             return null;

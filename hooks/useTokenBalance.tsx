@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 export enum TokenBalanceError {
   NO_KEPLR = 'NO_KEPLR',
   NO_VIEWING_KEY = 'NO_VIEWING_KEY',
+  VIEWING_KEY_INVALID = 'VIEWING_KEY_INVALID',
   VIEWING_KEY_REJECTED = 'VIEWING_KEY_REJECTED',
   NO_SECRET_JS = 'NO_SECRET_JS',
   NETWORK_ERROR = 'NETWORK_ERROR',
@@ -20,7 +21,10 @@ function mapStringToTokenBalanceError(errorString: string | null): TokenBalanceE
 
   if (errorString.includes('NO_KEPLR')) return null; // Treat as loading, not error
   if (errorString.includes('NETWORK_ERROR')) return TokenBalanceError.NETWORK_ERROR;
-  if (errorString.includes('VIEWING_KEY_REQUIRED')) return TokenBalanceError.VIEWING_KEY_REJECTED;
+  if (errorString.includes('VIEWING_KEY_REQUIRED')) return TokenBalanceError.NO_VIEWING_KEY;
+  if (errorString.includes('VIEWING_KEY_INVALID') || errorString.includes('unauthorized'))
+    return TokenBalanceError.VIEWING_KEY_INVALID;
+  if (errorString.includes('VIEWING_KEY_REJECTED')) return TokenBalanceError.VIEWING_KEY_REJECTED;
 
   return TokenBalanceError.UNKNOWN_ERROR;
 }

@@ -63,6 +63,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
         <TopRightBalance
           balance={balance}
           tokenSymbol={tokenSymbol}
+          tokenAddress={tokenAddress}
           hasMax={hasMax}
           inputIdentifier={inputIdentifier}
           loading={tokenData.loading}
