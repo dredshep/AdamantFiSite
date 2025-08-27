@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useSingleTokenPricing } from '@/hooks/useCoinGeckoPricing';
+import { isPricingEnabled } from '@/utils/features';
 
 interface PriceDisplayProps {
   symbol: 'SCRT' | 'SEFI' | 'ETH' | 'ATOM' | 'USDC';
@@ -6,54 +7,40 @@ interface PriceDisplayProps {
   className?: string;
 }
 
-interface PriceData {
-  SCRT: number;
-  SEFI: number;
-  ETH: number;
-  ATOM: number;
-  USDC: number;
-}
+// Map symbols to CoinGecko IDs
+const SYMBOL_TO_COINGECKO_ID: Record<string, string> = {
+  SCRT: 'secret',
+  SEFI: 'secret', // SEFI might not have its own CoinGecko ID, using SCRT as fallback
+  ETH: 'ethereum',
+  ATOM: 'cosmos',
+  USDC: 'usd-coin',
+};
 
 export const PriceDisplay = ({ symbol, amount = 1, className = '' }: PriceDisplayProps) => {
-  const [price, setPrice] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // If pricing is disabled, don't render anything
+  if (!isPricingEnabled()) {
+    return null;
+  }
 
-  useEffect(() => {
-    const fetchPrice = async () => {
-      try {
-        const response = await fetch('/api/prices');
-        const data = (await response.json()) as PriceData;
-        const priceValue = data[symbol];
-        if (typeof priceValue === 'number') {
-          setPrice(priceValue);
-        } else {
-          setError('Invalid price data');
-        }
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load price';
-        setError(errorMessage);
-      }
-    };
+  const coingeckoId = SYMBOL_TO_COINGECKO_ID[symbol];
+  const { getPriceForSymbol, loading, error } = useSingleTokenPricing(
+    coingeckoId,
+    symbol,
+    true, // autoFetch
+    300000 // 5 minute refresh to match server cache
+  );
 
-    // Initial fetch
-    void fetchPrice();
+  const priceInfo = getPriceForSymbol(symbol);
 
-    // Update every 5 minutes
-    const interval = setInterval(() => {
-      void fetchPrice();
-    }, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [symbol]);
-
-  if (error !== null && error !== '') {
+  if (error) {
     return <span className={`${className} text-red-500`}>Price unavailable</span>;
   }
 
-  if (price === null) {
+  if (loading || !priceInfo) {
     return <span className={`${className} text-gray-400`}>Loading...</span>;
   }
 
-  const value = (parseFloat(amount.toString()) * price).toFixed(2);
+  const value = (parseFloat(amount.toString()) * priceInfo.price).toFixed(2);
   return <span className={`${className} text-gray-600`}>${value}</span>;
 };
 

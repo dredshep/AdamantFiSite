@@ -185,21 +185,58 @@ export const toastManager = {
       message: 'Failed to connect to the service. Please refresh the page and try again.',
     }),
 
-  viewingKeyCorrupted: () =>
-    showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_CORRUPTED, 'Viewing Key Corrupted', 'error', {
-      message: 'The viewing key for this token is corrupted. Please reset it in Keplr wallet.',
-      autoClose: false,
-    }),
+  viewingKeyMismatch: (tokenSymbol?: string, tokenAddress?: string) => {
+    const truncatedAddress = tokenAddress
+      ? `${tokenAddress.slice(0, 12)}...${tokenAddress.slice(-8)}`
+      : 'Unknown token';
 
-  lpTokenViewingKeyCorrupted: (tokenSymbol?: string) =>
+    const title = tokenSymbol ? `${tokenSymbol} Viewing Key Mismatch` : 'Viewing Key Mismatch';
+    const baseMessage = tokenSymbol
+      ? `The viewing key for ${tokenSymbol} is incorrect or missing.`
+      : 'The viewing key for this token is incorrect or missing.';
+
+    showToastOnce(
+      tokenAddress
+        ? `viewing-key-mismatch-${tokenAddress}`
+        : GLOBAL_TOAST_IDS.VIEWING_KEY_CORRUPTED,
+      title,
+      'error',
+      tokenAddress
+        ? {
+            message: `${baseMessage} Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet and set a new viewing key.`,
+            actionLabel: 'Copy Address',
+            onAction: () => {
+              navigator.clipboard
+                .writeText(tokenAddress)
+                .then(() => {
+                  showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
+                    autoClose: 2000,
+                  });
+                })
+                .catch(() => {
+                  showToastOnce(`copy-failed-${tokenAddress}`, 'Failed to copy address', 'error', {
+                    autoClose: 3000,
+                  });
+                });
+            },
+            autoClose: false,
+          }
+        : {
+            message: `${baseMessage} Please go to Keplr wallet and set a new viewing key.`,
+            autoClose: false,
+          }
+    );
+  },
+
+  lpTokenViewingKeyMismatch: (tokenSymbol?: string) =>
     showToastOnce(
       GLOBAL_TOAST_IDS.LP_TOKEN_VIEWING_KEY_CORRUPTED,
-      'LP Token Viewing Key Corrupted',
+      'LP Token Viewing Key Mismatch',
       'error',
       {
         message: tokenSymbol
-          ? `The viewing key for ${tokenSymbol} LP token is corrupted. Please reset it in Keplr wallet.`
-          : 'The LP token viewing key is corrupted. Please reset it in Keplr wallet.',
+          ? `The viewing key for ${tokenSymbol} LP token is incorrect or missing. Please reset it in Keplr wallet.`
+          : 'The LP token viewing key is incorrect or missing. Please reset it in Keplr wallet.',
         autoClose: false,
       }
     ),

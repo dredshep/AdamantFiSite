@@ -8,6 +8,7 @@ import {
   isQueryErrorResponse,
 } from '@/types/secretswap/lp-staking';
 import { getAllStakingPools } from '@/utils/staking/stakingRegistry';
+import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { SecretNetworkClient } from 'secretjs';
 import { create } from 'zustand';
 import { useWalletStore } from './walletStore';
@@ -260,16 +261,54 @@ async function fetchPoolTvl(
       }
     }
 
-    // For other pairs, implement basic TVL calculation
+    // For other pairs, implement basic TVL calculation with proper decimal handling
     // This is a simplified approach - in production you'd want real price feeds
-    const reserve0 = parseFloat(poolData.assets[0]?.amount || '0');
-    const reserve1 = parseFloat(poolData.assets[1]?.amount || '0');
+    const asset0 = poolData.assets[0];
+    const asset1 = poolData.assets[1];
 
-    // Use a placeholder calculation for now
-    // TODO: Integrate with proper price feeds (CoinGecko, etc.)
-    const estimatedTvl = Math.max(reserve0, reserve1) / 1_000_000; // Rough estimate using larger reserve
+    if (!asset0 || !asset1) {
+      console.warn(`Missing assets for pool ${poolAddress}. TVL will be unavailable.`);
+      return null;
+    }
 
-    return { totalUsd: estimatedTvl };
+    // Check if token info exists
+    if (!asset0.info.token || !asset1.info.token) {
+      console.warn(`Missing token info for pool ${poolAddress}. TVL will be unavailable.`);
+      return null;
+    }
+
+    // Get the actual decimals for each token
+    const decimals0 = getTokenDecimals(asset0.info.token.contract_addr as SecretString);
+    const decimals1 = getTokenDecimals(asset1.info.token.contract_addr as SecretString);
+
+    // Log the proper decimal conversion for debugging
+    const reserve0Raw = parseFloat(asset0.amount || '0');
+    const reserve1Raw = parseFloat(asset1.amount || '0');
+
+    const reserve0 = reserve0Raw / Math.pow(10, decimals0);
+    const reserve1 = reserve1Raw / Math.pow(10, decimals1);
+
+    console.log(`Pool ${poolConfig.pairInfo.symbol} reserves:`, {
+      asset0: {
+        address: asset0.info.token.contract_addr,
+        decimals: decimals0,
+        rawAmount: reserve0Raw,
+        humanAmount: reserve0,
+      },
+      asset1: {
+        address: asset1.info.token.contract_addr,
+        decimals: decimals1,
+        rawAmount: reserve1Raw,
+        humanAmount: reserve1,
+      },
+    });
+
+    // For pools with no established price feeds, return null instead of wrong estimates
+    // Only calculate for specific pairs we can reasonably estimate
+    console.warn(
+      `No price feed available for pool ${poolConfig.pairInfo.symbol}. TVL calculation skipped.`
+    );
+    return null;
   } catch (error) {
     console.warn(`Error fetching TVL for pool ${poolAddress}:`, error, 'TVL will be unavailable.');
     return null;

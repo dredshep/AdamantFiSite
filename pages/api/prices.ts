@@ -7,6 +7,23 @@ const rateLimit = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 30; // 30 requests per minute per IP
 
+// Server-side cache to prevent duplicate external API calls
+interface CachedPriceData {
+  data: Record<
+    string,
+    {
+      usd: number;
+      usd_24h_change?: number;
+      symbol: string;
+    }
+  >;
+  timestamp: number;
+  etag?: string;
+}
+
+const priceCache = new Map<string, CachedPriceData>();
+const CACHE_DURATION = 300000; // 5 minutes
+
 // Create allowed CoinGecko IDs from our token config
 const ALLOWED_COINGECKO_IDS = TOKENS.filter((token) => token.coingeckoId).reduce((acc, token) => {
   if (token.coingeckoId) {
@@ -89,6 +106,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Create cache key based on requested IDs
+    const cacheKey = requestedIds.sort().join(',');
+    const cachedData = priceCache.get(cacheKey);
+
+    // Check if we have valid cached data
+    if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+      // Set cache headers for cached response
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      res.setHeader('X-Cache', 'HIT');
+
+      // Filter cached data to only include requested tokens
+      const filteredData: Record<string, { usd: number; usd_24h_change?: number; symbol: string }> =
+        {};
+      requestedIds.forEach((id) => {
+        if (cachedData.data[id]) {
+          filteredData[id] = cachedData.data[id];
+        }
+      });
+
+      return res.status(200).json(filteredData);
+    }
+
     // Build CoinGecko URL - use full coins/markets endpoint instead of simple/price
     const baseUrl = process.env.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3';
     const apiKey = process.env.COINGECKO_API_KEY;
@@ -145,8 +184,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       >
     );
 
+    // Cache the response for future requests
+    priceCache.set(cacheKey, {
+      data: pricesWithSymbols,
+      timestamp: Date.now(),
+    });
+
     // Set cache headers (5 minutes)
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    res.setHeader('X-Cache', 'MISS');
 
     res.status(200).json(pricesWithSymbols);
   } catch (error) {

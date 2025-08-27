@@ -19,13 +19,13 @@ export interface UseCoinGeckoPricingReturn {
  * @param coingeckoIds - Array of CoinGecko IDs to fetch prices for
  * @param tokenSymbols - Array of token symbols corresponding to the IDs
  * @param autoFetch - Whether to automatically fetch prices on mount (default: true)
- * @param refreshInterval - Interval in ms to auto-refresh prices (default: 60000 = 1 minute)
+ * @param refreshInterval - Interval in ms to auto-refresh prices (default: 300000 = 5 minutes)
  */
 export const useCoinGeckoPricing = (
   coingeckoIds: string[],
   tokenSymbols: string[],
   autoFetch = true,
-  refreshInterval = 60000
+  refreshInterval = 300000
 ): UseCoinGeckoPricingReturn => {
   const [pricing, setPricing] = useState<TokenPricing>({});
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ export const useCoinGeckoPricing = (
     if (autoFetch) {
       void fetchPricing();
     }
-  }, [autoFetch, JSON.stringify(coingeckoIds), JSON.stringify(tokenSymbols)]);
+  }, [autoFetch, coingeckoIds.join(','), tokenSymbols.join(',')]);
 
   // Set up auto-refresh interval
   useEffect(() => {
@@ -99,7 +99,7 @@ export const useCoinGeckoPricing = (
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [autoFetch, refreshInterval, JSON.stringify(coingeckoIds)]);
+  }, [autoFetch, refreshInterval, coingeckoIds.join(',')]);
 
   const refreshPricing = () => {
     void fetchPricing();
@@ -125,7 +125,7 @@ export const useSingleTokenPricing = (
   coingeckoId: string,
   tokenSymbol: string,
   autoFetch = true,
-  refreshInterval = 60000
+  refreshInterval = 300000
 ): UseCoinGeckoPricingReturn => {
   return useCoinGeckoPricing([coingeckoId], [tokenSymbol], autoFetch, refreshInterval);
 };
@@ -136,7 +136,7 @@ export const useSingleTokenPricing = (
 export const useAllTokensPricing = (
   tokens: { symbol: string; coingeckoId?: string }[],
   autoFetch = true,
-  refreshInterval = 60000
+  refreshInterval = 300000
 ): UseCoinGeckoPricingReturn => {
   // Filter tokens that have CoinGecko IDs
   const validTokens = tokens.filter((token) => token.coingeckoId);

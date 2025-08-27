@@ -33,8 +33,10 @@ interface PriceCache {
 
 class CoinGeckoService {
   private readonly cache: PriceCache = {};
-  private readonly cacheTimeout = 60000; // 1 minute cache
+  private readonly cacheTimeout = 300000; // 5 minutes cache to match server cache
   private readonly requestQueue: Map<string, Promise<TokenPriceInfo | null>> = new Map();
+  private readonly multiRequestQueue: Map<string, Promise<Record<string, TokenPriceInfo | null>>> =
+    new Map();
 
   // Rate limiting
   private lastRequestTime = 0;
@@ -167,6 +169,33 @@ class CoinGeckoService {
   async getMultipleTokenPrices(coinIds: string[]): Promise<Record<string, TokenPriceInfo | null>> {
     if (coinIds.length === 0) return {};
 
+    // Create a cache key for this specific request
+    const requestKey = coinIds.sort().join(',');
+
+    // Check if an identical request is already in progress
+    const existingRequest = this.multiRequestQueue.get(requestKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    // Create new request and add to queue
+    const request = this.processMultipleTokenPrices(coinIds);
+    this.multiRequestQueue.set(requestKey, request);
+
+    try {
+      const result = await request;
+      return result;
+    } finally {
+      this.multiRequestQueue.delete(requestKey);
+    }
+  }
+
+  /**
+   * Internal method to process multiple token price requests
+   */
+  private async processMultipleTokenPrices(
+    coinIds: string[]
+  ): Promise<Record<string, TokenPriceInfo | null>> {
     // Check cache for all coins and separate cached vs uncached
     const result: Record<string, TokenPriceInfo | null> = {};
     const uncachedIds: string[] = [];

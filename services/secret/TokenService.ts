@@ -388,7 +388,7 @@ export class TokenService {
         if (isLpToken) {
           const truncatedAddress = safeTruncateAddress(tokenAddress);
           throw new TokenServiceError(
-            `LP token viewing key is corrupted for ${truncatedAddress}: ${errorMsg} (called from: ${caller})`,
+            `LP token viewing key is invalid for ${truncatedAddress}: ${errorMsg} (called from: ${caller})`,
             TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED,
             true,
             'Reset the LP token viewing key in Keplr',

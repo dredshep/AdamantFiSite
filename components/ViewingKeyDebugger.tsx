@@ -206,7 +206,7 @@ export const ViewingKeyDebugger: React.FC = () => {
                 addLog(`[${traceId}] Invalid viewing key: ${error.message}`);
                 if (!retryBalance) {
                   addLog(
-                    `[${traceId}] Viewing key appears to be corrupted - manual reset may be required`
+                    `[${traceId}] Viewing key appears to be invalid - manual reset may be required`
                   );
                 } else {
                   addLog(`[${traceId}] Retry failed - viewing key is still invalid`);

@@ -17,7 +17,7 @@ const TokenPriceDisplay: React.FC<TokenPriceDisplayProps> = ({ coingeckoId, clas
     coingeckoId || '',
     'temp-symbol',
     !!coingeckoId, // Only auto-fetch if we have a coingeckoId
-    120000 // 2 minute refresh
+    300000 // 5 minute refresh to match server cache
   );
 
   if (!coingeckoId) {

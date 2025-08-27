@@ -100,7 +100,8 @@ function PoolCard({ pool, index }: { pool: ValidatedPool; index: number }) {
   const lpToken =
     LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.contract_address)?.lpToken || '';
 
-  const formatNumber = (value: number): string => {
+  const formatNumber = (value: number | null): string => {
+    if (value == null) return '-';
     if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
     if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
     return `$${value.toFixed(2)}`;
@@ -140,7 +141,7 @@ function PoolCard({ pool, index }: { pool: ValidatedPool; index: number }) {
               <span className="text-adamant-text-box-secondary">TVL:</span>
               {poolData.isLoading ? (
                 <LoadingPlaceholder size="small" />
-              ) : poolData.tvl != null ? (
+              ) : poolData.tvl != null && poolData.tvl > 0 ? (
                 <span className="font-medium text-white">{formatNumber(poolData.tvl)}</span>
               ) : (
                 <span className="font-medium text-adamant-text-box-secondary">-</span>
@@ -241,7 +242,8 @@ function PoolRow({ pool, index }: { pool: ValidatedPool; index: number }) {
   const lpToken =
     LIQUIDITY_PAIRS.find((p) => p.pairContract === pool.contract_address)?.lpToken || '';
 
-  const formatNumber = (value: number): string => {
+  const formatNumber = (value: number | null): string => {
+    if (value == null) return '-';
     if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
     if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
     return `$${value.toFixed(2)}`;
@@ -285,7 +287,7 @@ function PoolRow({ pool, index }: { pool: ValidatedPool; index: number }) {
                 <div className="text-right flex justify-end">
                   {poolData.isLoading ? (
                     <LoadingPlaceholder size="small" />
-                  ) : poolData.tvl != null ? (
+                  ) : poolData.tvl != null && poolData.tvl > 0 ? (
                     <span className="font-medium text-adamant-text-box-main">
                       {formatNumber(poolData.tvl)}
                     </span>

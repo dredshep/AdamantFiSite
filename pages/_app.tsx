@@ -66,10 +66,10 @@ export default function App({ Component, pageProps }: AppProps) {
             toastManager.viewingKeyRequired();
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
-            toastManager.viewingKeyCorrupted();
+            toastManager.viewingKeyMismatch();
             break;
           case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
-            toastManager.lpTokenViewingKeyCorrupted();
+            toastManager.lpTokenViewingKeyMismatch();
             break;
           case TokenServiceErrorType.VIEWING_KEY_REJECTED:
             toastManager.viewingKeyRejected();

@@ -251,14 +251,16 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
             get().setNeedsViewingKey(tokenAddress, true);
-            toastManager.viewingKeyCorrupted();
+            // Get token symbol from config
+            const token = TOKENS.find((t) => t.address === tokenAddress);
+            toastManager.viewingKeyMismatch(token?.symbol, tokenAddress);
             break;
           case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
             get().setNeedsViewingKey(tokenAddress, true);
             // Extract token symbol for better error message
             const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
             const tokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1}` : undefined;
-            toastManager.lpTokenViewingKeyCorrupted(tokenSymbol);
+            toastManager.lpTokenViewingKeyMismatch(tokenSymbol);
             break;
           case TokenServiceErrorType.NETWORK_ERROR:
             toastManager.networkError();
@@ -478,7 +480,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
             // For specific error types, use the existing error handling logic
             if (validationError.type === TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED) {
               get().setNeedsViewingKey(tokenAddress, true);
-              get().setError(tokenAddress, 'LP Token Viewing Key Corrupted');
+              get().setError(tokenAddress, 'LP Token Viewing Key Invalid');
               // Don't return, let it fall through to the detailed toast logic below
             } else if (validationError.type === TokenServiceErrorType.VIEWING_KEY_INVALID) {
               get().setNeedsViewingKey(tokenAddress, true);
@@ -495,7 +497,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
           // Clean up the error message to remove duplicate address mention and fix formatting
           const cleanErrorDetails = errorDetails
             .replace(/for secret1[a-z0-9\.]+/g, '') // Remove "for secret1abc...xyz"
-            .replace(/LP token viewing key is corrupted\s*/i, '') // Remove redundant prefix
+            .replace(/LP token viewing key is (corrupted|invalid)\s*/i, '') // Remove redundant prefix
             .replace(/:\s*$/, '') // Remove trailing colon
             .replace(/:\s+/g, ': ') // Fix double colons
             .replace(/\(called from:.*?\)/g, '') // Remove caller info
