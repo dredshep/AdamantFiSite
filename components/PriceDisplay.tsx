@@ -23,7 +23,7 @@ export const PriceDisplay = ({ symbol, amount = 1, className = '' }: PriceDispla
   }
 
   const coingeckoId = SYMBOL_TO_COINGECKO_ID[symbol];
-  
+
   // If we don't have a coingeckoId for this symbol, return null
   if (!coingeckoId) {
     return null;
