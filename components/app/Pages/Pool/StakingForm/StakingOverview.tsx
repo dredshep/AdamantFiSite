@@ -7,7 +7,7 @@ import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { SecretString } from '@/types';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { removeToast, showToastOnce, toastManager } from '@/utils/toast/toastManager';
-import { Key, RefreshCw, Settings, Zap } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { TxResultCode } from 'secretjs';
 
@@ -447,7 +447,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
       </div>
 
       {/* Debug: Show viewing key states */}
-      <div className="bg-adamant-box-dark/10 backdrop-blur-sm rounded-xl p-2 border border-gray-500/10 text-xs">
+      {/* <div className="bg-adamant-box-dark/10 backdrop-blur-sm rounded-xl p-2 border border-gray-500/10 text-xs">
         <div className="text-gray-400">Debug: VK Status</div>
         <div className="flex gap-4 mt-1">
           <span className={`${lpKeyValid ? 'text-green-400' : 'text-red-400'}`}>
@@ -460,10 +460,10 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             Sync: {lpKeyValid && !stakingKeyValid ? 'Available' : 'N/A'}
           </span>
         </div>
-      </div>
+      </div> */}
 
       {/* Sync Key Button - Only show when LP key exists but staking key doesn't */}
-      {lpKeyValid && !stakingKeyValid && (
+      {/* {lpKeyValid && !stakingKeyValid && (
         <div className="bg-adamant-box-dark/20 backdrop-blur-sm rounded-xl p-3 border border-blue-500/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -499,10 +499,10 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             </button>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Debug Section - Update Allocation Button */}
-      <div className="bg-adamant-box-dark/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-500/20">
+      {/* <div className="bg-adamant-box-dark/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-500/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4 text-yellow-400" />
@@ -536,7 +536,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             )}
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Staked Balance - Enhanced with USD value */}
       <div className="bg-adamant-box-dark/50 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border">
