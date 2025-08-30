@@ -8,6 +8,7 @@ import {
 } from '@/types/secretswap/lp-staking';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { removeToast, showToastOnce, viewingKeyErrorAggregator } from '@/utils/toast/toastManager';
+import { Window } from '@keplr-wallet/types';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 /**
@@ -166,7 +167,7 @@ export async function getRewards(params: GetRewardsParams): Promise<string | nul
                 .join('');
             };
 
-            const handleCreateKey = async () => {
+            const _handleCreateKey = async () => {
               try {
                 // Clear any existing error toasts first
                 removeToast('lp-token-vk-error');
@@ -328,7 +329,7 @@ export async function getRewards(params: GetRewardsParams): Promise<string | nul
                   actionLabel: 'Retry',
                   onAction: () => {
                     removeToast('create-vk-final-error');
-                    void handleCreateKey();
+                    void _handleCreateKey();
                   },
                   autoClose: false,
                 });
@@ -338,16 +339,58 @@ export async function getRewards(params: GetRewardsParams): Promise<string | nul
             console.log('🔑 Old viewing key:', viewingKey);
 
             // Use aggregation system instead of individual toast
+            // Note: This error is from the STAKING contract, not the LP token
             viewingKeyErrorAggregator.addError({
-              tokenAddress: lpToken || 'unknown',
-              tokenSymbol: 'LP Token',
+              tokenAddress: lpStakingContractAddress,
+              tokenSymbol: 'Staking Contract',
               errorType: 'required',
-              isLpToken: true,
+              isLpToken: false, // This is a staking contract error, not LP token
               timestamp: Date.now(),
+              onSyncKey: () => {
+                // Auto-sync functionality: copy LP token viewing key to staking contract
+                void (async () => {
+                  try {
+                    const keplr = (window as unknown as Window).keplr;
+                    if (!keplr) return;
+
+                    // Get LP token viewing key
+                    const lpKey = await keplr.getSecret20ViewingKey('secret-4', lpToken);
+                    if (!lpKey) return;
+
+                    // Set the same key on staking contract
+                    const setViewingKeyMsg = { set_viewing_key: { key: lpKey } };
+
+                    const result = await secretjs.tx.compute.executeContract(
+                      {
+                        sender: secretjs.address,
+                        contract_address: lpStakingContractAddress,
+                        code_hash: lpStakingContractHash,
+                        msg: setViewingKeyMsg,
+                        sent_funds: [],
+                      },
+                      { gasLimit: 150_000 }
+                    );
+
+                    if (result.code === TxResultCode.Success) {
+                      showToastOnce('sync-success', 'Viewing key synced!', 'success', {
+                        message:
+                          'Your LP token viewing key has been successfully synced to the staking contract.',
+                        autoClose: 5000,
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Auto-sync failed:', error);
+                    showToastOnce('sync-error', 'Sync failed', 'error', {
+                      message: 'Failed to sync viewing key. Please try manually.',
+                      autoClose: 5000,
+                    });
+                  }
+                })();
+              },
             });
 
-            // Still automatically try to create the key
-            void handleCreateKey();
+            // Auto creation disabled - user requested no auto sync
+            // void _handleCreateKey();
 
             // Return null instead of throwing to avoid unhandled runtime errors
             return null;

@@ -45,6 +45,7 @@ interface ViewingKeyError {
   errorType: 'invalid' | 'corrupted' | 'required' | 'rejected' | 'failed';
   isLpToken: boolean;
   timestamp: number;
+  onSyncKey?: () => void; // Optional sync callback for staking contracts
 }
 
 class ViewingKeyErrorAggregator {
@@ -107,15 +108,42 @@ class ViewingKeyErrorAggregator {
 
   private showTokenAddressTable(errors: ViewingKeyError[]) {
     const tokenCount = errors.length;
+
+    // Check if this is a staking contract error
+    const hasStakingContractError = errors.some(
+      (error) =>
+        error.tokenSymbol === 'Staking Contract' ||
+        (error.tokenAddress?.includes('secret1') && !error.isLpToken)
+    );
+
     const title =
       tokenCount === 1
         ? `${errors[0]?.tokenSymbol ?? 'Token'} Viewing Key Error`
         : `${tokenCount} Tokens Need Viewing Keys`;
 
-    // Remove HTML approach since it gets escaped
-
-    // Create a clean text-based table with sequential copy
+    // Create different messaging for staking contracts vs regular tokens
     const createFormattedList = () => {
+      if (hasStakingContractError && tokenCount === 1) {
+        const stakingError = errors.find(
+          (error) =>
+            error.tokenSymbol === 'Staking Contract' ||
+            (error.tokenAddress?.includes('secret1') && !error.isLpToken)
+        );
+        const contractAddress = stakingError?.tokenAddress || 'unknown';
+        const truncatedAddr =
+          contractAddress !== 'unknown'
+            ? `${contractAddress.slice(0, 12)}...${contractAddress.slice(-8)}`
+            : 'unknown';
+
+        // Concise messaging for staking contract errors
+        return `Staking contract viewing key missing.
+
+Contract: ${truncatedAddr}
+
+Your LP token viewing key will be copied to the staking contract when you click "Sync Key".`;
+      }
+
+      // Original logic for regular tokens
       let message =
         tokenCount === 1
           ? 'The viewing key for this token is incorrect or missing:\n\n'
@@ -130,8 +158,10 @@ class ViewingKeyErrorAggregator {
         message += `${index + 1}. ${symbol}\n   ${truncatedAddr}\n\n`;
       });
 
-      message += '💡 Click "Copy Next Address" to copy each address individually.\n';
-      message += '🔧 After copying, set viewing keys in Keplr wallet.';
+      if (!hasStakingContractError) {
+        message += '💡 Click "Copy Next Address" to copy each address individually.\n';
+        message += '🔧 After copying, set viewing keys in Keplr wallet.';
+      }
 
       return message;
     };
@@ -141,6 +171,29 @@ class ViewingKeyErrorAggregator {
     const showCopyInterface = () => {
       const currentError = errors[currentIndex];
 
+      // For staking contract errors, show sync functionality
+      if (hasStakingContractError && tokenCount === 1) {
+        const stakingError = errors.find(
+          (error) =>
+            error.tokenSymbol === 'Staking Contract' ||
+            (error.tokenAddress?.includes('secret1') && !error.isLpToken)
+        );
+
+        showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_ERRORS_AGGREGATE, title, 'error', {
+          message: createFormattedList(),
+          actionLabel: stakingError?.onSyncKey ? 'Sync Key' : 'Got it',
+          onAction: () => {
+            if (stakingError?.onSyncKey) {
+              stakingError.onSyncKey();
+            }
+            // Toast will auto-close after sync action
+          },
+          autoClose: false,
+        });
+        return;
+      }
+
+      // Original copy interface for regular tokens
       showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_ERRORS_AGGREGATE, title, 'error', {
         message: createFormattedList(),
         actionLabel: currentError

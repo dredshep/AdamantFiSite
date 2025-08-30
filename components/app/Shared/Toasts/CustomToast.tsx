@@ -81,7 +81,11 @@ const CustomToast: React.FC<CustomToastProps> = ({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className={`font-medium ${styles.titleColor} text-sm leading-tight`}>{title}</div>
-          {message && <div className="text-white/70 text-xs mt-1 leading-relaxed">{message}</div>}
+          {message && (
+            <div className="text-white/70 text-xs mt-1 leading-relaxed whitespace-pre-line">
+              {message}
+            </div>
+          )}
 
           {/* Action button */}
           {actionLabel && onAction && (

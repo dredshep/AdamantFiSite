@@ -6,9 +6,10 @@ import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { SecretString } from '@/types';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
-import { RefreshCw, Settings, Zap } from 'lucide-react';
-import React, { useState } from 'react';
+import { removeToast, showToastOnce, toastManager } from '@/utils/toast/toastManager';
+import { Key, RefreshCw, Settings, Zap } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { TxResultCode } from 'secretjs';
 
 interface StakingOverviewProps {
   stakedBalance: string | null;
@@ -36,6 +37,9 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   lpTokenAddress,
 }) => {
   const [isUpdatingAllocation, setIsUpdatingAllocation] = useState(false);
+  const [isSyncingKey, setIsSyncingKey] = useState(false);
+  const [lpKeyValid, setLpKeyValid] = useState(false);
+  const [stakingKeyValid, setStakingKeyValid] = useState(false);
   const { secretjs } = useKeplrConnection();
 
   // Get LP token address from staking contract if not provided
@@ -46,6 +50,90 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
 
   // Use reward estimates hook if we have LP token address
   const rewardEstimates = useRewardEstimates(resolvedLpTokenAddress || '');
+
+  // Check viewing key validity for LP token and staking contract
+  useEffect(() => {
+    const checkViewingKeys = async () => {
+      if (!window.keplr || !resolvedLpTokenAddress || !stakingContractAddress || !secretjs) {
+        console.log('🔑 ViewingKey check skipped:', {
+          hasKeplr: !!window.keplr,
+          hasLpAddress: !!resolvedLpTokenAddress,
+          hasStakingAddress: !!stakingContractAddress,
+          hasSecretjs: !!secretjs,
+        });
+        return;
+      }
+
+      try {
+        console.log('🔑 Checking viewing keys for:', {
+          lpToken: resolvedLpTokenAddress,
+          stakingContract: stakingContractAddress,
+        });
+
+        // Check LP token viewing key - test if it actually works
+        let lpValid = false;
+        try {
+          const lpKey = await window.keplr.getSecret20ViewingKey(
+            'secret-4',
+            resolvedLpTokenAddress
+          );
+          if (lpKey && lpKey.length > 0) {
+            // Test if the LP key actually works by trying to query balance
+            const lpStakingInfo = getStakingContractInfo(stakingContractAddress);
+            if (lpStakingInfo) {
+              await secretjs.query.compute.queryContract({
+                contract_address: resolvedLpTokenAddress,
+                code_hash: lpStakingInfo.lpTokenCodeHash,
+                query: { balance: { address: secretjs.address, key: lpKey } },
+              });
+              lpValid = true;
+              console.log('🔑 LP token viewing key is valid and works');
+            }
+          }
+        } catch (err) {
+          console.log('🔑 LP key test failed:', err);
+          lpValid = false;
+        }
+        setLpKeyValid(lpValid);
+
+        // Check staking contract viewing key - test if it actually works
+        let stakingValid = false;
+        try {
+          const stakingKey = await window.keplr.getSecret20ViewingKey(
+            'secret-4',
+            stakingContractAddress
+          );
+          if (stakingKey && stakingKey.length > 0) {
+            // Test if the staking key actually works by trying to query balance
+            const stakingInfo = getStakingContractInfo(stakingContractAddress);
+            if (stakingInfo) {
+              await secretjs.query.compute.queryContract({
+                contract_address: stakingContractAddress,
+                code_hash: stakingInfo.stakingCodeHash,
+                query: { balance: { address: secretjs.address, key: stakingKey } },
+              });
+              stakingValid = true;
+              console.log('🔑 Staking contract viewing key is valid and works');
+            }
+          }
+        } catch (err) {
+          console.log('🔑 Staking key test failed:', err);
+          stakingValid = false;
+        }
+        setStakingKeyValid(stakingValid);
+
+        console.log('🔑 Viewing key status:', {
+          lpKeyValid: lpValid,
+          stakingKeyValid: stakingValid,
+          showSyncButton: lpValid && !stakingValid,
+        });
+      } catch (error) {
+        console.error('Error checking viewing keys:', error);
+      }
+    };
+
+    void checkViewingKeys();
+  }, [resolvedLpTokenAddress, stakingContractAddress, secretjs]);
 
   // Helper to format numbers cleanly - NEVER show '0' for null/unknown values
   const formatBalance = (value: string | null): string => {
@@ -116,6 +204,105 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
 
   // Get bADMT token for reward display
   const rewardToken = TOKENS.find((t) => t.symbol === 'bADMT');
+
+  // Sync LP viewing key to staking contract
+  const handleSyncViewingKey = async () => {
+    if (!window.keplr || !secretjs || !resolvedLpTokenAddress || !stakingContractAddress) {
+      toastManager.keplrNotInstalled();
+      return;
+    }
+
+    try {
+      setIsSyncingKey(true);
+
+      // Get the LP token viewing key
+      const lpKey = await window.keplr.getSecret20ViewingKey('secret-4', resolvedLpTokenAddress);
+
+      if (!lpKey || lpKey.length === 0) {
+        showToastOnce('sync-key-error', 'LP token viewing key not found', 'error', {
+          message: 'Please create a viewing key for the LP token first.',
+          autoClose: 5000,
+        });
+        return;
+      }
+
+      // Get staking contract info for code hash
+      const stakingInfo = getStakingContractInfo(stakingContractAddress);
+      if (!stakingInfo) {
+        showToastOnce('sync-key-error', 'Staking contract info not found', 'error', {
+          autoClose: 5000,
+        });
+        return;
+      }
+
+      // Set the same viewing key on the staking contract
+      const setViewingKeyMsg = {
+        set_viewing_key: {
+          key: lpKey,
+        },
+      };
+
+      showToastOnce('sync-key-progress', 'Syncing viewing key...', 'info', {
+        message: 'Please approve the transaction in Keplr to sync your viewing key.',
+        autoClose: false,
+      });
+
+      const result = await secretjs.tx.compute.executeContract(
+        {
+          sender: secretjs.address,
+          contract_address: stakingContractAddress,
+          code_hash: stakingInfo.stakingCodeHash,
+          msg: setViewingKeyMsg,
+          sent_funds: [],
+        },
+        {
+          gasLimit: 150_000,
+        }
+      );
+
+      if (result.code === TxResultCode.Success) {
+        showToastOnce('sync-key-success', 'Viewing key synced!', 'success', {
+          message:
+            'Your LP token viewing key has been successfully synced to the staking contract.',
+          autoClose: 5000,
+        });
+
+        // Update the key validity state
+        setStakingKeyValid(true);
+
+        // Refresh balances if callback provided
+        if (onRefresh) {
+          setTimeout(() => {
+            onRefresh();
+          }, 1000);
+        }
+      } else {
+        throw new Error(`Transaction failed: ${result.rawLog}`);
+      }
+    } catch (error) {
+      console.error('Error syncing viewing key:', error);
+
+      let errorMessage = 'Failed to sync viewing key';
+      if (error instanceof Error) {
+        if (error.message.includes('rejected') || error.message.includes('denied')) {
+          errorMessage = 'Transaction was rejected by user';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      showToastOnce('sync-key-error', 'Sync failed', 'error', {
+        message: errorMessage,
+        autoClose: 8000,
+      });
+    } finally {
+      setIsSyncingKey(false);
+      // Clear progress toast
+      setTimeout(() => {
+        removeToast('sync-key-progress');
+      }, 500);
+    }
+  };
 
   // Update allocation function to trigger reward initialization
   const handleUpdateAllocation = async () => {
@@ -258,6 +445,61 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Debug: Show viewing key states */}
+      <div className="bg-adamant-box-dark/10 backdrop-blur-sm rounded-xl p-2 border border-gray-500/10 text-xs">
+        <div className="text-gray-400">Debug: VK Status</div>
+        <div className="flex gap-4 mt-1">
+          <span className={`${lpKeyValid ? 'text-green-400' : 'text-red-400'}`}>
+            LP: {lpKeyValid ? '✓' : '✗'}
+          </span>
+          <span className={`${stakingKeyValid ? 'text-green-400' : 'text-red-400'}`}>
+            Staking: {stakingKeyValid ? '✓' : '✗'}
+          </span>
+          <span className={`${lpKeyValid && !stakingKeyValid ? 'text-blue-400' : 'text-gray-500'}`}>
+            Sync: {lpKeyValid && !stakingKeyValid ? 'Available' : 'N/A'}
+          </span>
+        </div>
+      </div>
+
+      {/* Sync Key Button - Only show when LP key exists but staking key doesn't */}
+      {lpKeyValid && !stakingKeyValid && (
+        <div className="bg-adamant-box-dark/20 backdrop-blur-sm rounded-xl p-3 border border-blue-500/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="h-4 w-4 text-blue-400" />
+              <div>
+                <p className="text-xs font-medium text-blue-400">Viewing Key Sync</p>
+                <p className="text-xs text-adamant-text-box-secondary">
+                  LP key found, sync to staking contract
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                void handleSyncViewingKey();
+              }}
+              disabled={isSyncingKey || !secretjs}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg
+                       bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30
+                       text-blue-400 transition-all duration-200 disabled:opacity-50
+                       hover:scale-105 active:scale-95 disabled:hover:scale-100"
+            >
+              {isSyncingKey ? (
+                <>
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <Key className="h-3 w-3" />
+                  Sync Key
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Debug Section - Update Allocation Button */}
       <div className="bg-adamant-box-dark/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-500/20">

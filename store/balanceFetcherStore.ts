@@ -4,7 +4,7 @@ import {
   TokenServiceError,
   TokenServiceErrorType,
 } from '@/services/secret/TokenService';
-import { showToastOnce, toastManager, viewingKeyErrorAggregator } from '@/utils/toast/toastManager';
+import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
 import { create } from 'zustand';
 import { useWalletStore } from './walletStore';
 
@@ -243,69 +243,24 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         switch (tokenError.type) {
           case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
             get().setNeedsViewingKey(tokenAddress, true);
-            // Use aggregation system instead of direct toast
-            const requiredToken = TOKENS.find((t) => t.address === tokenAddress);
-            const requiredLpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
-            const requiredTokenSymbol =
-              requiredToken?.symbol ||
-              (requiredLpPair ? `${requiredLpPair.token0}/${requiredLpPair.token1}` : undefined);
-
-            viewingKeyErrorAggregator.addError({
-              tokenAddress,
-              tokenSymbol: requiredTokenSymbol,
-              errorType: 'required',
-              isLpToken: !!requiredLpPair,
-              timestamp: Date.now(),
-            });
+            toastManager.viewingKeyRequired();
             break;
           case TokenServiceErrorType.VIEWING_KEY_REJECTED:
             get().setNeedsViewingKey(tokenAddress, true);
-            // Use aggregation system
-            const rejectedToken = TOKENS.find((t) => t.address === tokenAddress);
-            const rejectedLpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
-            const rejectedTokenSymbol =
-              rejectedToken?.symbol ||
-              (rejectedLpPair ? `${rejectedLpPair.token0}/${rejectedLpPair.token1}` : undefined);
-
-            viewingKeyErrorAggregator.addError({
-              tokenAddress,
-              tokenSymbol: rejectedTokenSymbol,
-              errorType: 'rejected',
-              isLpToken: !!rejectedLpPair,
-              timestamp: Date.now(),
-            });
+            toastManager.viewingKeyRejected(() => void get().retryWithViewingKey(tokenAddress));
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
             get().setNeedsViewingKey(tokenAddress, true);
-            // Get token symbol from config and use aggregation system
+            // Get token symbol from config
             const token = TOKENS.find((t) => t.address === tokenAddress);
-            const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
-            const tokenSymbol =
-              token?.symbol || (lpPair ? `${lpPair.token0}/${lpPair.token1}` : undefined);
-
-            viewingKeyErrorAggregator.addError({
-              tokenAddress,
-              tokenSymbol,
-              errorType: 'invalid',
-              isLpToken: !!lpPair,
-              timestamp: Date.now(),
-            });
+            toastManager.viewingKeyMismatch(token?.symbol, tokenAddress);
             break;
           case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
             get().setNeedsViewingKey(tokenAddress, true);
-            // Extract token symbol for better error message and use aggregation
-            const corruptedLpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
-            const corruptedTokenSymbol = corruptedLpPair
-              ? `${corruptedLpPair.token0}/${corruptedLpPair.token1}`
-              : undefined;
-
-            viewingKeyErrorAggregator.addError({
-              tokenAddress,
-              tokenSymbol: corruptedTokenSymbol,
-              errorType: 'corrupted',
-              isLpToken: true,
-              timestamp: Date.now(),
-            });
+            // Extract token symbol for better error message
+            const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+            const tokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1}` : undefined;
+            toastManager.lpTokenViewingKeyMismatch(tokenSymbol);
             break;
           case TokenServiceErrorType.NETWORK_ERROR:
             toastManager.networkError();
@@ -314,21 +269,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       } else if (error instanceof Error && error.message.toLowerCase().includes('viewing key')) {
         get().setNeedsViewingKey(tokenAddress, true);
         get().setError(tokenAddress, 'Set viewing key in Keplr');
-
-        // Use aggregation system for generic viewing key errors too
-        const fallbackToken = TOKENS.find((t) => t.address === tokenAddress);
-        const fallbackLpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
-        const fallbackTokenSymbol =
-          fallbackToken?.symbol ||
-          (fallbackLpPair ? `${fallbackLpPair.token0}/${fallbackLpPair.token1}` : undefined);
-
-        viewingKeyErrorAggregator.addError({
-          tokenAddress,
-          tokenSymbol: fallbackTokenSymbol,
-          errorType: 'required',
-          isLpToken: !!fallbackLpPair,
-          timestamp: Date.now(),
-        });
+        toastManager.viewingKeyRequired();
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         get().setError(tokenAddress, errorMessage);
@@ -516,9 +457,17 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
           // The viewing key exists but doesn't work - this is the "false success" case
           console.error('Viewing key validation failed:', validationError);
 
-          // Remove unused function since we're using aggregation now
+          // Add inline truncate function for proper address handling
+          const safeTruncateAddress = (address: string): string => {
+            const startChars = 8;
+            const endChars = 6;
+            if (address.length <= startChars + endChars + 3) {
+              return address;
+            }
+            return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+          };
 
-          // Extract specific error details and handle TokenServiceError properly (for logging)
+          // Extract specific error details and handle TokenServiceError properly
           let errorDetails = 'Unknown validation error';
 
           if (validationError instanceof TokenServiceError) {
@@ -545,17 +494,70 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
             errorDetails = validationError;
           }
 
-          // Log the error details for debugging
-          console.log('Viewing key validation error details:', errorDetails);
+          // Clean up the error message to remove duplicate address mention and fix formatting
+          const cleanErrorDetails = errorDetails
+            .replace(/for secret1[a-z0-9\.]+/g, '') // Remove "for secret1abc...xyz"
+            .replace(/LP token viewing key is (corrupted|invalid)\s*/i, '') // Remove redundant prefix
+            .replace(/:\s*$/, '') // Remove trailing colon
+            .replace(/:\s+/g, ': ') // Fix double colons
+            .replace(/\(called from:.*?\)/g, '') // Remove caller info
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
 
-          // Use aggregation system instead of individual toasts
-          viewingKeyErrorAggregator.addError({
-            tokenAddress,
-            tokenSymbol,
-            errorType: 'failed',
-            isLpToken,
-            timestamp: Date.now(),
-          });
+          const truncatedAddress = safeTruncateAddress(tokenAddress);
+
+          if (isLpToken) {
+            showToastOnce(
+              `lp-key-validation-failed-${tokenAddress}`,
+              'LP Token Viewing Key Failed',
+              'error',
+              {
+                message: `${tokenSymbol} viewing key failed: ${cleanErrorDetails}. Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet, find the LP token, and set a new viewing key.`,
+                actionLabel: 'Copy Address',
+                onAction: () => {
+                  navigator.clipboard
+                    .writeText(tokenAddress)
+                    .then(() => {
+                      showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
+                        autoClose: 2000,
+                      });
+                    })
+                    .catch(() => {
+                      showToastOnce(
+                        `copy-failed-${tokenAddress}`,
+                        'Failed to copy address',
+                        'error',
+                        { autoClose: 3000 }
+                      );
+                    });
+                },
+                autoClose: false,
+              }
+            );
+          } else {
+            showToastOnce(`key-validation-failed-${tokenAddress}`, 'Viewing Key Failed', 'error', {
+              message: `Token viewing key failed: ${cleanErrorDetails}. Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet and set a new viewing key.`,
+              actionLabel: 'Copy Address',
+              onAction: () => {
+                navigator.clipboard
+                  .writeText(tokenAddress)
+                  .then(() => {
+                    showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
+                      autoClose: 2000,
+                    });
+                  })
+                  .catch(() => {
+                    showToastOnce(
+                      `copy-failed-${tokenAddress}`,
+                      'Failed to copy address',
+                      'error',
+                      { autoClose: 3000 }
+                    );
+                  });
+              },
+              autoClose: false,
+            });
+          }
 
           // Update state and return early - don't throw to avoid duplicate toast in outer catch
           get().setError(tokenAddress, 'LP Token Viewing Key Validation Failed');
@@ -754,8 +756,6 @@ useWalletStore.subscribe((state) => {
     console.log('Wallet disconnected, clearing balance states');
     // Clear all balance states
     useBalanceFetcherStore.setState({ balances: {}, queue: [] });
-    // Clear aggregation session data
-    viewingKeyErrorAggregator.clearSession();
   }
 
   lastWalletAddress = currentAddress;
