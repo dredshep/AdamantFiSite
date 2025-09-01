@@ -18,7 +18,6 @@ const FetchButton: React.FC<FetchButtonProps> = ({
   loading = false,
   error = false,
   hasBalance = false,
-  errorMessage = 'Error',
   showAddToken = false,
   onFetch,
   onAddToken,

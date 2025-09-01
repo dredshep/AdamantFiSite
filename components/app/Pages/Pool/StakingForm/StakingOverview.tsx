@@ -6,10 +6,9 @@ import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { SecretString } from '@/types';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
-import { removeToast, showToastOnce, toastManager } from '@/utils/toast/toastManager';
+
 import { RefreshCw } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { TxResultCode } from 'secretjs';
 
 interface StakingOverviewProps {
   stakedBalance: string | null;
@@ -36,10 +35,8 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   pairSymbol = 'LP',
   lpTokenAddress,
 }) => {
-  const [isUpdatingAllocation, setIsUpdatingAllocation] = useState(false);
-  const [isSyncingKey, setIsSyncingKey] = useState(false);
-  const [lpKeyValid, setLpKeyValid] = useState(false);
-  const [stakingKeyValid, setStakingKeyValid] = useState(false);
+  const [, setLpKeyValid] = useState(false);
+  const [, setStakingKeyValid] = useState(false);
   const { secretjs } = useKeplrConnection();
 
   // Get LP token address from staking contract if not provided
@@ -205,180 +202,6 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   // Get bADMT token for reward display
   const rewardToken = TOKENS.find((t) => t.symbol === 'bADMT');
 
-  // Sync LP viewing key to staking contract
-  const handleSyncViewingKey = async () => {
-    if (!window.keplr || !secretjs || !resolvedLpTokenAddress || !stakingContractAddress) {
-      toastManager.keplrNotInstalled();
-      return;
-    }
-
-    try {
-      setIsSyncingKey(true);
-
-      // Get the LP token viewing key
-      const lpKey = await window.keplr.getSecret20ViewingKey('secret-4', resolvedLpTokenAddress);
-
-      if (!lpKey || lpKey.length === 0) {
-        showToastOnce('sync-key-error', 'LP token viewing key not found', 'error', {
-          message: 'Please create a viewing key for the LP token first.',
-          autoClose: 5000,
-        });
-        return;
-      }
-
-      // Get staking contract info for code hash
-      const stakingInfo = getStakingContractInfo(stakingContractAddress);
-      if (!stakingInfo) {
-        showToastOnce('sync-key-error', 'Staking contract info not found', 'error', {
-          autoClose: 5000,
-        });
-        return;
-      }
-
-      // Set the same viewing key on the staking contract
-      const setViewingKeyMsg = {
-        set_viewing_key: {
-          key: lpKey,
-        },
-      };
-
-      showToastOnce('sync-key-progress', 'Syncing viewing key...', 'info', {
-        message: 'Please approve the transaction in Keplr to sync your viewing key.',
-        autoClose: false,
-      });
-
-      const result = await secretjs.tx.compute.executeContract(
-        {
-          sender: secretjs.address,
-          contract_address: stakingContractAddress,
-          code_hash: stakingInfo.stakingCodeHash,
-          msg: setViewingKeyMsg,
-          sent_funds: [],
-        },
-        {
-          gasLimit: 150_000,
-        }
-      );
-
-      if (result.code === TxResultCode.Success) {
-        showToastOnce('sync-key-success', 'Viewing key synced!', 'success', {
-          message:
-            'Your LP token viewing key has been successfully synced to the staking contract.',
-          autoClose: 5000,
-        });
-
-        // Update the key validity state
-        setStakingKeyValid(true);
-
-        // Refresh balances if callback provided
-        if (onRefresh) {
-          setTimeout(() => {
-            onRefresh();
-          }, 1000);
-        }
-      } else {
-        throw new Error(`Transaction failed: ${result.rawLog}`);
-      }
-    } catch (error) {
-      console.error('Error syncing viewing key:', error);
-
-      let errorMessage = 'Failed to sync viewing key';
-      if (error instanceof Error) {
-        if (error.message.includes('rejected') || error.message.includes('denied')) {
-          errorMessage = 'Transaction was rejected by user';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      showToastOnce('sync-key-error', 'Sync failed', 'error', {
-        message: errorMessage,
-        autoClose: 8000,
-      });
-    } finally {
-      setIsSyncingKey(false);
-      // Clear progress toast
-      setTimeout(() => {
-        removeToast('sync-key-progress');
-      }, 500);
-    }
-  };
-
-  // Update allocation function to trigger reward initialization
-  const handleUpdateAllocation = async () => {
-    if (!secretjs) {
-      toastManager.keplrNotInstalled();
-      return;
-    }
-
-    try {
-      setIsUpdatingAllocation(true);
-
-      // Bulk distributor contract details
-      const bulkDistributorAddress = 'secret1s563hkkrzjzx9q8qcx3r47h7s0hn5kfgy9t62r';
-      const bulkDistributorCodeHash =
-        '89083455710f42520356d0fbaa2d3a6f8e1362e1b67040cd59d365d02378fad5'; // From docs
-
-      // Execute update_allocation message
-      const executeMsg = {
-        update_allocation: {
-          spy_addr: stakingContractAddress, // LP staking contract address
-          spy_hash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a', // LP staking contract code hash
-          hook: null, // Optional hook, using null as per docs
-        },
-      };
-
-      console.log('🚀 Triggering update_allocation on bulk distributor:', {
-        bulkDistributorAddress,
-        executeMsg,
-      });
-
-      const tx = await secretjs.tx.compute.executeContract(
-        {
-          sender: secretjs.address,
-          contract_address: bulkDistributorAddress,
-          code_hash: bulkDistributorCodeHash,
-          msg: executeMsg,
-          sent_funds: [],
-        },
-        {
-          gasLimit: 200000,
-          gasPriceInFeeDenom: 0.1,
-        }
-      );
-
-      console.log('✅ Update allocation transaction successful:', tx);
-
-      // Show success toast
-      showToastOnce('update-allocation-success', 'Update allocation triggered', 'success', {
-        message:
-          'Successfully triggered reward allocation update. Balances are automatically refreshed every 10 seconds.',
-        autoClose: 8000,
-      });
-
-      // Refresh data after successful update
-      if (onRefresh) {
-        setTimeout(() => {
-          onRefresh();
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('❌ Failed to update allocation:', error);
-
-      let errorMessage = 'Failed to trigger update allocation';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      showToastOnce('update-allocation-error', 'Update allocation failed', 'error', {
-        message: errorMessage,
-        autoClose: 8000,
-      });
-    } finally {
-      setIsUpdatingAllocation(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Pool Statistics - New section */}
@@ -429,7 +252,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
           </div>
           <div>
             <p className="text-adamant-text-box-secondary">Your Share</p>
-            <p className="font-medium text-adamant-text-box-main">
+            <div className="font-medium text-adamant-text-box-main">
               {isLoading ? (
                 <LoadingPlaceholder size="small" />
               ) : isStakedBalanceKnown ? (
@@ -441,7 +264,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
               ) : (
                 <LoadingPlaceholder size="small" />
               )}
-            </p>
+            </div>
           </div>
         </div>
       </div>
