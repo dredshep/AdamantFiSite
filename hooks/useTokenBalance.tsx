@@ -164,7 +164,7 @@ export function useTokenBalance(
           addToQueue(tokenAddress, caller);
         });
     }
-  }, [autoFetch, tokenAddress, addToQueue, caller, balanceState.lastUpdated, balanceState.balance]);
+  }, [autoFetch, tokenAddress, addToQueue, caller]);
 
   // Convert balance format for backward compatibility
   const amount = balanceState.balance;

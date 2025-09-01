@@ -109,11 +109,9 @@ class ViewingKeyErrorAggregator {
   private showTokenAddressTable(errors: ViewingKeyError[]) {
     const tokenCount = errors.length;
 
-    // Check if this is a staking contract error
+    // Check if this is a staking contract error - only if explicitly marked as such
     const hasStakingContractError = errors.some(
-      (error) =>
-        error.tokenSymbol === 'Staking Contract' ||
-        (error.tokenAddress?.includes('secret1') && !error.isLpToken)
+      (error) => error.tokenSymbol === 'Staking Contract'
     );
 
     const title =
@@ -124,11 +122,7 @@ class ViewingKeyErrorAggregator {
     // Create different messaging for staking contracts vs regular tokens
     const createFormattedList = () => {
       if (hasStakingContractError && tokenCount === 1) {
-        const stakingError = errors.find(
-          (error) =>
-            error.tokenSymbol === 'Staking Contract' ||
-            (error.tokenAddress?.includes('secret1') && !error.isLpToken)
-        );
+        const stakingError = errors.find((error) => error.tokenSymbol === 'Staking Contract');
         const contractAddress = stakingError?.tokenAddress || 'unknown';
         const truncatedAddr =
           contractAddress !== 'unknown'
@@ -143,11 +137,29 @@ Contract: ${truncatedAddr}
 Your LP token viewing key will be copied to the staking contract when you click "Sync Key".`;
       }
 
-      // Original logic for regular tokens
-      let message =
-        tokenCount === 1
-          ? 'The viewing key for this token is incorrect or missing:\n\n'
+      // Create different messaging based on error type
+      const hasInvalidKeys = errors.some((error) => error.errorType === 'invalid');
+      const hasRequiredKeys = errors.some((error) => error.errorType === 'required');
+      const hasMixedTypes = hasInvalidKeys && hasRequiredKeys;
+
+      let message = '';
+
+      if (tokenCount === 1) {
+        const error = errors[0];
+        if (error?.errorType === 'invalid') {
+          message = 'The viewing key for this token is incorrect:\n\n';
+        } else if (error?.errorType === 'required') {
+          message = 'This token requires a viewing key:\n\n';
+        } else {
+          message = 'The viewing key for this token needs attention:\n\n';
+        }
+      } else {
+        message = hasMixedTypes
+          ? 'These tokens have viewing key issues:\n\n'
+          : hasInvalidKeys
+          ? 'These tokens have incorrect viewing keys:\n\n'
           : 'These tokens require viewing keys:\n\n';
+      }
 
       errors.forEach((error, index) => {
         const symbol = error.tokenSymbol ?? 'Unknown';
@@ -159,8 +171,20 @@ Your LP token viewing key will be copied to the staking contract when you click 
       });
 
       if (!hasStakingContractError) {
-        message += '💡 Click "Copy Next Address" to copy each address individually.\n';
-        message += '🔧 After copying, set viewing keys in Keplr wallet.';
+        const buttonText =
+          tokenCount === 1
+            ? `"Copy ${errors[0]?.tokenSymbol ?? 'Address'} Address"`
+            : `"Copy Next Address"`;
+        message += `Click ${buttonText} to copy each token address.\n`;
+
+        if (hasMixedTypes) {
+          message += 'For missing keys: Add token to Keplr and set viewing key.\n';
+          message += 'For incorrect keys: Reset viewing key in Keplr wallet.';
+        } else if (hasInvalidKeys) {
+          message += 'Reset the viewing keys in Keplr wallet (remove and re-add tokens).';
+        } else {
+          message += 'After copying, add tokens to Keplr and set viewing keys.';
+        }
       }
 
       return message;
@@ -173,11 +197,7 @@ Your LP token viewing key will be copied to the staking contract when you click 
 
       // For staking contract errors, show sync functionality
       if (hasStakingContractError && tokenCount === 1) {
-        const stakingError = errors.find(
-          (error) =>
-            error.tokenSymbol === 'Staking Contract' ||
-            (error.tokenAddress?.includes('secret1') && !error.isLpToken)
-        );
+        const stakingError = errors.find((error) => error.tokenSymbol === 'Staking Contract');
 
         showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_ERRORS_AGGREGATE, title, 'error', {
           message: createFormattedList(),
@@ -197,7 +217,11 @@ Your LP token viewing key will be copied to the staking contract when you click 
       showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_ERRORS_AGGREGATE, title, 'error', {
         message: createFormattedList(),
         actionLabel: currentError
-          ? `Copy ${currentError.tokenSymbol ?? 'Next'} (${currentIndex + 1}/${tokenCount})`
+          ? tokenCount === 1
+            ? `Copy ${currentError.tokenSymbol ?? 'Token'} Address`
+            : `Copy ${currentError.tokenSymbol ?? 'Next'} Address (${
+                currentIndex + 1
+              }/${tokenCount})`
           : 'All Done',
         onAction: () => {
           if (currentError?.tokenAddress) {

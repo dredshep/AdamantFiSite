@@ -40,6 +40,7 @@ interface BalanceFetcherState {
   fetchPriorityBalances: (tokenAddresses: string[], caller: string) => void;
   getBalanceState: (tokenAddress: string) => TokenBalanceState;
   clearError: (tokenAddress: string) => void;
+  clearNonViewingKeyErrors: (tokenAddress: string) => void;
   setBalance: (tokenAddress: string, balance: string) => void;
   setLoading: (tokenAddress: string, loading: boolean) => void;
   setError: (tokenAddress: string, error: string) => void;
@@ -211,7 +212,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
     }
 
     get().setLoading(tokenAddress, true);
-    get().clearError(tokenAddress);
+    get().clearNonViewingKeyErrors(tokenAddress);
 
     const tokenService = new TokenService();
 
@@ -237,8 +238,8 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       // Check if it's a TokenServiceError using instanceof
       if (error instanceof TokenServiceError) {
         const tokenError = error;
-        const errorMessage = `${tokenError.message} (from: ${tokenError.caller || 'unknown'})`;
-        get().setError(tokenAddress, errorMessage);
+        // Store the error type for proper mapping, not the human-readable message
+        get().setError(tokenAddress, tokenError.type);
 
         switch (tokenError.type) {
           case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
@@ -268,7 +269,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         }
       } else if (error instanceof Error && error.message.toLowerCase().includes('viewing key')) {
         get().setNeedsViewingKey(tokenAddress, true);
-        get().setError(tokenAddress, 'Set viewing key in Keplr');
+        get().setError(tokenAddress, TokenServiceErrorType.VIEWING_KEY_REQUIRED);
         toastManager.viewingKeyRequired();
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -320,9 +321,39 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         [tokenAddress]: {
           ...(state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE),
           error: null,
+          loading: false, // Clear loading state when clearing errors
         },
       },
     }));
+  },
+
+  clearNonViewingKeyErrors: (tokenAddress: string) => {
+    set((state) => {
+      const currentState = state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE;
+      // Only clear error if it's not a viewing key error
+      if (currentState.needsViewingKey) {
+        return {
+          balances: {
+            ...state.balances,
+            [tokenAddress]: {
+              ...currentState,
+              loading: false, // Still clear loading state
+            },
+          },
+        };
+      } else {
+        return {
+          balances: {
+            ...state.balances,
+            [tokenAddress]: {
+              ...currentState,
+              error: null,
+              loading: false,
+            },
+          },
+        };
+      }
+    });
   },
 
   setBalance: (tokenAddress: string, balance: string) => {
@@ -374,6 +405,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         [tokenAddress]: {
           ...(state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE),
           needsViewingKey,
+          loading: false, // Always set loading to false when setting viewing key requirement
         },
       },
     }));

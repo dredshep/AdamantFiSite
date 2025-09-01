@@ -49,12 +49,12 @@ const FetchButton: React.FC<FetchButtonProps> = ({
     return (
       <button
         onClick={onFetch}
-        className="px-2 py-0.5 text-xs bg-red-700/30 hover:bg-red-700/50 rounded-full transition-colors flex items-center gap-1"
-        title={`${errorMessage} - Click to retry`}
+        className="px-2 py-0.5 text-xs bg-orange-700/30 hover:bg-orange-700/50 rounded-full transition-colors flex items-center gap-1"
+        title={`Could not load balance - Click to retry`}
         disabled={loading}
       >
         <BiErrorCircle className="h-3 w-3" />
-        <span>Error</span>
+        <span>Retry</span>
       </button>
     );
   }

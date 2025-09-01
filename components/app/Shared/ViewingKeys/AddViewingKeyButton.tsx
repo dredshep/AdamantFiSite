@@ -38,6 +38,7 @@ const AddViewingKeyButton: React.FC<AddViewingKeyButtonProps> = ({
 
   const isInvalidKey = error === TokenBalanceError.VIEWING_KEY_INVALID;
   const isMissingKey = error === TokenBalanceError.NO_VIEWING_KEY;
+  const isRejectedKey = error === TokenBalanceError.VIEWING_KEY_REJECTED;
 
   if (isInvalidKey) {
     return (
@@ -59,23 +60,20 @@ const AddViewingKeyButton: React.FC<AddViewingKeyButtonProps> = ({
             setShowCreator(true);
           }}
         />
-        {showCreator && (
-          <div className="absolute top-full left-0 mt-1 z-50">
-            <ViewingKeyMiniCreator
-              token={token}
-              onSuccess={handleSuccess}
-              onError={handleError}
-              onClose={() => setShowCreator(false)}
-            />
-          </div>
-        )}
+        <ViewingKeyMiniCreator
+          token={token}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={() => setShowCreator(false)}
+          isOpen={showCreator}
+        />
       </>
     );
   }
 
   if (isMissingKey) {
     return (
-      <div className="relative">
+      <>
         <button
           onClick={() => setShowCreator(!showCreator)}
           className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded border border-green-700/50"
@@ -84,17 +82,36 @@ const AddViewingKeyButton: React.FC<AddViewingKeyButtonProps> = ({
           <PlusIcon className="w-3 h-3" />
           Add Key
         </button>
-        {showCreator && (
-          <div className="absolute top-full left-0 mt-1 z-50">
-            <ViewingKeyMiniCreator
-              token={token}
-              onSuccess={handleSuccess}
-              onError={handleError}
-              onClose={() => setShowCreator(false)}
-            />
-          </div>
-        )}
-      </div>
+        <ViewingKeyMiniCreator
+          token={token}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={() => setShowCreator(false)}
+          isOpen={showCreator}
+        />
+      </>
+    );
+  }
+
+  if (isRejectedKey) {
+    return (
+      <>
+        <button
+          onClick={() => setShowCreator(!showCreator)}
+          className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 transition-colors bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded border border-amber-700/50"
+          title="Retry viewing key creation (was rejected)"
+        >
+          <PlusIcon className="w-3 h-3" />
+          Try Again
+        </button>
+        <ViewingKeyMiniCreator
+          token={token}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={() => setShowCreator(false)}
+          isOpen={showCreator}
+        />
+      </>
     );
   }
 

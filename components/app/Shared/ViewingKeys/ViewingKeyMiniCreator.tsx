@@ -1,6 +1,8 @@
 import { ConfigToken } from '@/config/tokens';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
+import * as Dialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
+import { Key, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { BroadcastMode, TxResultCode } from 'secretjs';
 
@@ -9,6 +11,7 @@ interface ViewingKeyMiniCreatorProps {
   onSuccess: () => void;
   onError: (error: Error) => void;
   onClose: () => void;
+  isOpen: boolean;
 }
 
 const ViewingKeyMiniCreator: React.FC<ViewingKeyMiniCreatorProps> = ({
@@ -16,6 +19,7 @@ const ViewingKeyMiniCreator: React.FC<ViewingKeyMiniCreatorProps> = ({
   onSuccess,
   onError,
   onClose,
+  isOpen,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const { secretjs } = useSecretNetwork();
@@ -95,60 +99,85 @@ const ViewingKeyMiniCreator: React.FC<ViewingKeyMiniCreatorProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-white font-medium text-sm">Create Viewing Key</h3>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors"
-          disabled={isCreating}
-        >
-          <Cross2Icon className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        <div className="text-sm text-gray-300">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-medium">{token.symbol}</span>
-            <span className="text-gray-400">({token.name})</span>
+    <Dialog.Root open={isOpen} onOpenChange={onClose}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-adamant-box-dark border border-adamant-box-border rounded-lg w-[90vw] max-w-md z-50 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-adamant-box-border">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-adamant-gradientBright" />
+              <Dialog.Title className="text-adamant-text-box-main font-medium text-sm">
+                Create Viewing Key
+              </Dialog.Title>
+            </div>
+            <Dialog.Close asChild>
+              <button
+                className="text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors"
+                disabled={isCreating}
+              >
+                <Cross2Icon className="w-4 h-4" />
+              </button>
+            </Dialog.Close>
           </div>
-          <p className="text-xs text-gray-400">
-            A viewing key is required to see your token balance. This will create a secure key for
-            this token.
-          </p>
-        </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => void createViewingKey()}
-            disabled={isCreating}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 px-3 rounded text-sm transition-colors"
-          >
-            {isCreating ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                Creating...
-              </span>
-            ) : (
-              'Create Key'
-            )}
-          </button>
-          <button
-            onClick={onClose}
-            disabled={isCreating}
-            className="px-3 py-2 text-gray-400 hover:text-white transition-colors text-sm"
-          >
-            Cancel
-          </button>
-        </div>
+          {/* Content */}
+          <div className="p-4 space-y-4">
+            <div className="text-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-medium text-adamant-text-box-main">{token.symbol}</span>
+                <span className="text-adamant-text-box-secondary">({token.name})</span>
+              </div>
+              <p className="text-xs text-adamant-text-box-secondary">
+                A viewing key is required to see your token balance. This will create a secure key
+                for this token.
+              </p>
+            </div>
 
-        <div className="text-xs text-amber-300 bg-amber-900/20 p-2 rounded">
-          💡 After creating, you may need to refresh the page or wait a moment for the balance to
-          appear.
-        </div>
-      </div>
-    </div>
+            <div className="bg-adamant-box-regular border border-adamant-box-border p-3 rounded">
+              <div className="flex items-start gap-2">
+                <Key className="w-4 h-4 text-adamant-gradientBright mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-adamant-text-box-secondary">
+                  <p>
+                    After creating, you may need to refresh the page or wait a moment for the
+                    balance to appear.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex gap-2 p-4 border-t border-adamant-box-border">
+            <button
+              onClick={() => void createViewingKey()}
+              disabled={isCreating}
+              className="flex-1 bg-adamant-gradientBright hover:bg-adamant-gradientDark disabled:bg-adamant-app-buttonDisabled disabled:cursor-not-allowed text-adamant-text-button-form-main font-medium py-2 px-3 rounded text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Key className="w-3 h-3" />
+                  Create Key
+                </>
+              )}
+            </button>
+            <Dialog.Close asChild>
+              <button
+                disabled={isCreating}
+                className="px-3 py-2 text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </Dialog.Close>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 };
 

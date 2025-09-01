@@ -3,6 +3,7 @@ import React from 'react';
 import FetchButton from './Forms/Input/TokenInput/FetchButton';
 import PoolMaxButton from './Forms/Input/TokenInput/PoolMaxButton';
 import { PoolInputIdentifier } from './Forms/Input/TokenInputBase';
+import AddLpViewingKeyButton from './ViewingKeys/AddLpViewingKeyButton';
 
 interface TopRightBalanceLpProps {
   balance: string | null;
@@ -64,10 +65,12 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
     }
   };
 
-  const shouldShowAddToken =
+  // Show AddLpViewingKeyButton when we have viewing key errors
+  const showAddLpKeyButton =
     error &&
     (error === LpTokenBalanceError.NO_VIEWING_KEY ||
-      error === LpTokenBalanceError.LP_TOKEN_NOT_FOUND);
+      error === LpTokenBalanceError.LP_TOKEN_NOT_FOUND ||
+      error === LpTokenBalanceError.VIEWING_KEY_REJECTED);
 
   return (
     <div className="flex items-center gap-2">
@@ -77,15 +80,23 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
             <span className="text-xs text-gray-400">
               Available: {formatBalance(balance)} {tokenSymbol}
             </span>
-            <FetchButton
-              loading={loading}
-              error={!!error}
-              hasBalance={balance !== null && balance !== '-'}
-              errorMessage={error ? getErrorMessage(error) : 'Error'}
-              showAddToken={!!shouldShowAddToken}
-              onFetch={handleFetchClick}
-              onAddToken={handleSuggestClick}
-            />
+
+            {showAddLpKeyButton ? (
+              <AddLpViewingKeyButton
+                error={error}
+                onSuggestToken={handleSuggestClick}
+                onSuccess={handleFetchClick}
+                tokenSymbol={tokenSymbol}
+              />
+            ) : (
+              <FetchButton
+                loading={loading}
+                error={!!error}
+                hasBalance={balance !== null && balance !== '-'}
+                errorMessage={error ? getErrorMessage(error) : 'Error'}
+                onFetch={handleFetchClick}
+              />
+            )}
           </div>
         )}
         {hasMax && inputIdentifier && <PoolMaxButton poolInputIdentifier={inputIdentifier} />}

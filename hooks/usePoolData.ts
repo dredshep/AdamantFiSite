@@ -6,7 +6,9 @@ import { useEffect, useMemo } from 'react';
 
 export interface PoolData {
   isLoading: boolean;
+  tvlLoading: boolean; // Separate TVL loading state
   error: string | null;
+  tvlError: string | null; // Separate TVL error state
   lpBalance: string | null;
   stakedBalance: string | null;
   tvl: number | null;
@@ -84,13 +86,24 @@ export function usePoolData(poolAddress: string, caller: string): PoolData {
   // Memoize the final, combined state object for the UI.
   // The component will only re-render when this combined object changes.
   return useMemo(() => {
-    const isLoading =
+    // FIXED: Separate TVL loading from balance loading
+    // TVL should load independently of viewing key requirements
+    const balancesLoading =
       (lpState?.loading ?? true) ||
-      (poolConfig.stakingContractAddress ? stakedState?.loading ?? true : false) ||
-      (tvlState?.loading ?? true);
+      (poolConfig.stakingContractAddress ? stakedState?.loading ?? true : false);
 
-    // Combine errors
-    const error = lpState?.error || stakedState?.error || tvlState?.error || null;
+    const tvlLoading = tvlState?.loading ?? true;
+
+    // For the main "isLoading" state, only consider balances
+    // TVL will have its own loading state that components can check separately
+    const isLoading = balancesLoading;
+
+    // Combine errors - but don't let viewing key errors from balances affect TVL
+    const balanceError = lpState?.error || stakedState?.error || null;
+    const tvlError = tvlState?.error || null;
+
+    // Only show balance errors as the main error (viewing key issues shouldn't block TVL display)
+    const error = balanceError;
 
     // Check if balances have been fetched (lastUpdated > 0)
     const hasLpBalance = (lpState?.lastUpdated ?? 0) > 0;
@@ -126,7 +139,9 @@ export function usePoolData(poolAddress: string, caller: string): PoolData {
 
     return {
       isLoading,
+      tvlLoading,
       error,
+      tvlError,
       lpBalance: lpState?.value ?? null,
       stakedBalance: stakedState?.value ?? null,
       tvl: tvlState?.value?.totalUsd ?? null,

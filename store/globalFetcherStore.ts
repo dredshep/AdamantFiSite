@@ -8,7 +8,6 @@ import {
   isQueryErrorResponse,
 } from '@/types/secretswap/lp-staking';
 import { getAllStakingPools } from '@/utils/staking/stakingRegistry';
-import { getTokenDecimals } from '@/utils/token/tokenInfo';
 import { SecretNetworkClient } from 'secretjs';
 import { create } from 'zustand';
 import { useWalletStore } from './walletStore';
@@ -39,6 +38,7 @@ interface DataState<T> {
 // TVL data structure
 interface TvlData {
   totalUsd: number;
+  isPlaceholder?: boolean; // True when we can't calculate actual TVL but pool has reserves
 }
 
 // Pool data response structure
@@ -239,30 +239,6 @@ async function fetchPoolTvl(
       return null;
     }
 
-    // For sSCRT/USDC.nbl pairs, we can use USDC as the base since it's ~$1
-    if (poolConfig.pairInfo.symbol === 'sSCRT/USDC.nbl') {
-      // Find the USDC asset
-      const usdcAsset = poolData.assets.find((asset: PoolAsset) => {
-        return (
-          asset.info.token &&
-          (poolConfig.pairInfo?.token1 === 'USDC.nbl' ||
-            asset.info.token.contract_addr.includes('usdc'))
-        );
-      });
-
-      if (usdcAsset) {
-        // USDC has 6 decimals, convert to human readable
-        const usdcReserve = parseFloat(usdcAsset.amount) / 1_000_000;
-
-        // Total pool TVL = USDC reserve * 2 (assuming roughly equal value in both sides)
-        const totalTvlUsd = usdcReserve * 2;
-
-        return { totalUsd: totalTvlUsd };
-      }
-    }
-
-    // For other pairs, implement basic TVL calculation with proper decimal handling
-    // This is a simplified approach - in production you'd want real price feeds
     const asset0 = poolData.assets[0];
     const asset1 = poolData.assets[1];
 
@@ -277,38 +253,134 @@ async function fetchPoolTvl(
       return null;
     }
 
-    // Get the actual decimals for each token
-    const decimals0 = getTokenDecimals(asset0.info.token.contract_addr as SecretString);
-    const decimals1 = getTokenDecimals(asset1.info.token.contract_addr as SecretString);
+    // Get token information from configuration
+    const token0Info = TOKENS.find((t) => t.address === asset0.info.token!.contract_addr);
+    const token1Info = TOKENS.find((t) => t.address === asset1.info.token!.contract_addr);
 
-    // Log the proper decimal conversion for debugging
-    const reserve0Raw = parseFloat(asset0.amount || '0');
-    const reserve1Raw = parseFloat(asset1.amount || '0');
+    if (!token0Info || !token1Info) {
+      console.warn(
+        `Token configuration not found for pool ${poolConfig.pairInfo.symbol}. TVL will be unavailable.`
+      );
+      return null;
+    }
 
-    const reserve0 = reserve0Raw / Math.pow(10, decimals0);
-    const reserve1 = reserve1Raw / Math.pow(10, decimals1);
+    // Calculate human-readable reserve amounts
+    const reserve0 = parseFloat(asset0.amount || '0') / Math.pow(10, token0Info.decimals);
+    const reserve1 = parseFloat(asset1.amount || '0') / Math.pow(10, token1Info.decimals);
 
-    console.log(`Pool ${poolConfig.pairInfo.symbol} reserves:`, {
-      asset0: {
-        address: asset0.info.token.contract_addr,
-        decimals: decimals0,
-        rawAmount: reserve0Raw,
-        humanAmount: reserve0,
+    console.log(`🏊 Pool ${poolConfig.pairInfo.symbol} reserves:`, {
+      token0: {
+        symbol: token0Info.symbol,
+        amount: reserve0,
+        decimals: token0Info.decimals,
+        raw: asset0.amount,
       },
-      asset1: {
-        address: asset1.info.token.contract_addr,
-        decimals: decimals1,
-        rawAmount: reserve1Raw,
-        humanAmount: reserve1,
+      token1: {
+        symbol: token1Info.symbol,
+        amount: reserve1,
+        decimals: token1Info.decimals,
+        raw: asset1.amount,
       },
     });
 
-    // For pools with no established price feeds, return null instead of wrong estimates
-    // Only calculate for specific pairs we can reasonably estimate
-    console.warn(
-      `No price feed available for pool ${poolConfig.pairInfo.symbol}. TVL calculation skipped.`
+    // Check if pool is empty (no reserves)
+    if (reserve0 === 0 && reserve1 === 0) {
+      console.log(`🏊 Pool ${poolConfig.pairInfo.symbol} is empty (zero reserves). TVL = $0.00`);
+      return { totalUsd: 0, isPlaceholder: false }; // Empty pool, not a placeholder
+    }
+
+    // Special case: USDC pairs - use USDC as base (most accurate)
+    if (token0Info.symbol === 'USDC.nbl' || token1Info.symbol === 'USDC.nbl') {
+      const usdcReserve = token0Info.symbol === 'USDC.nbl' ? reserve0 : reserve1;
+      const totalTvlUsd = usdcReserve * 2; // Assume equal value on both sides
+
+      console.log(`Using USDC base for ${poolConfig.pairInfo.symbol}: $${totalTvlUsd.toFixed(2)}`);
+      return { totalUsd: totalTvlUsd, isPlaceholder: false }; // Real calculated value
+    }
+
+    // For other pairs, try to get pricing data from CoinGecko
+    const coingeckoIds = [token0Info.coingeckoId, token1Info.coingeckoId].filter(
+      (id): id is string => Boolean(id)
     );
-    return null;
+
+    if (coingeckoIds.length === 0) {
+      console.warn(
+        `🏊 No CoinGecko IDs available for pool ${poolConfig.pairInfo.symbol}. TVL will be unavailable.`
+      );
+      return null;
+    }
+
+    try {
+      // Import CoinGecko service dynamically to avoid circular dependencies
+      const { coingeckoService } = await import('@/services/pricing/coingeckoService');
+      const { isPricingEnabled } = await import('@/utils/features');
+
+      if (!isPricingEnabled()) {
+        console.warn('🏊 Pricing is disabled. TVL will be unavailable.');
+        return null;
+      }
+
+      const priceData = await coingeckoService.getMultipleTokenPrices(coingeckoIds);
+
+      console.log(`🏊 Price data for ${poolConfig.pairInfo.symbol}:`, {
+        requestedIds: coingeckoIds,
+        receivedData: priceData,
+        token0CoinGeckoId: token0Info.coingeckoId,
+        token1CoinGeckoId: token1Info.coingeckoId,
+      });
+
+      // Calculate TVL using available price data
+      let totalUsd = 0;
+      let hasValidPrice = false;
+
+      if (token0Info.coingeckoId && priceData[token0Info.coingeckoId]) {
+        const token0Price = priceData[token0Info.coingeckoId]!.price;
+        const token0Value = reserve0 * token0Price;
+        totalUsd = token0Value * 2; // Assume equal value on both sides
+        hasValidPrice = true;
+        console.log(
+          `🏊 Using ${
+            token0Info.symbol
+          } price ($${token0Price}) for TVL: ${reserve0} * $${token0Price} * 2 = $${totalUsd.toFixed(
+            2
+          )}`
+        );
+      } else if (token1Info.coingeckoId && priceData[token1Info.coingeckoId]) {
+        const token1Price = priceData[token1Info.coingeckoId]!.price;
+        const token1Value = reserve1 * token1Price;
+        totalUsd = token1Value * 2; // Assume equal value on both sides
+        hasValidPrice = true;
+        console.log(
+          `🏊 Using ${
+            token1Info.symbol
+          } price ($${token1Price}) for TVL: ${reserve1} * $${token1Price} * 2 = $${totalUsd.toFixed(
+            2
+          )}`
+        );
+      }
+
+      if (hasValidPrice) {
+        console.log(
+          `🏊 Final calculated TVL for ${poolConfig.pairInfo.symbol}: $${totalUsd.toFixed(2)}`
+        );
+        return { totalUsd, isPlaceholder: false }; // Real calculated value
+      }
+
+      console.warn(`🏊 No valid price data available for pool ${poolConfig.pairInfo.symbol}:`, {
+        token0Info: { symbol: token0Info.symbol, coingeckoId: token0Info.coingeckoId },
+        token1Info: { symbol: token1Info.symbol, coingeckoId: token1Info.coingeckoId },
+        priceData,
+      });
+      console.log(`🏊 Pool has reserves but no pricing data. TVL will be unavailable.`);
+      return null;
+    } catch (pricingError) {
+      console.warn(
+        `🏊 Error fetching pricing data for pool ${poolConfig.pairInfo.symbol}:`,
+        pricingError
+      );
+      console.log(`🏊 Pool has reserves but pricing failed. TVL will be unavailable.`);
+      return null;
+    }
   } catch (error) {
     console.warn(`Error fetching TVL for pool ${poolAddress}:`, error, 'TVL will be unavailable.');
     return null;
@@ -569,7 +641,9 @@ export const useGlobalFetcherStore = create<GlobalFetcherState>((set, get) => ({
                           const delayMs = 1000 * Math.pow(2, attempt - 1); // 1s,2s,4s
                           setTimeout(() => {
                             const state = get().tokenBalances[task.key];
-                            const stillErrored = !state || !!state.error || state.needsViewingKey;
+                            // Don't retry on viewing key errors - they require user action
+                            const stillErrored =
+                              !state || (!!state.error && !state.needsViewingKey);
                             if (stillErrored) {
                               retryFetch(attempt + 1);
                             }

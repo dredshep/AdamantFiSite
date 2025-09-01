@@ -139,9 +139,9 @@ function PoolCard({ pool, index }: { pool: ValidatedPool; index: number }) {
             {/* TVL Row */}
             <div className="flex justify-between items-center">
               <span className="text-adamant-text-box-secondary">TVL:</span>
-              {poolData.isLoading ? (
+              {poolData.tvlLoading ? (
                 <LoadingPlaceholder size="small" />
-              ) : poolData.tvl != null && poolData.tvl > 0 ? (
+              ) : poolData.tvl != null ? (
                 <span className="font-medium text-white">{formatNumber(poolData.tvl)}</span>
               ) : (
                 <span className="font-medium text-adamant-text-box-secondary">-</span>
@@ -285,9 +285,9 @@ function PoolRow({ pool, index }: { pool: ValidatedPool; index: number }) {
             {
               content: (
                 <div className="text-right flex justify-end">
-                  {poolData.isLoading ? (
+                  {poolData.tvlLoading ? (
                     <LoadingPlaceholder size="small" />
-                  ) : poolData.tvl != null && poolData.tvl > 0 ? (
+                  ) : poolData.tvl != null ? (
                     <span className="font-medium text-adamant-text-box-main">
                       {formatNumber(poolData.tvl)}
                     </span>

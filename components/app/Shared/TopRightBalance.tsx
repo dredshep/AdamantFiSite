@@ -50,7 +50,9 @@ const TopRightBalance: React.FC<TopRightBalanceProps> = ({
   const showAddKeyButton =
     tokenAddress &&
     error &&
-    (error === TokenBalanceError.NO_VIEWING_KEY || error === TokenBalanceError.VIEWING_KEY_INVALID);
+    (error === TokenBalanceError.NO_VIEWING_KEY ||
+      error === TokenBalanceError.VIEWING_KEY_INVALID ||
+      error === TokenBalanceError.VIEWING_KEY_REJECTED);
 
   return (
     <div className="flex items-center gap-2">
