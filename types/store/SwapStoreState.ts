@@ -28,7 +28,7 @@ export interface SwapStoreState {
   setSharedSetting: <T extends keyof SharedSettings>(setting: T, value: SharedSettings[T]) => void;
   connectWallet: (address: SecretString) => void;
   disconnectWallet: () => void;
-  updateBalance: (tokenSymbol: 'SCRT' | 'ADMT', balance: string) => void;
+  updateBalance: (tokenSymbol: 'SCRT' | 'bADMT', balance: string) => void;
   setChainId: (chainId: string) => void;
   setSwappableTokens: (tokens: ConfigToken[]) => void;
   setConnectionRefused: (refused: boolean) => void;

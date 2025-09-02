@@ -22,7 +22,7 @@ const UserWallet: React.FC = () => {
   // Fetch real SCRT balance
   const { balance: nativeSCRTBalance } = useNativeSCRTBalance();
 
-  // Fetch real ADMT balance (bADMT token)
+  // Fetch real bADMT balance (bADMT token)
   const { balance: admtBalance } = useTokenBalance(
     'secret1cu5gvrvu24hm36fzyq46vca7u25llrymj6ntek' as SecretString,
     'UserWallet',
@@ -38,7 +38,7 @@ const UserWallet: React.FC = () => {
 
   useEffect(() => {
     if (admtBalance !== '-') {
-      updateBalance('ADMT', admtBalance);
+      updateBalance('bADMT', admtBalance);
     }
   }, [admtBalance, updateBalance]);
 
@@ -67,7 +67,7 @@ const UserWallet: React.FC = () => {
                 </div>
                 <div className="hidden md:block font-normal opacity-50">
                   {SCRTBalance === '-' ? 'Loading...' : parseFloat(SCRTBalance).toFixed(4)} SCRT /{' '}
-                  {ADMTBalance === '-' ? 'Loading...' : parseFloat(ADMTBalance).toFixed(4)} ADMT
+                  {ADMTBalance === '-' ? 'Loading...' : parseFloat(ADMTBalance).toFixed(4)} bADMT
                 </div>
               </div>
             </div>

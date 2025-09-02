@@ -339,15 +339,13 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
           );
           const { sendTokens } = await import('@/utils/wallet/sendTokens');
           const { showToastOnce } = await import('@/utils/toast/toastManager');
-          const { convertToRawAmount } = await import('@/utils/staking/convertStakingAmount');
 
-          // Convert amount to raw units using token decimals
-          const rawAmount = convertToRawAmount(commandStep.amount!, commandStep.fromToken.decimals);
-
+          // Pass the amount directly - sendTokens will handle the conversion
+          // No need to convert to raw amount here since sendTokens already handles it
           await sendTokens({
             fromAddress: walletAddress as unknown as import('@/types').SecretString,
             toAddress: commandStep.target as unknown as import('@/types').SecretString,
-            amount: rawAmount,
+            amount: commandStep.amount!,
             denom: commandStep.fromToken.address,
           });
 

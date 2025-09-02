@@ -67,7 +67,7 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
       wallet: { ...state.wallet, address: null },
     })),
 
-  updateBalance: (tokenSymbol: 'SCRT' | 'ADMT', balance: string) =>
+  updateBalance: (tokenSymbol: 'SCRT' | 'bADMT', balance: string) =>
     set((state) => ({
       ...state,
       wallet: { ...state.wallet, [`${tokenSymbol}Balance`]: balance },

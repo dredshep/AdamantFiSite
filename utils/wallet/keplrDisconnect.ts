@@ -6,7 +6,7 @@ const keplrDisconnect = () => {
   useWalletStore.getState().disconnectWallet();
 
   useSwapStore.getState().updateBalance('SCRT', '-');
-  useSwapStore.getState().updateBalance('ADMT', '-');
+  useSwapStore.getState().updateBalance('bADMT', '-');
   useSwapStore.getState().setConnectionRefused(true);
 
   console.log('Disconnected from Keplr.');

@@ -17,10 +17,10 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleAction = async () => {
+  const handleAction = () => {
     setIsProcessing(true);
     try {
-      await onSuggestToken();
+      onSuggestToken();
       onSuccess();
     } catch (error) {
       console.error('LP viewing key creation failed:', error);
@@ -71,5 +71,3 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
 };
 
 export default AddLpViewingKeyButton;
-
-

@@ -7,7 +7,7 @@ interface WalletStoreState {
   ADMTBalance: string;
   connectWallet: (address: SecretString) => void;
   disconnectWallet: () => void;
-  updateBalance: (tokenSymbol: 'SCRT' | 'ADMT', balance: string) => void;
+  updateBalance: (tokenSymbol: 'SCRT' | 'bADMT', balance: string) => void;
 }
 
 export const useWalletStore = create<WalletStoreState>((set) => ({

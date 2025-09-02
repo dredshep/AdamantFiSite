@@ -65,7 +65,7 @@ const FixViewingKeyModal: React.FC<FixViewingKeyModalProps> = ({
                   {`${token.address.slice(0, 16)}...${token.address.slice(-8)}`}
                 </code>
                 <button
-                  onClick={copyAddress}
+                  onClick={() => void copyAddress()}
                   className="text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors p-1"
                   title="Copy address"
                 >
@@ -160,7 +160,7 @@ const FixViewingKeyModal: React.FC<FixViewingKeyModalProps> = ({
           {/* Footer Actions */}
           <div className="flex gap-3 p-6 border-t border-adamant-box-border">
             <button
-              onClick={copyAddress}
+              onClick={() => void copyAddress()}
               className="flex-1 bg-adamant-gradientBright hover:bg-adamant-gradientDark text-adamant-text-button-form-main font-medium py-2 px-4 rounded text-sm transition-colors flex items-center justify-center gap-2"
             >
               {copiedAddress ? (
