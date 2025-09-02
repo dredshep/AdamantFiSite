@@ -29,8 +29,8 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
   },
   wallet: {
     address: null,
-    SCRTBalance: '0',
-    ADMTBalance: '0',
+    SCRTBalance: '-',
+    ADMTBalance: '-',
   } as WalletState,
   swappableTokens: [] as ConfigToken[],
   chainId: 'secret-4',

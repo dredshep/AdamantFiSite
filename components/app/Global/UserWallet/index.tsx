@@ -1,7 +1,10 @@
 import PlaceholderImageFromSeed from '@/components/app/Shared/PlaceholderImageFromSeed';
+import { useNativeSCRTBalance } from '@/hooks/useNativeSCRTBalance';
+import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { useModalStore } from '@/store/modalStore';
 import { useSwapStore } from '@/store/swapStore';
 import { useWalletStore } from '@/store/walletStore';
+import { SecretString } from '@/types';
 import keplrConnect from '@/utils/wallet/keplrConnect';
 import keplrDisconnect from '@/utils/wallet/keplrDisconnect';
 import React, { useEffect } from 'react';
@@ -12,9 +15,32 @@ import WalletSidebar from './WalletSidebar';
 const UserWallet: React.FC = () => {
   const { connectionRefused } = useSwapStore();
   const { openWalletModal } = useModalStore();
-  const { address, ADMTBalance, SCRTBalance } = useWalletStore();
+  const { address, ADMTBalance, SCRTBalance, updateBalance } = useWalletStore();
   const truncatedAddress = address === null ? '' : address.slice(0, 6) + '...' + address.slice(-4);
   const isConnected = address !== null;
+
+  // Fetch real SCRT balance
+  const { balance: nativeSCRTBalance } = useNativeSCRTBalance();
+
+  // Fetch real ADMT balance (bADMT token)
+  const { balance: admtBalance } = useTokenBalance(
+    'secret1cu5gvrvu24hm36fzyq46vca7u25llrymj6ntek' as SecretString,
+    'UserWallet',
+    isConnected
+  );
+
+  // Update walletStore with real balances when they change
+  useEffect(() => {
+    if (nativeSCRTBalance !== '-') {
+      updateBalance('SCRT', nativeSCRTBalance);
+    }
+  }, [nativeSCRTBalance, updateBalance]);
+
+  useEffect(() => {
+    if (admtBalance !== '-') {
+      updateBalance('ADMT', admtBalance);
+    }
+  }, [admtBalance, updateBalance]);
 
   useEffect(() => {
     if (!connectionRefused) {
@@ -40,7 +66,8 @@ const UserWallet: React.FC = () => {
                   <RxCaretDown className="text-white h-5 w-5" />
                 </div>
                 <div className="hidden md:block font-normal opacity-50">
-                  {SCRTBalance} SCRT / {ADMTBalance} ADMT
+                  {SCRTBalance === '-' ? 'Loading...' : parseFloat(SCRTBalance).toFixed(4)} SCRT /{' '}
+                  {ADMTBalance === '-' ? 'Loading...' : parseFloat(ADMTBalance).toFixed(4)} ADMT
                 </div>
               </div>
             </div>
