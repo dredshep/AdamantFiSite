@@ -49,19 +49,21 @@ export function parseCommand(input: string): ParsedCommand {
     }> = [];
 
     // Find tokens and their associated amounts
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      if (!word || /^\d+(\.\d+)?$/.test(word)) continue; // Skip standalone numbers
 
-      // Try single word first
-      const context = command.action === 'send' ? 'send' : 'swap';
-      const singleToken = findTokenByText(word, context);
-      if (singleToken && !foundTokens.find((t) => t.token.symbol === singleToken.symbol)) {
-        const precedingAmount =
-          i > 0 && /^\d+(\.\d+)?$/.test(words[i - 1]!) ? words[i - 1]! : undefined;
-        const followingAmount =
-          i < words.length - 1 && /^\d+(\.\d+)?$/.test(words[i + 1]!) ? words[i + 1]! : undefined;
+    // For stake context, try to match the entire remaining text as one token first
+    if (command.action === 'stake') {
+      // Check if first word is an amount
+      let tokenWords = words;
+      let amount: string | undefined;
 
+      if (words.length > 0 && /^\d+(\.\d+)?$/.test(words[0]!)) {
+        amount = words[0]!;
+        tokenWords = words.slice(1); // Remove amount from token words
+      }
+
+      const fullText = tokenWords.join(' ');
+      const fullToken = findTokenByText(fullText, 'stake');
+      if (fullToken) {
         const tokenData: {
           token: ConfigToken;
           position: number;
@@ -69,51 +71,90 @@ export function parseCommand(input: string): ParsedCommand {
           precedingAmount?: string;
           followingAmount?: string;
         } = {
-          token: singleToken,
-          position: i,
-          wordCount: 1,
+          token: fullToken,
+          position: amount ? 1 : 0,
+          wordCount: tokenWords.length,
         };
 
-        if (precedingAmount) tokenData.precedingAmount = precedingAmount;
-        if (followingAmount) tokenData.followingAmount = followingAmount;
+        if (amount) tokenData.precedingAmount = amount;
 
         foundTokens.push(tokenData);
-        command.confidence += 0.3;
-        continue;
+        command.confidence += 0.5; // Higher confidence for full match
       }
+    }
 
-      // Try two words for compound tokens
-      if (i < words.length - 1) {
-        const nextWord = words[i + 1];
-        if (nextWord && word && !/^\d+(\.\d+)?$/.test(nextWord)) {
-          const twoWords = `${word} ${nextWord}`;
-          const compoundToken = findTokenByText(twoWords, context);
-          if (compoundToken && !foundTokens.find((t) => t.token.symbol === compoundToken.symbol)) {
-            const precedingAmount =
-              i > 0 && /^\d+(\.\d+)?$/.test(words[i - 1]!) ? words[i - 1]! : undefined;
-            const followingAmount =
-              i < words.length - 2 && /^\d+(\.\d+)?$/.test(words[i + 2]!)
-                ? words[i + 2]!
-                : undefined;
+    // Only continue with word-by-word parsing if no full token was found
+    if (foundTokens.length === 0) {
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (!word || /^\d+(\.\d+)?$/.test(word)) continue; // Skip standalone numbers
 
-            const tokenData: {
-              token: ConfigToken;
-              position: number;
-              wordCount: number;
-              precedingAmount?: string;
-              followingAmount?: string;
-            } = {
-              token: compoundToken,
-              position: i,
-              wordCount: 2,
-            };
+        // Try single word first
+        const context =
+          command.action === 'send' ? 'send' : command.action === 'stake' ? 'stake' : 'swap';
+        const singleToken = findTokenByText(word, context);
+        if (singleToken && !foundTokens.find((t) => t.token.symbol === singleToken.symbol)) {
+          const precedingAmount =
+            i > 0 && /^\d+(\.\d+)?$/.test(words[i - 1]!) ? words[i - 1]! : undefined;
+          const followingAmount =
+            i < words.length - 1 && /^\d+(\.\d+)?$/.test(words[i + 1]!) ? words[i + 1]! : undefined;
 
-            if (precedingAmount) tokenData.precedingAmount = precedingAmount;
-            if (followingAmount) tokenData.followingAmount = followingAmount;
+          const tokenData: {
+            token: ConfigToken;
+            position: number;
+            wordCount: number;
+            precedingAmount?: string;
+            followingAmount?: string;
+          } = {
+            token: singleToken,
+            position: i,
+            wordCount: 1,
+          };
 
-            foundTokens.push(tokenData);
-            command.confidence += 0.3;
-            i++; // Skip next word since we used it
+          if (precedingAmount) tokenData.precedingAmount = precedingAmount;
+          if (followingAmount) tokenData.followingAmount = followingAmount;
+
+          foundTokens.push(tokenData);
+          command.confidence += 0.3;
+          continue;
+        }
+
+        // Try two words for compound tokens
+        if (i < words.length - 1) {
+          const nextWord = words[i + 1];
+          if (nextWord && word && !/^\d+(\.\d+)?$/.test(nextWord)) {
+            const twoWords = `${word} ${nextWord}`;
+            const compoundToken = findTokenByText(twoWords, context);
+            if (
+              compoundToken &&
+              !foundTokens.find((t) => t.token.symbol === compoundToken.symbol)
+            ) {
+              const precedingAmount =
+                i > 0 && /^\d+(\.\d+)?$/.test(words[i - 1]!) ? words[i - 1]! : undefined;
+              const followingAmount =
+                i < words.length - 2 && /^\d+(\.\d+)?$/.test(words[i + 2]!)
+                  ? words[i + 2]!
+                  : undefined;
+
+              const tokenData: {
+                token: ConfigToken;
+                position: number;
+                wordCount: number;
+                precedingAmount?: string;
+                followingAmount?: string;
+              } = {
+                token: compoundToken,
+                position: i,
+                wordCount: 2,
+              };
+
+              if (precedingAmount) tokenData.precedingAmount = precedingAmount;
+              if (followingAmount) tokenData.followingAmount = followingAmount;
+
+              foundTokens.push(tokenData);
+              command.confidence += 0.3;
+              i++; // Skip next word since we used it
+            }
           }
         }
       }

@@ -108,7 +108,8 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
 
     // Try single word first (more accurate), then full phrase
     // Pass context based on action type
-    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const context =
+      currentStep.action === 'send' ? 'send' : currentStep.action === 'stake' ? 'stake' : 'swap';
     const token = findTokenByText(singleWord, context) || findTokenByText(possibleToken, context);
 
     if (token) {
@@ -147,7 +148,8 @@ function analyzeSwapState(step: CommandStep, words: string[]): CommandStep {
 
     // Try single word first (more accurate), then full phrase
     // Pass context based on action type
-    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const context =
+      currentStep.action === 'send' ? 'send' : currentStep.action === 'stake' ? 'stake' : 'swap';
     const toToken =
       findTokenByText(singleWord, context) || findTokenByText(remainingWords, context);
 
@@ -195,7 +197,8 @@ function analyzeStakeState(step: CommandStep, words: string[]): CommandStep {
     const tokenWords = connectorIndex !== -1 ? restWords.slice(0, connectorIndex) : restWords;
     const tokenText = tokenWords.join(' ');
 
-    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const context =
+      currentStep.action === 'send' ? 'send' : currentStep.action === 'stake' ? 'stake' : 'swap';
     const token = findTokenByText(tokenText, context);
     if (token) {
       currentStep.fromToken = token;
@@ -213,7 +216,8 @@ function analyzeStakeState(step: CommandStep, words: string[]): CommandStep {
     const tokenWords = connectorIndex !== -1 ? words.slice(0, connectorIndex) : words;
     const tokenText = tokenWords.join(' ');
 
-    const context = currentStep.action === 'send' ? 'send' : 'swap';
+    const context =
+      currentStep.action === 'send' ? 'send' : currentStep.action === 'stake' ? 'stake' : 'swap';
     const token = findTokenByText(tokenText, context);
     if (token) {
       currentStep.fromToken = token;

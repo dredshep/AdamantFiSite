@@ -24,6 +24,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 // Import our extracted utilities
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
+import { getStakingContractInfoForPool } from '@/utils/staking/stakingRegistry';
 import {
   CommandStep,
   SearchSuggestion,
@@ -263,39 +264,143 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
       // Handle stake command
       if (commandStep.action === 'stake' && commandStep.fromToken) {
-        console.log('🔥 Executing stake command:', commandStep);
+        console.log('🎯 STAKE: Starting execution, mode:', mode, 'current route:', router.pathname);
         setIsLoading(true);
         try {
+          const fromTokenSymbol = commandStep.fromToken.symbol;
+
+          // Check if this is an LP token (ends with " LP")
+          if (!fromTokenSymbol.endsWith(' LP')) {
+            console.error(
+              '❌ Invalid token for staking. Only LP tokens can be staked. Received:',
+              fromTokenSymbol
+            );
+            setIsLoading(false);
+            return;
+          }
+
           // For staking, we need to find the pool that corresponds to the LP token
           // Since LP tokens are named like "sSCRT/USDC.nbl LP", we need to extract the pool symbol
-          const lpTokenSymbol = commandStep.fromToken.symbol;
-          console.log('🔥 LP Token Symbol:', lpTokenSymbol);
+          const lpTokenSymbol = fromTokenSymbol;
           const poolSymbol = lpTokenSymbol.replace(' LP', ''); // Remove " LP" suffix
-          console.log('🔥 Pool Symbol:', poolSymbol);
 
           // Find the pool from LIQUIDITY_PAIRS
           const pool = LIQUIDITY_PAIRS.find((p) => p.symbol === poolSymbol);
-          console.log('🔥 Found Pool:', pool);
           if (!pool) {
             console.error('❌ Pool not found for LP token:', lpTokenSymbol);
             setIsLoading(false);
             return;
           }
 
-          // Navigate to the pool page with staking tab and amount query params
-          const queryParams = new URLSearchParams();
-          queryParams.append('tab', 'staking'); // Set the active tab to staking
-
-          if (commandStep.amount) {
-            queryParams.append('stakingAmount', commandStep.amount);
+          // Get staking contract info for this pool
+          const stakingInfo = getStakingContractInfoForPool(pool.pairContract);
+          if (!stakingInfo) {
+            console.error('❌ No staking contract found for pool:', pool.symbol);
+            setIsLoading(false);
+            return;
           }
 
-          const targetUrl = `/pool/${pool.pairContract}?${queryParams.toString()}`;
-          console.log('🔥 Navigating to:', targetUrl);
-          await router.push(targetUrl);
-          console.log('🔥 Navigation completed');
+          // Navigate to the new static staking page with amount query params
+          const queryParams = new URLSearchParams();
+          if (commandStep.amount) {
+            queryParams.append('amount', commandStep.amount);
+            console.log('🎯 STAKE: Adding amount to query params:', commandStep.amount);
+          }
+
+          const stakingContractAddress = stakingInfo.stakingAddress;
+          const targetUrl = `/staking/${stakingContractAddress}${
+            queryParams.toString() ? '?' + queryParams.toString() : ''
+          }`;
+
+          console.log('🎯 STAKE: Navigating to:', targetUrl);
+          console.log('🎯 STAKE: Current path before navigation:', router.pathname);
+
+          // Check if we're already on the target page
+          const isOnStakingPage = router.pathname.startsWith('/staking/');
+          const currentStakingContract = router.query.stakingContractAddress as string;
+          const isTargetStakingPage =
+            isOnStakingPage && currentStakingContract === stakingContractAddress;
+
+          if (isTargetStakingPage) {
+            console.log('🎯 STAKE: Already on target staking page, updating URL with query params');
+            // Use router.replace to update URL without full navigation
+            await router.replace(targetUrl, undefined, { shallow: true });
+          } else {
+            console.log('🎯 STAKE: Navigating from different page');
+            await router.push(targetUrl);
+          }
+
+          // Close the dropdown and clear query
           setIsOpen(false);
           setQuery('');
+          setIsLoading(false);
+
+          // Only execute the stake if mode is 'execute', not 'fill'
+          if (mode === 'execute') {
+            console.log('🎯 STAKE: Mode is execute, triggering auto-stake...');
+
+            // Wait for the page to update and then trigger staking
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  console.log(
+                    '🎯 STAKE: Auto-execution delay completed, importing staking utilities...'
+                  );
+
+                  // Import the required utilities
+                  const { initKeplr } = await import('@/utils/wallet/initKeplr');
+
+                  console.log('🎯 STAKE: Initializing Keplr...');
+                  const { secretjs, walletAddress } = await initKeplr();
+
+                  if (!secretjs || !walletAddress) {
+                    console.error('🎯 STAKE: Failed to initialize Keplr');
+                    return;
+                  }
+
+                  console.log('🎯 STAKE: Keplr initialized, setting up staking...');
+
+                  // Call the staking functions directly since we can't use hooks in this context
+                  const { stakeLP } = await import('@/lib/keplr/incentives/stakeLP');
+
+                  console.log(
+                    '🎯 STAKE: Calling stakeLP directly with amount:',
+                    commandStep.amount
+                  );
+
+                  const result = await stakeLP({
+                    secretjs,
+                    lpToken: pool.lpToken, // Use the LP token address from the pool
+                    amount: commandStep.amount!,
+                  });
+
+                  console.log('🎯 STAKE: Auto-stake completed successfully:', result);
+
+                  // Show success message
+                  const { showToastOnce } = await import('@/utils/toast/toastManager');
+                  showToastOnce(
+                    'stake-success',
+                    'Staking transaction submitted successfully',
+                    'success',
+                    {
+                      message: 'Your LP tokens are being staked',
+                    }
+                  );
+                } catch (error) {
+                  console.error('🎯 STAKE: Auto-execution failed:', error);
+
+                  const { showToastOnce } = await import('@/utils/toast/toastManager');
+                  showToastOnce('stake-error', 'Auto-staking failed', 'error', {
+                    message: 'Please try clicking the Stake button manually',
+                  });
+                }
+              })();
+            }, 1000); // 1 second delay to let the page settle
+          } else {
+            console.log('🎯 STAKE: Mode is fill, not executing auto-stake');
+          }
+
+          console.log('🎯 STAKE: Navigation completed, search closed');
         } catch (error) {
           console.error('❌ Error executing stake command:', error);
         } finally {
@@ -305,8 +410,6 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
 
       // Handle send command
       if (commandStep.action === 'send' && commandStep.fromToken && commandStep.target) {
-        console.log('💸 Executing send command:', commandStep, 'mode:', mode);
-
         // If user selected "fill form" or amount is missing, just open the dialog
         const shouldOpenDialog = mode === 'fill' || !commandStep.amount;
 

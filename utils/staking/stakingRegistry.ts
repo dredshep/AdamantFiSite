@@ -175,6 +175,31 @@ export function getStakingContractInfo(lpTokenAddress: string): StakingContractI
 }
 
 /**
+ * Gets staking contract information by staking contract address (reverse lookup)
+ * @param stakingContractAddress The staking contract address to look up
+ * @returns Staking contract info with pool name or null if not found
+ */
+export function getStakingContractInfoByAddress(
+  stakingContractAddress: string
+): (StakingContractInfo & { poolName: string }) | null {
+  // Search through all staking contracts to find the one with matching staking address
+  for (const [lpTokenAddress, contractInfo] of Object.entries(STAKING_CONTRACTS)) {
+    if (contractInfo.stakingAddress === stakingContractAddress) {
+      // Find the corresponding liquidity pair to get the pool name
+      const matchingPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === lpTokenAddress);
+      const poolName = matchingPair?.symbol || 'Unknown Pool';
+
+      return {
+        ...contractInfo,
+        poolName,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Gets staking contract information for a pool contract
  * Maps pool contract address to LP token address first
  */

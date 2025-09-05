@@ -211,8 +211,25 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
   // Stake LP tokens
   const stakeLpTokens = useCallback(
     async (amount: string) => {
-      if (!secretjs || !stakingInfo) return false;
+      console.log('🎯 STAKING HOOK: stakeLpTokens called with amount:', amount);
+      console.log('🎯 STAKING HOOK: Current state:', {
+        hasSecretjs: !!secretjs,
+        hasStakingInfo: !!stakingInfo,
+        stakingInfo: stakingInfo
+          ? {
+              lpTokenAddress: stakingInfo.lpTokenAddress,
+              stakingAddress: stakingInfo.stakingAddress,
+              rewardTokenSymbol: stakingInfo.rewardTokenSymbol,
+            }
+          : null,
+      });
 
+      if (!secretjs || !stakingInfo) {
+        console.log('🎯 STAKING HOOK: Missing dependencies, returning false');
+        return false;
+      }
+
+      console.log('🎯 STAKING HOOK: Setting loading state and pending...');
       setLoadingState('stake', true);
       setPending(true);
 
@@ -222,28 +239,40 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
           code_hash: stakingInfo.lpTokenCodeHash,
         };
 
+        console.log('🎯 STAKING HOOK: Created LP token contract info:', lpTokenContract);
+
         // const stakingContract: ContractInfo = {
         //   address: stakingInfo.stakingAddress,
         //   code_hash: stakingInfo.stakingCodeHash,
         // };
 
+        console.log('🎯 STAKING HOOK: Calling stakeLP function...');
         const result = await stakeLP({
           secretjs,
           lpToken: lpTokenContract.address,
           amount,
         });
 
+        console.log('🎯 STAKING HOOK: stakeLP result:', result);
+
         setResult(result);
 
+        console.log('🎯 STAKING HOOK: Refreshing balances...');
         // Refresh balances after staking
         await Promise.all([fetchStakedBalance(), fetchPendingRewards()]);
 
+        console.log('🎯 STAKING HOOK: Staking completed successfully');
         return true;
       } catch (error) {
-        console.error('Error staking LP tokens:', error);
+        console.error('🎯 STAKING HOOK: Error staking LP tokens:', error);
+        console.error('🎯 STAKING HOOK: Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         toast.error('Failed to stake LP tokens');
         return false;
       } finally {
+        console.log('🎯 STAKING HOOK: Clearing loading state and pending...');
         setLoadingState('stake', false);
         setPending(false);
       }

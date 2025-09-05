@@ -577,7 +577,12 @@ function generateExecutionSuggestions(
   }
 
   // Verify tokens exist in our configuration
-  const tokenList = commandStep.action === 'send' ? getAllTokensWithNative() : getSwappableTokens();
+  const tokenList =
+    commandStep.action === 'send'
+      ? getAllTokensWithNative()
+      : commandStep.action === 'stake'
+      ? getStakeableTokens()
+      : getSwappableTokens();
   const fromTokenExists = tokenList.some((token) => token.symbol === commandStep.fromToken?.symbol);
   const toTokenExists =
     !commandStep.toToken || tokenList.some((token) => token.symbol === commandStep.toToken?.symbol);

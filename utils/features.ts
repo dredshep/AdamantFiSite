@@ -17,20 +17,20 @@ export function isPricingEnabled(): boolean {
 }
 
 /**
+ * Check if the application is running in development mode
+ * @returns true if in development mode, false otherwise
+ */
+export function isDevelopmentMode(): boolean {
+  return process.env.NODE_ENV === 'development';
+}
+
+/**
  * Get all available feature flags and their status
  * Useful for debugging and admin panels
  */
 export function getFeatureFlags(): Record<string, boolean> {
   return {
     pricing: isPricingEnabled(),
+    development: isDevelopmentMode(),
   };
 }
-
-
-
-
-
-
-
-
-

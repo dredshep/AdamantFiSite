@@ -1,4 +1,4 @@
-import { ConfigToken, TOKENS } from '@/config/tokens';
+import { ConfigToken, LIQUIDITY_PAIRS, STAKING_CONTRACTS, TOKENS } from '@/config/tokens';
 import { ACTION_KEYWORDS, ActionType } from '../constants/actionKeywords';
 
 /**
@@ -31,10 +31,18 @@ function getSwappableTokens(): ConfigToken[] {
  */
 export function findTokenByText(
   text: string,
-  context: 'swap' | 'send' = 'swap'
+  context: 'swap' | 'send' | 'stake' = 'swap'
 ): ConfigToken | null {
-  const normalized = text.toLowerCase().replace(/[^a-z0-9.]/g, '');
-  const allTokens = context === 'send' ? getAllTokensWithNative() : getSwappableTokens();
+  // For stake context, preserve LP token format and don't over-normalize
+  const normalized =
+    context === 'stake' ? text.toLowerCase().trim() : text.toLowerCase().replace(/[^a-z0-9.]/g, '');
+
+  const allTokens =
+    context === 'send'
+      ? getAllTokensWithNative()
+      : context === 'stake'
+      ? getStakeableTokens()
+      : getSwappableTokens();
 
   // Don't match very short inputs (1-2 characters) unless it's an exact match
   if (normalized.length <= 2) {
@@ -44,33 +52,34 @@ export function findTokenByText(
       return exactMatch;
     }
 
-    // Check special mappings for short inputs
-    const specialMappings: Record<string, string> = {
-      secret: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
-      scrt: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
-      sscrt: 'sSCRT', // Map sSCRT properly
-      native: 'SCRT', // Map native to SCRT only when explicitly requested
-      atom: 'sATOM',
-      satom: 'sATOM',
-      eth: 'ETH.axl',
-      ethereum: 'ETH.axl',
-      usdc: 'USDC.nbl',
-      usdcnbl: 'USDC.nbl',
-      dollar: 'USDC.nbl',
-      usd: 'USDC.nbl',
-      silk: 'SILK',
-      stable: 'SILK',
-      jackal: 'JKL',
-      jkl: 'JKL',
-      adamant: 'bADMT',
-      badmt: 'bADMT',
-    };
+    // Check special mappings for short inputs (only for non-stake contexts)
+    if (context !== 'stake') {
+      const specialMappings: Record<string, string> = {
+        secret: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
+        scrt: 'sSCRT', // Map to wrapped sSCRT, not native SCRT
+        sscrt: 'sSCRT', // Map sSCRT properly
+        native: 'SCRT', // Map native to SCRT only when explicitly requested
+        atom: 'sATOM',
+        satom: 'sATOM',
+        eth: 'ETH.axl',
+        ethereum: 'ETH.axl',
+        usdc: 'USDC.nbl',
+        usdcnbl: 'USDC.nbl',
+        dollar: 'USDC.nbl',
+        usd: 'USDC.nbl',
+        silk: 'SILK',
+        stable: 'SILK',
+        jackal: 'JKL',
+        jkl: 'JKL',
+        adamant: 'bADMT',
+        badmt: 'bADMT',
+      };
 
-    const mappedSymbol = specialMappings[normalized];
-    if (mappedSymbol) {
-      const foundToken = allTokens.find((token) => token.symbol === mappedSymbol) || null;
-
-      return foundToken;
+      const mappedSymbol = specialMappings[normalized];
+      if (mappedSymbol) {
+        const foundToken = allTokens.find((token) => token.symbol === mappedSymbol) || null;
+        return foundToken;
+      }
     }
 
     // Don't match partial inputs that are too short
@@ -154,4 +163,27 @@ export function detectAction(query: string): ActionType | null {
     }
   }
   return null;
+}
+
+/**
+ * Get LP tokens that can be staked (have staking contracts)
+ */
+function getStakeableTokens(): ConfigToken[] {
+  const stakeableTokens = STAKING_CONTRACTS.map((stakingContract) => {
+    // Find the LP token for this staking contract
+    const pair = LIQUIDITY_PAIRS.find((pair) => pair.symbol === stakingContract.pairSymbol);
+    if (!pair) return null;
+
+    // Return the LP token in ConfigToken format
+    const lpToken = {
+      name: `${pair.symbol} LP Token`,
+      symbol: `${pair.symbol} LP`,
+      address: pair.lpToken,
+      codeHash: pair.lpTokenCodeHash,
+      decimals: 6,
+    } as ConfigToken;
+    return lpToken;
+  }).filter((token): token is ConfigToken => token !== null);
+
+  return stakeableTokens;
 }
