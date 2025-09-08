@@ -1,3 +1,6 @@
+import { TOKENS } from '@/config/tokens';
+import { useViewingKeyModalStore } from '@/store/viewingKeyModalStore';
+
 // Toast ID references to prevent duplicates
 export const GLOBAL_TOAST_IDS = {
   KEPLR_NOT_INSTALLED: 'global-keplr-not-installed',
@@ -172,18 +175,16 @@ Your LP token viewing key will be copied to the staking contract when you click 
 
       if (!hasStakingContractError) {
         const buttonText =
-          tokenCount === 1
-            ? `"Copy ${errors[0]?.tokenSymbol ?? 'Address'} Address"`
-            : `"Copy Next Address"`;
-        message += `Click ${buttonText} to copy each token address.\n`;
+          tokenCount === 1 ? `"Fix ${errors[0]?.tokenSymbol ?? 'Token'} Key"` : `"Fix Next Key"`;
+        message += `Click ${buttonText} to create viewing keys automatically.\n`;
 
         if (hasMixedTypes) {
-          message += 'For missing keys: Add token to Keplr and set viewing key.\n';
-          message += 'For incorrect keys: Reset viewing key in Keplr wallet.';
+          message += 'Fix automatically or use custom keys with dual setup.\n';
+          message += 'Quick one-click solution available.';
         } else if (hasInvalidKeys) {
-          message += 'Reset the viewing keys in Keplr wallet (remove and re-add tokens).';
+          message += 'Fix automatically or use custom keys with dual setup.';
         } else {
-          message += 'After copying, add tokens to Keplr and set viewing keys.';
+          message += 'Fix automatically or use custom keys with dual setup.';
         }
       }
 
@@ -213,50 +214,46 @@ Your LP token viewing key will be copied to the staking contract when you click 
         return;
       }
 
-      // Original copy interface for regular tokens
+      // Dual setup interface for regular tokens
       showToastOnce(GLOBAL_TOAST_IDS.VIEWING_KEY_ERRORS_AGGREGATE, title, 'error', {
         message: createFormattedList(),
         actionLabel: currentError
           ? tokenCount === 1
-            ? `Copy ${currentError.tokenSymbol ?? 'Token'} Address`
-            : `Copy ${currentError.tokenSymbol ?? 'Next'} Address (${
-                currentIndex + 1
-              }/${tokenCount})`
+            ? `Fix ${currentError.tokenSymbol ?? 'Token'} Key`
+            : `Fix ${currentError.tokenSymbol ?? 'Next'} Key (${currentIndex + 1}/${tokenCount})`
           : 'All Done',
         onAction: () => {
           if (currentError?.tokenAddress) {
-            navigator.clipboard
-              .writeText(currentError.tokenAddress)
-              .then(() => {
-                // Show success feedback
-                showToastOnce(
-                  `copied-${currentIndex}`,
-                  `${currentError.tokenSymbol ?? 'Address'} copied!`,
-                  'success',
-                  { autoClose: 2000 }
-                );
+            // Find token and open dual setup modal
+            const token = TOKENS.find((t) => t.address === currentError.tokenAddress);
+            if (token) {
+              useViewingKeyModalStore.getState().open(token, 'aggregate-error');
 
-                currentIndex++;
+              // Move to next error after opening modal
+              currentIndex++;
 
-                // Continue to next or finish
-                setTimeout(() => {
-                  if (currentIndex < errors.length) {
-                    showCopyInterface();
-                  } else {
-                    showToastOnce('viewing-keys-complete', 'All addresses copied!', 'success', {
-                      message: `Successfully copied all ${tokenCount} token addresses. You can now set viewing keys in Keplr wallet.`,
-                      autoClose: 5000,
-                    });
-                  }
-                }, 1000);
-              })
-              .catch(() => {
-                showToastOnce('copy-failed', 'Failed to copy address', 'error', {
-                  autoClose: 3000,
-                });
+              // Continue to next if there are more
+              setTimeout(() => {
+                if (currentIndex < errors.length) {
+                  showCopyInterface();
+                } else {
+                  showToastOnce('viewing-keys-handled', 'All keys processed!', 'success', {
+                    message: `Opened dual setup for all ${tokenCount} tokens. Create keys automatically or use custom keys.`,
+                    autoClose: 5000,
+                  });
+                }
+              }, 500);
+            } else {
+              // Fallback to copy if token not found
+              void navigator.clipboard.writeText(currentError.tokenAddress);
+              showToastOnce(`token-not-found-${currentIndex}`, 'Token not found', 'warning', {
+                message: `Address copied: ${currentError.tokenAddress}. Please manually add to Keplr.`,
+                autoClose: 3000,
               });
+              currentIndex++;
+            }
           } else {
-            // No more addresses to copy
+            // No more addresses to handle
             return;
           }
         },

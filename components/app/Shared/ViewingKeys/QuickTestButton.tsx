@@ -11,8 +11,13 @@ const QuickTestButton: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showQuick, setShowQuick] = useState(false);
 
-  // Use sSCRT as default test token
+  // Use sSCRT as default test token, fallback to first available token
   const testToken = TOKENS.find((t) => t.symbol === 'sSCRT') || TOKENS[0];
+
+  // Don't render if no tokens available
+  if (!testToken) {
+    return null;
+  }
 
   const handleSuccess = (viewingKey: string) => {
     console.log('✅ Test Success:', viewingKey);

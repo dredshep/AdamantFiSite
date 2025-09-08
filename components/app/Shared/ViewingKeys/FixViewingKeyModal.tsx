@@ -91,10 +91,12 @@ const FixViewingKeyModal: React.FC<FixViewingKeyModalProps> = ({
             </div>
 
             {/* Fix Instructions */}
-            <div className="bg-adamant-box-regular border border-adamant-box-border p-4 rounded">
+            <div className="bg-adamant-box-dark border border-adamant-box-border p-4 rounded">
               <div className="flex items-center gap-2 mb-3">
-                <Wrench className="w-4 h-4 text-adamant-gradientBright" />
-                <h3 className="font-medium text-adamant-text-box-main">How to Fix:</h3>
+                <Wrench className="w-4 h-4 text-adamant-text-box-secondary" />
+                <h3 className="font-medium text-adamant-text-box-secondary">
+                  Alternative: Manual Setup
+                </h3>
               </div>
               <ol className="text-sm text-adamant-text-box-secondary space-y-2 list-decimal list-inside">
                 <li>
@@ -125,14 +127,16 @@ const FixViewingKeyModal: React.FC<FixViewingKeyModalProps> = ({
               </ol>
             </div>
 
-            {/* Alternative Method */}
-            <div className="bg-adamant-box-regular border border-adamant-box-border p-4 rounded">
+            {/* Recommended Method */}
+            <div className="bg-adamant-box-regular border border-adamant-gradientBright p-4 rounded">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="w-4 h-4 text-adamant-gradientBright" />
-                <h3 className="font-medium text-adamant-text-box-main">Alternative:</h3>
+                <h3 className="font-medium text-adamant-text-box-main">
+                  Recommended: Automatic Setup
+                </h3>
               </div>
               <p className="text-sm text-adamant-text-box-secondary mb-3">
-                You can also create a new viewing key directly from this interface:
+                Create a new viewing key automatically or use your own custom key:
               </p>
               <button
                 onClick={handleRetryAndClose}

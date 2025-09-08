@@ -391,7 +391,7 @@ export class TokenService {
             `LP token viewing key is invalid for ${truncatedAddress}: ${errorMsg} (called from: ${caller})`,
             TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED,
             true,
-            'Reset the LP token viewing key in Keplr',
+            'Use dual setup to create automatically or set custom key',
             caller,
             traceId
           );
@@ -403,7 +403,7 @@ export class TokenService {
           `Invalid viewing key for token ${truncatedAddress}: ${errorMsg} (called from: ${caller})`,
           TokenServiceErrorType.VIEWING_KEY_INVALID,
           true,
-          'Reset the viewing key for this token',
+          'Use dual setup to create automatically or set custom key',
           caller,
           traceId
         );
@@ -528,10 +528,10 @@ export class TokenService {
       console.error('Error resetting viewing key:', error);
       const truncatedAddress = safeTruncateAddress(tokenAddress);
       throw new TokenServiceError(
-        `Failed to reset viewing key for token ${truncatedAddress} (called from: ${caller}). You may need to manually remove and re-add this token in Keplr wallet settings.`,
+        `Failed to reset viewing key for token ${truncatedAddress} (called from: ${caller}). Use dual setup to create automatically or set custom key.`,
         TokenServiceErrorType.VIEWING_KEY_INVALID,
         true,
-        'Manually remove and re-add token in Keplr settings',
+        'Use dual viewing key setup',
         caller,
         traceId
       );

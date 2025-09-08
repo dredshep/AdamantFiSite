@@ -65,7 +65,7 @@ const QuickKeyActions: React.FC<QuickKeyActionsProps> = ({
         secretjs,
         contractAddress: token.address,
         codeHash: token.codeHash,
-        customKey: customKeyValue,
+        ...(customKeyValue && { customKey: customKeyValue }),
         onProgress: (message) => {
           console.log('Quick Key Creation:', message);
         },

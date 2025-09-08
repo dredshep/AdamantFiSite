@@ -34,6 +34,19 @@ const WalletSidebar: React.FC = () => {
 
   const walletBalance = useWalletBalance();
   const walletTotal = isPricingEnabled() ? useWalletTotalValue() : null;
+
+  // DEBUG: Log wallet balance calculation details
+  React.useEffect(() => {
+    if (walletTotal && !walletTotal.loading) {
+      console.log('🏦 WALLET SIDEBAR DEBUG:', {
+        totalUSD: walletTotal.totalUSD,
+        loading: walletTotal.loading,
+        error: walletTotal.error,
+        walletBalanceTotalUSD: walletBalance.totalUsdValue,
+        scrtPrice: walletBalance.scrtPrice,
+      });
+    }
+  }, [walletTotal, walletBalance]);
   const tokens = listAllTokens() ?? [];
   const sidebarRef = useRef<HTMLElement>(null);
 
@@ -47,13 +60,25 @@ const WalletSidebar: React.FC = () => {
   // Handle click outside to close modal
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        isWalletModalOpen &&
-        sidebarRef.current &&
-        !sidebarRef.current.contains(event.target as Node)
-      ) {
-        handleCloseSidebar();
+      if (!isWalletModalOpen) return;
+
+      const target = event.target as Element;
+
+      // Check if the click is inside our wallet dropdown menu
+      const isInWalletDropdown = target.closest('[data-wallet-dropdown="true"]') !== null;
+
+      // If clicking inside dropdown, don't close anything
+      if (isInWalletDropdown) {
+        return;
       }
+
+      // If clicking inside sidebar (but not in dropdown), don't close sidebar
+      if (sidebarRef.current && sidebarRef.current.contains(event.target as Node)) {
+        return;
+      }
+
+      // Only close sidebar if clicking completely outside both sidebar and dropdown
+      handleCloseSidebar();
     };
 
     if (isWalletModalOpen) {

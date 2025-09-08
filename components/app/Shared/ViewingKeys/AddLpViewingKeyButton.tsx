@@ -1,4 +1,5 @@
 import { LpTokenBalanceError } from '@/hooks/useLpTokenBalance';
+import { enhanceSuggestTokenWithDualSetup } from '@/utils/viewingKeys/integrationHelpers';
 import { ExclamationTriangleIcon, PlusIcon } from '@radix-ui/react-icons';
 import React, { useState } from 'react';
 
@@ -7,6 +8,7 @@ interface AddLpViewingKeyButtonProps {
   onSuggestToken: () => void;
   onSuccess: () => void;
   tokenSymbol: string;
+  tokenAddress?: string; // Optional for dual setup fallback
 }
 
 const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
@@ -14,13 +16,22 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
   onSuggestToken,
   onSuccess,
   tokenSymbol,
+  tokenAddress,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleAction = () => {
+  const handleAction = async () => {
     setIsProcessing(true);
     try {
-      onSuggestToken();
+      if (tokenAddress) {
+        // Enhanced version with dual setup fallback
+        await enhanceSuggestTokenWithDualSetup(tokenAddress, async () => {
+          return Promise.resolve(onSuggestToken());
+        });
+      } else {
+        // Fallback to original behavior
+        onSuggestToken();
+      }
       onSuccess();
     } catch (error) {
       console.error('LP viewing key creation failed:', error);
@@ -37,7 +48,7 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
   if (isMissingKey) {
     return (
       <button
-        onClick={handleAction}
+        onClick={() => void handleAction()}
         disabled={isProcessing}
         className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded border border-green-700/50 disabled:opacity-50"
         title={`Add viewing key for ${tokenSymbol} LP token`}
@@ -52,7 +63,7 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
   if (isKeyRejected || isLpTokenNotFound) {
     return (
       <button
-        onClick={handleAction}
+        onClick={() => void handleAction()}
         disabled={isProcessing}
         className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors bg-orange-900/20 hover:bg-orange-900/30 px-2 py-1 rounded border border-orange-700/50 disabled:opacity-50"
         title={

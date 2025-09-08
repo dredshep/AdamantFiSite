@@ -13,8 +13,8 @@ const DualSetupExample: React.FC = () => {
   const [showMiniCreator, setShowMiniCreator] = useState(false);
   const [results, setResults] = useState<string[]>([]);
 
-  // Use sSCRT as example token
-  const exampleToken = TOKENS.find((t) => t.symbol === 'sSCRT') || TOKENS[0];
+  // Use sSCRT as example token - guaranteed to be defined since TOKENS array is not empty
+  const exampleToken = TOKENS.find((t) => t.symbol === 'sSCRT') || TOKENS[0]!;
 
   const addResult = (message: string) => {
     setResults((prev) => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);

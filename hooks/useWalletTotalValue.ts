@@ -228,10 +228,31 @@ export const useWalletTotalValue = (): WalletTotalValue => {
           const currentPrice = priceInfo.price;
           const change24hPercent = priceInfo.change24h || 0;
 
+          // Enhanced debug logging for balance parsing
+          console.log(`🔍 TOKEN BALANCE DEBUG [${token.symbol}]:`, {
+            rawBalance: balanceState.balance,
+            parsedBalance: balance,
+            currentPrice,
+            balanceIsNaN: isNaN(balance),
+            balanceIsPositive: balance > 0,
+            tokenSymbol: token.symbol,
+            tokenAddress: token.address,
+            coingeckoId: token.coingeckoId,
+          });
+
           if (!isNaN(balance) && balance > 0) {
             const tokenValueUSD = balance * currentPrice;
             const previousPrice = currentPrice / (1 + change24hPercent / 100);
             const previousTokenValueUSD = balance * previousPrice;
+
+            // Enhanced calculation logging
+            console.log(`💰 CALCULATION DEBUG [${token.symbol}]:`, {
+              balance,
+              currentPrice,
+              calculation: `${balance} × ${currentPrice} = ${tokenValueUSD}`,
+              tokenValueUSD,
+              expectedRange: balance < 0.1 ? 'Should be small value' : 'Large balance',
+            });
 
             tokenDetail.calculations = {
               balanceNumber: balance,

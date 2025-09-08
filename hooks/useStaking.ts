@@ -438,8 +438,17 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
         console.log('No existing viewing key found for LP token, will try to create one', e);
       }
 
-      // Suggest the LP TOKEN to Keplr (required for staking operations)
-      await keplr.suggestToken('secret-4', stakingInfo.lpTokenAddress, stakingInfo.lpTokenCodeHash);
+      // Suggest the LP TOKEN to Keplr (required for staking operations) with dual setup fallback
+      const { enhanceSuggestTokenWithDualSetup } = await import(
+        '@/utils/viewingKeys/integrationHelpers'
+      );
+      await enhanceSuggestTokenWithDualSetup(stakingInfo.lpTokenAddress, async () => {
+        await keplr.suggestToken(
+          'secret-4',
+          stakingInfo.lpTokenAddress,
+          stakingInfo.lpTokenCodeHash
+        );
+      });
 
       // Need to wait a bit for Keplr to register the token
       await new Promise((resolve) => setTimeout(resolve, 1000));
