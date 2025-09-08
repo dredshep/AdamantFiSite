@@ -1,23 +1,40 @@
-import * as Tabs from '@radix-ui/react-tabs';
+import { getStakingContractInfoForPool } from '@/utils/staking/stakingRegistry';
+import { useRouter } from 'next/router';
 import { useState } from 'react';
 
 interface SparklyTabProps {
   value: string;
   children: React.ReactNode;
+  poolAddress?: string;
 }
 
-const SparklyTab = ({ value, children }: SparklyTabProps) => {
+const SparklyTab = ({ value, children, poolAddress }: SparklyTabProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const router = useRouter();
+
+  const handleClick = () => {
+    if (value === 'staking' && poolAddress) {
+      // Get the staking contract address for this pool
+      const stakingInfo = getStakingContractInfoForPool(poolAddress);
+
+      if (stakingInfo) {
+        // Navigate to the new staking page
+        router.push(`/staking/${stakingInfo.stakingAddress}`);
+      } else {
+        console.warn(`No staking contract found for pool: ${poolAddress}`);
+      }
+    }
+  };
 
   return (
-    <Tabs.Trigger
-      value={value}
+    <button
+      onClick={handleClick}
       className="flex-1 bg-adamant-app-box-lighter px-4 py-4 rounded-xl text-white/75
-                 data-[state=active]:text-black data-[state=active]:bg-gradient-to-br 
-                 data-[state=active]:from-yellow-300/90 data-[state=active]:to-amber-400/90
+                 hover:text-black hover:bg-gradient-to-br 
+                 hover:from-yellow-300/90 hover:to-amber-400/90
                  hover:bg-white/5 transition-all duration-300 font-medium tracking-wide
                  relative overflow-hidden transform hover:scale-105
-                 data-[state=active]:border-2 data-[state=active]:border-yellow-300/50"
+                 hover:border-2 hover:border-yellow-300/50"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -60,7 +77,7 @@ const SparklyTab = ({ value, children }: SparklyTabProps) => {
         </svg>
         {children}
       </div>
-    </Tabs.Trigger>
+    </button>
   );
 };
 

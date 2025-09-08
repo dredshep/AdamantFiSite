@@ -39,9 +39,9 @@ interface StakingPageState {
     data: {
       stakedBalance: string;
       pendingRewards: string;
-      stakedValueUsd?: number;
+      stakedValueUsd: number | undefined;
       userSharePercentage: number;
-      dailyEarnings?: number;
+      dailyEarnings: number | undefined;
     } | null;
     error: string | null;
   };
@@ -49,7 +49,7 @@ interface StakingPageState {
 }
 
 export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingContractAddress }) => {
-  const { secretjs, walletAddress } = useKeplrConnection();
+  const { secretjs } = useKeplrConnection();
   const router = useRouter();
 
   // Get staking contract info by staking contract address (reverse lookup)
@@ -295,8 +295,7 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
       const totalLocked = rewardInfo.totalLocked;
       const totalLockedFormatted = parseFloat(totalLocked) / 1_000_000;
 
-      // Get LP token price and TVL
-      const lpTokenPrice = await getLpTokenPriceUsd(secretjs, lpTokenAddress);
+      // Get TVL
       const tvlUsd = await getTvlUsd(secretjs, lpTokenAddress, totalLocked);
 
       // Calculate daily rewards from configuration
@@ -363,7 +362,7 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
 
   // Initial data load on mount
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []); // Empty dependency array - run only once on mount
 
   // Simple retry after 3 seconds if staked balance is not loaded
@@ -372,15 +371,16 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
       const timer = setTimeout(() => {
         console.log('Attempting one retry after 3 seconds...');
         setHasAttemptedRetry(true);
-        loadData();
+        void loadData();
       }, 3000);
 
       return () => clearTimeout(timer);
     }
+    return undefined; // Explicit return for all code paths
   }, [hasAttemptedRetry, state.userPosition.data?.stakedBalance, loadData]);
 
   // Manual refresh function
-  const refreshAllData = async () => {
+  const refreshAllData = useCallback(() => {
     setIsRefreshing(true);
     setHasAttemptedRetry(false); // Reset retry state
 
@@ -401,15 +401,18 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
       viewingKeys.refresh();
 
       // Give viewing keys a moment to update, then refresh data
-      setTimeout(async () => {
-        await Promise.allSettled([fetchPoolData(), fetchLpTokenBalance(), fetchUserPosition()]);
-        setIsRefreshing(false);
+      setTimeout(() => {
+        void Promise.allSettled([fetchPoolData(), fetchLpTokenBalance(), fetchUserPosition()]).then(
+          () => {
+            setIsRefreshing(false);
+          }
+        );
       }, 1000);
     } catch (error) {
       console.error('Error during manual refresh:', error);
       setIsRefreshing(false);
     }
-  };
+  }, [fetchPoolData, fetchLpTokenBalance, fetchUserPosition, viewingKeys]);
 
   // Show error if staking contract info not found
   if (!stakingInfo) {
@@ -434,9 +437,6 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
     );
   }
 
-  const isAnyLoading =
-    state.poolData.status === 'loading' || state.userPosition.status === 'loading' || isRefreshing;
-
   return (
     <div className="max-w-7xl mx-auto mt-12 flex flex-col gap-4">
       <div className="px-2.5">
@@ -445,12 +445,12 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
           <nav className="text-sm breadcrumbs mb-4">
             <ol className="flex items-center space-x-2">
               <li>
-                <a
-                  href="/pools"
+                <button
+                  onClick={() => void router.push('/pools')}
                   className="text-adamant-text-box-secondary hover:text-adamant-text-box-main"
                 >
                   Pools
-                </a>
+                </button>
               </li>
               <li className="text-adamant-text-box-secondary">/</li>
               <li className="text-adamant-text-box-main">{stakingInfo.poolName} Staking</li>
@@ -524,7 +524,6 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
               {viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid && (
                 <>
                   <StaticStakingInput
-                    inputIdentifier="stakeAmount"
                     operation="stake"
                     balance={lpTokenBalance.balance}
                     balanceLabel="Available LP Balance"
@@ -543,7 +542,6 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
                   {state.userPosition.data?.stakedBalance &&
                     state.userPosition.data.stakedBalance !== '0' && (
                       <StaticStakingInput
-                        inputIdentifier="unstakeAmount"
                         operation="unstake"
                         balance={state.userPosition.data.stakedBalance}
                         balanceLabel="Staked LP Balance"
@@ -580,7 +578,7 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
                   stakeAmount={stakeAmount}
                   unstakeAmount={unstakeAmount}
                   onTransactionComplete={() => {
-                    setTimeout(fetchUserPosition, 2000);
+                    setTimeout(() => void fetchUserPosition(), 2000);
                   }}
                 />
               </div>

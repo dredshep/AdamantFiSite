@@ -1,14 +1,13 @@
 import { Breadcrumb } from '@/components/app/Breadcrumb';
 import AppLayout from '@/components/app/Global/AppLayout';
 import DepositForm from '@/components/app/Pages/Pool/DepositForm';
-import StakingForm from '@/components/app/Pages/Pool/StakingForm';
 import WithdrawForm from '@/components/app/Pages/Pool/WithdrawForm';
 import SparklyTab from '@/components/app/Pages/Pools/SparklyTab';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import { usePoolsAndTokens } from '@/hooks/usePoolsAndTokens';
-import ErrorBoundary from '@/lib/keplr/components/ErrorBoundary';
 import { usePoolStore } from '@/store/forms/poolStore';
+import { getStakingContractInfoForPool } from '@/utils/staking/stakingRegistry';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -74,6 +73,23 @@ export default function PoolPage() {
 
     setSelectedPool(liquidityPair);
   }, [poolAddress, pools, setSelectedPool, router.isReady]);
+
+  // Handle staking tab redirect
+  useEffect(() => {
+    if (!router.isReady || typeof poolAddress !== 'string') return;
+
+    const { tab } = router.query;
+    if (tab === 'staking') {
+      // User is trying to access the legacy staking tab, redirect to new staking page
+      const stakingInfo = getStakingContractInfoForPool(poolAddress);
+      if (stakingInfo) {
+        void router.replace(`/staking/${stakingInfo.stakingAddress}`);
+      } else {
+        // If no staking contract found, redirect to pool page without tab parameter
+        void router.replace(`/pool/${poolAddress}`);
+      }
+    }
+  }, [router.isReady, router.query.tab, poolAddress, router]);
 
   // Handle loading states and errors
   if (!router.isReady || loading) {
@@ -153,10 +169,7 @@ export default function PoolPage() {
           </div>
 
           <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto mb-4">
-            <Tabs.Root
-              className="flex flex-col"
-              defaultValue={(router.query.tab as string) || 'deposit'}
-            >
+            <Tabs.Root className="flex flex-col" defaultValue="deposit">
               <Tabs.List className="flex mb-4 p-2.5 gap-2.5" aria-label="Manage your liquidity">
                 <Tabs.Trigger
                   key="deposit"
@@ -178,7 +191,11 @@ export default function PoolPage() {
                   Withdraw
                 </Tabs.Trigger>
 
-                <SparklyTab value="staking">Staking</SparklyTab>
+                {typeof poolAddress === 'string' && (
+                  <SparklyTab value="staking" poolAddress={poolAddress}>
+                    Staking
+                  </SparklyTab>
+                )}
               </Tabs.List>
 
               <Tabs.Content value="deposit" className="outline-none">
@@ -192,30 +209,6 @@ export default function PoolPage() {
 
               <Tabs.Content value="withdraw" className="outline-none">
                 <WithdrawForm />
-              </Tabs.Content>
-
-              <Tabs.Content value="staking" className="outline-none">
-                <ErrorBoundary
-                  fallback={
-                    <div className="p-6 bg-red-900/20 border border-red-500/20 rounded-xl text-white">
-                      <h3 className="text-lg font-semibold mb-2">
-                        Staking temporarily unavailable
-                      </h3>
-                      <p className="text-gray-300 mb-4">
-                        There was an issue loading the staking interface. This is usually related to
-                        viewing key problems.
-                      </p>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        Refresh Page
-                      </button>
-                    </div>
-                  }
-                >
-                  <StakingForm initialStakingAmount={router.query.stakingAmount as string} />
-                </ErrorBoundary>
               </Tabs.Content>
             </Tabs.Root>
           </div>

@@ -8,7 +8,6 @@ import { amountExceedsBalance } from '@/utils/staking/convertStakingAmount';
 import React, { useEffect, useState } from 'react';
 
 interface StaticStakingInputProps {
-  inputIdentifier: 'stakeAmount' | 'unstakeAmount';
   operation: 'stake' | 'unstake';
   balance: string;
   balanceLabel?: string;
@@ -21,7 +20,6 @@ interface StaticStakingInputProps {
 }
 
 export const StaticStakingInput: React.FC<StaticStakingInputProps> = ({
-  inputIdentifier,
   operation,
   balance,
   balanceLabel = 'Balance',

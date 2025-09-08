@@ -1,5 +1,6 @@
 import AppLayout from '@/components/app/Global/AppLayout';
 import SwapForm from '@/components/app/Pages/Swap/SwapForm/SwapForm';
+import QuickTestButton from '@/components/app/Shared/ViewingKeys/QuickTestButton';
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
 // import { validateIncentives } from '@/lib/keplr/incentives/__tests__/validateIncentives';
 import { Roboto } from 'next/font/google';
@@ -49,6 +50,9 @@ export default function Swap() {
           </div>
         </div>
       </AppLayout>
+
+      {/* Test Button - Only show in development */}
+      {process.env.NODE_ENV === 'development' && <QuickTestButton />}
     </div>
   );
 }

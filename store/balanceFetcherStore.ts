@@ -544,22 +544,29 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
               'LP Token Viewing Key Failed',
               'error',
               {
-                message: `${tokenSymbol} viewing key failed: ${cleanErrorDetails}. Token: ${truncatedAddress} (click to copy). Please go to Keplr wallet, find the LP token, and set a new viewing key.`,
-                actionLabel: 'Copy Address',
+                message: `${tokenSymbol} viewing key failed: ${cleanErrorDetails}. You can quickly fix this by creating a new viewing key automatically, or use your own custom key.`,
+                actionLabel: 'Fix Viewing Key',
                 onAction: () => {
+                  // TODO: Integrate with DualViewingKeyCreator or QuickKeyActions
+                  // For now, show the manual copy option as fallback
                   navigator.clipboard
                     .writeText(tokenAddress)
                     .then(() => {
-                      showToastOnce(`copied-${tokenAddress}`, 'Address copied!', 'info', {
-                        autoClose: 2000,
-                      });
+                      showToastOnce(
+                        `copied-${tokenAddress}`,
+                        'Address copied! Use this to manually create a viewing key in Keplr.',
+                        'info',
+                        {
+                          autoClose: 4000,
+                        }
+                      );
                     })
                     .catch(() => {
                       showToastOnce(
                         `copy-failed-${tokenAddress}`,
-                        'Failed to copy address',
+                        'Failed to copy address. Please manually find the LP token in Keplr and set a new viewing key.',
                         'error',
-                        { autoClose: 3000 }
+                        { autoClose: 5000 }
                       );
                     });
                 },
