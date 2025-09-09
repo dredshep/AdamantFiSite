@@ -1,3 +1,4 @@
+import { convertToRawAmount } from '@/utils/staking/convertStakingAmount';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
@@ -38,10 +39,14 @@ export const unstakeLP = async ({ secretjs, lpToken, amount }: UnstakeLPParams) 
 
     console.log(`Unstaking ${amount} LP tokens from ${lpStakingContractAddress}`);
 
+    // Convert decimal amount to raw amount (LP tokens have 6 decimals)
+    const rawAmount = convertToRawAmount(amount, 6);
+    console.log(`Converted ${amount} to raw amount: ${rawAmount}`);
+
     // Create the unstake message
     const unstakeMsg = {
       redeem: {
-        amount: amount,
+        amount: rawAmount,
       },
     };
 
