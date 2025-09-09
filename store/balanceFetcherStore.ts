@@ -141,6 +141,16 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       return;
     }
 
+    // NEW: Additional check for very recent fetches to prevent rapid re-fetching (429 prevention)
+    if (currentBalance?.lastUpdated && Date.now() - currentBalance.lastUpdated < 5000) {
+      console.log(
+        `🔄 Skipping ${tokenAddress} - fetched very recently (${
+          Date.now() - currentBalance.lastUpdated
+        }ms ago) to prevent 429 errors`
+      );
+      return;
+    }
+
     // --- NEW: Set loading state immediately and clear old errors ---
     // This ensures the UI shows 'loading' right away and prevents stale error flashes.
     set((s) => ({
@@ -665,11 +675,17 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
     // Check if service is rate limited before processing
     if (TokenService.isCurrentlyRateLimited()) {
       const remainingTime = TokenService.getRemainingCooldownTime();
-      console.log(`🚫 Queue processing paused - rate limited for ${remainingTime}s`);
-      // Schedule retry after cooldown
+      const consecutiveErrors = TokenService.getConsecutiveErrors();
+      console.log(
+        `🚫 Queue processing paused - rate limited for ${remainingTime}s (consecutive errors: ${consecutiveErrors})`
+      );
+
+      // Schedule retry after cooldown with some additional buffer to be conservative
+      const retryDelay = (remainingTime + 2) * 1000; // Add 2 seconds buffer
       setTimeout(() => {
+        console.log('🔄 Retrying queue processing after rate limit cooldown');
         void get().processQueue();
-      }, remainingTime * 1000);
+      }, retryDelay);
       return;
     }
 
@@ -682,7 +698,15 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
 
         // Check rate limit before each request
         if (TokenService.isCurrentlyRateLimited()) {
-          console.log(`🚫 Stopping queue processing - rate limited during batch`);
+          const remainingTime = TokenService.getRemainingCooldownTime();
+          console.log(
+            `🚫 Stopping queue processing - rate limited during batch (${remainingTime}s remaining)`
+          );
+          // Schedule retry after the rate limit expires
+          setTimeout(() => {
+            console.log('🔄 Resuming queue processing after rate limit');
+            void get().processQueue();
+          }, (remainingTime + 1) * 1000);
           break;
         }
 
@@ -692,7 +716,14 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
 
         if (get().queue.length > 0) {
           // Increase delay to be more conservative with rate limits
-          await new Promise((resolve) => setTimeout(resolve, FETCH_DELAY_MS * 3)); // 300ms instead of 100ms
+          // Use exponential backoff based on queue length to prevent cascading failures
+          const queueLength = get().queue.length;
+          const backoffMultiplier = Math.min(queueLength, 10); // Cap at 10x
+          const delay = FETCH_DELAY_MS * 3 * backoffMultiplier; // 300ms base * backoff
+          console.log(
+            `⏳ Queue processing delay: ${delay}ms (queue: ${queueLength}, backoff: ${backoffMultiplier}x)`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     } catch (error) {

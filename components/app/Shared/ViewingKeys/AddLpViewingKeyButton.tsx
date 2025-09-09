@@ -1,42 +1,47 @@
+import { ConfigToken, LIQUIDITY_PAIRS } from '@/config/tokens';
 import { LpTokenBalanceError } from '@/hooks/useLpTokenBalance';
-import { enhanceSuggestTokenWithDualSetup } from '@/utils/viewingKeys/integrationHelpers';
+import { useViewingKeyModalStore } from '@/store/viewingKeyModalStore';
 import { ExclamationTriangleIcon, PlusIcon } from '@radix-ui/react-icons';
-import React, { useState } from 'react';
+import React from 'react';
 
 interface AddLpViewingKeyButtonProps {
   error: LpTokenBalanceError;
-  onSuggestToken: () => void;
   onSuccess: () => void;
   tokenSymbol: string;
-  tokenAddress?: string; // Optional for dual setup fallback
+  tokenAddress: string; // Required for LP viewing key modal
 }
 
 const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
   error,
-  onSuggestToken,
   onSuccess,
   tokenSymbol,
   tokenAddress,
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const openModal = useViewingKeyModalStore((state) => state.open);
 
-  const handleAction = async () => {
-    setIsProcessing(true);
-    try {
-      if (tokenAddress) {
-        // Enhanced version with dual setup fallback
-        await enhanceSuggestTokenWithDualSetup(tokenAddress, async () => {
-          return Promise.resolve(onSuggestToken());
-        });
-      } else {
-        // Fallback to original behavior
-        onSuggestToken();
-      }
-      onSuccess();
-    } catch (error) {
-      console.error('LP viewing key creation failed:', error);
-    } finally {
-      setIsProcessing(false);
+  // Create a temporary ConfigToken for the LP token to work with the viewing key modal
+  const createLpTokenConfig = (): ConfigToken | null => {
+    const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+    if (!lpPair) {
+      console.warn('LP token not found in LIQUIDITY_PAIRS:', tokenAddress);
+      return null;
+    }
+
+    return {
+      name: `${lpPair.token0}/${lpPair.token1} LP Token`,
+      symbol: tokenSymbol,
+      address: tokenAddress as `secret1${string}`,
+      codeHash: lpPair.lpTokenCodeHash,
+      decimals: 6, // LP tokens typically use 6 decimals
+    };
+  };
+
+  const handleOpenModal = (context: string) => {
+    const lpTokenConfig = createLpTokenConfig();
+    if (lpTokenConfig) {
+      openModal(lpTokenConfig, context, onSuccess);
+    } else {
+      console.error('Cannot open viewing key modal for LP token:', tokenAddress);
     }
   };
 
@@ -48,13 +53,12 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
   if (isMissingKey) {
     return (
       <button
-        onClick={() => void handleAction()}
-        disabled={isProcessing}
-        className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded border border-green-700/50 disabled:opacity-50"
+        onClick={() => handleOpenModal('missing-key')}
+        className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded border border-green-700/50"
         title={`Add viewing key for ${tokenSymbol} LP token`}
       >
         <PlusIcon className="w-3 h-3" />
-        {isProcessing ? 'Adding...' : 'Add LP Key'}
+        Add LP Key
       </button>
     );
   }
@@ -63,9 +67,8 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
   if (isKeyRejected || isLpTokenNotFound) {
     return (
       <button
-        onClick={() => void handleAction()}
-        disabled={isProcessing}
-        className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors bg-orange-900/20 hover:bg-orange-900/30 px-2 py-1 rounded border border-orange-700/50 disabled:opacity-50"
+        onClick={() => handleOpenModal(isLpTokenNotFound ? 'lp-setup' : 'rejected-key')}
+        className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors bg-orange-900/20 hover:bg-orange-900/30 px-2 py-1 rounded border border-orange-700/50"
         title={
           isLpTokenNotFound
             ? `Add ${tokenSymbol} LP token to Keplr wallet`
@@ -73,7 +76,7 @@ const AddLpViewingKeyButton: React.FC<AddLpViewingKeyButtonProps> = ({
         }
       >
         <ExclamationTriangleIcon className="w-3 h-3" />
-        {isProcessing ? 'Setting...' : isLpTokenNotFound ? 'Add LP Token' : 'Fix LP Key'}
+        {isLpTokenNotFound ? 'Add LP Token' : 'Fix LP Key'}
       </button>
     );
   }

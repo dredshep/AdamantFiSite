@@ -1,4 +1,5 @@
 import { TOKENS } from '@/config/tokens';
+import { getSecretClient } from '@/hooks/useSecretNetwork';
 import { useViewingKeyModalStore } from '@/store/viewingKeyModalStore';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import { registerViewingKeyToast } from './smartDismissal';
@@ -121,4 +122,103 @@ export const getLpTokenSymbol = (tokenAddress: string): string => {
   // Could be enhanced later to handle LP tokens more specifically
 
   return 'Token';
+};
+
+/**
+ * Validates and imports an existing viewing key into Keplr
+ * This function validates the viewing key before storing it in Keplr to minimize failed transactions
+ * @param tokenAddress - The token contract address
+ * @param codeHash - The contract code hash
+ * @param viewingKey - The viewing key to validate and import
+ * @param chainId - The chain ID (default: 'secret-4')
+ * @returns Promise<{success: boolean, balance?: string, error?: string}>
+ */
+export const validateAndImportViewingKey = async (
+  tokenAddress: string,
+  codeHash: string,
+  viewingKey: string,
+  chainId: string = 'secret-4'
+): Promise<{ success: boolean; balance?: string; error?: string }> => {
+  if (!viewingKey.trim()) {
+    return { success: false, error: 'Viewing key cannot be empty' };
+  }
+
+  try {
+    // Check Keplr availability
+    if (!window.keplr) {
+      return { success: false, error: 'Keplr wallet not found' };
+    }
+
+    // Get wallet address for direct validation
+    await window.keplr.enable(chainId);
+    const offlineSigner = window.keplr.getOfflineSignerOnlyAmino(chainId);
+    const accounts = await offlineSigner.getAccounts();
+    const walletAddress = accounts[0]?.address;
+
+    if (!walletAddress) {
+      return { success: false, error: 'No wallet address found' };
+    }
+
+    // Step 1: Validate the viewing key by making a direct query to the Secret Network
+    console.log('🔍 Validating viewing key with direct Secret Network query...');
+    console.log('Debug info:', {
+      tokenAddress,
+      codeHash,
+      walletAddress,
+      viewingKeyLength: viewingKey.length,
+      viewingKeyStart: viewingKey.substring(0, 8),
+      viewingKeyEnd: viewingKey.substring(viewingKey.length - 4),
+    });
+
+    try {
+      // Use the centralized SecretNetworkClient for consistency
+      const secretClient = getSecretClient();
+      console.log('Using centralized SecretNetworkClient for validation');
+
+      const response = await secretClient.query.compute.queryContract({
+        contract_address: tokenAddress,
+        code_hash: codeHash,
+        query: {
+          balance: {
+            address: walletAddress,
+            key: viewingKey,
+          },
+        },
+      });
+
+      console.log('Query response:', response);
+
+      // Check if query succeeded and returned balance data
+      if (response && typeof response === 'object' && 'balance' in response) {
+        const balanceData = response as { balance?: { amount?: string } };
+        const balance = balanceData.balance?.amount || '0';
+        console.log('✅ Viewing key validation successful, balance:', balance);
+
+        // Now store the validated key in Keplr
+        console.log('🔐 Storing validated viewing key in Keplr...');
+        await window.keplr.suggestToken(chainId, tokenAddress, viewingKey);
+
+        return { success: true, balance };
+      } else if (response && typeof response === 'object' && 'viewing_key_error' in response) {
+        const errorData = response as { viewing_key_error?: { msg?: string } };
+        const errorMsg = errorData.viewing_key_error?.msg || 'Unknown viewing key error';
+        console.log('❌ Viewing key error:', errorMsg);
+        return { success: false, error: 'Invalid viewing key for this address' };
+      } else {
+        console.log('❌ Unexpected response format:', response);
+        return { success: false, error: 'Unexpected response format from contract' };
+      }
+    } catch (validationError) {
+      console.log('❌ Viewing key validation failed:', validationError);
+      const errorMessage =
+        validationError instanceof Error ? validationError.message : 'Unknown error';
+      return { success: false, error: `Validation failed: ${errorMessage}` };
+    }
+  } catch (error) {
+    console.log('Viewing key import failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Import failed',
+    };
+  }
 };

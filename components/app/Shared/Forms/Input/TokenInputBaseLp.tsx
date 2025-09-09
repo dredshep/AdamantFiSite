@@ -64,12 +64,12 @@ const TokenInputBaseLp: React.FC<TokenInputBaseLpProps> = ({
         <TopRightBalanceLp
           balance={lpTokenData.amount}
           tokenSymbol={tokenSymbol}
+          tokenAddress={tokenAddress}
           hasMax={hasMax}
           inputIdentifier={inputIdentifier}
           loading={lpTokenData.loading}
           error={lpTokenData.error}
           onFetchBalance={() => void lpTokenData.refetch()}
-          onSuggestToken={() => void lpTokenData.suggestToken()}
         />
       </div>
       <div className={INPUT_STYLES.inputRow}>

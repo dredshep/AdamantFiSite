@@ -58,11 +58,11 @@ export const ViewingKeyManager: React.FC<ViewingKeyManagerProps> = ({
       };
     }
 
-    // LP key exists but is invalid (corrupted)
+    // LP key exists but is invalid
     if (!lpState.isValid) {
       return {
         action: 'fix_lp',
-        message: 'LP viewing key is corrupted and needs to be recreated',
+        message: 'LP viewing key is invalid and needs to be recreated',
         canSync: false,
       };
     }
@@ -240,7 +240,19 @@ export const ViewingKeyManager: React.FC<ViewingKeyManagerProps> = ({
 
   return (
     <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-6 border border-adamant-box-border">
-      <h3 className="text-lg font-semibold text-adamant-text-box-main mb-4">Viewing Key Status</h3>
+      <div className="flex items-center gap-2 mb-4">
+        <Key className="h-5 w-5 text-adamant-gradientBright" />
+        <h3 className="text-lg font-semibold text-adamant-text-box-main">Fix Viewing Keys</h3>
+      </div>
+
+      {/* Explanation */}
+      <div className="bg-adamant-box-regular border border-adamant-box-border p-4 rounded-lg mb-4">
+        <p className="text-sm text-adamant-text-box-secondary">
+          <strong className="text-adamant-text-box-main">Viewing keys are required</strong> to
+          access your LP token balance and staking information. For staking to work properly, both
+          your LP token and staking contract need valid viewing keys, and they must be synchronized.
+        </p>
+      </div>
 
       {/* Status Message */}
       <div
@@ -268,36 +280,39 @@ export const ViewingKeyManager: React.FC<ViewingKeyManagerProps> = ({
         {/* Create LP Key Button */}
         {actions.action === 'create_lp' && (
           <button
-            onClick={handleCreateLpKey}
+            onClick={() => void handleCreateLpKey()}
             disabled={isCreatingKey}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-adamant-accentText text-white rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50"
+            title="Create a new viewing key for your LP token to access your balance"
           >
             <Key className="h-4 w-4" />
-            {isCreatingKey ? 'Creating LP Key...' : 'Create LP Viewing Key'}
+            {isCreatingKey ? 'Creating LP Key...' : '🔑 Create LP Viewing Key'}
           </button>
         )}
 
         {/* Fix LP Key Button */}
         {actions.action === 'fix_lp' && (
           <button
-            onClick={handleCreateLpKey}
+            onClick={() => void handleCreateLpKey()}
             disabled={isCreatingKey}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50"
+            title="Replace the invalid LP viewing key with a new one"
           >
             <AlertCircle className="h-4 w-4" />
-            {isCreatingKey ? 'Fixing LP Key...' : 'Fix Corrupted LP Key'}
+            {isCreatingKey ? 'Fixing LP Key...' : '🔧 Fix Invalid LP Key'}
           </button>
         )}
 
         {/* Sync to Staking Button */}
         {actions.action === 'sync_to_staking' && actions.canSync && (
           <button
-            onClick={handleSyncToStaking}
+            onClick={() => void handleSyncToStaking()}
             disabled={isSyncing}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50"
+            title="Copy your LP viewing key to the staking contract so you can access staking features"
           >
             <Copy className="h-4 w-4" />
-            {isSyncing ? 'Syncing Key...' : 'Sync LP Key to Staking'}
+            {isSyncing ? 'Syncing Key...' : '🔄 Sync LP Key to Staking'}
           </button>
         )}
       </div>
@@ -306,7 +321,7 @@ export const ViewingKeyManager: React.FC<ViewingKeyManagerProps> = ({
       {actions.action === 'sync_to_staking' && !actions.canSync && (
         <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
           <p className="text-red-400 text-sm">
-            ⚠️ Cannot sync invalid LP key to staking contract. Fix LP key first.
+            ⚠️ Cannot sync invalid LP key to staking contract. Create a valid LP key first.
           </p>
         </div>
       )}

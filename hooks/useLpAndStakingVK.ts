@@ -128,8 +128,8 @@ export function useLpAndStakingVK(
 
       setLpToken(lpState);
 
-      // Check staking contract viewing key
-      let stakingKey: string | null = null;
+      // Check staking contract viewing key using LP token VK
+      // Staking contracts don't have VKs in Keplr, we use the LP VK to validate
       const stakingState: VKState = {
         isValid: false,
         hasKey: false,
@@ -138,51 +138,45 @@ export function useLpAndStakingVK(
         isLoading: false,
       };
 
-      try {
-        stakingKey = await window.keplr.getSecret20ViewingKey('secret-4', stakingContractAddress);
-        stakingState.hasKey = Boolean(stakingKey);
+      if (lpKey && lpState.isValid) {
+        // Use LP VK to validate staking contract
+        stakingState.hasKey = true; // We "have" the key (it's the LP key)
 
-        if (stakingKey) {
-          // Test if the staking key works by querying balance
-          try {
-            const result = await secretjs.query.compute.queryContract({
-              contract_address: stakingContractAddress,
-              code_hash: stakingInfo.stakingCodeHash,
-              query: { balance: { address: secretjs.address, key: stakingKey } },
-            });
+        try {
+          const result = await secretjs.query.compute.queryContract({
+            contract_address: stakingContractAddress,
+            code_hash: stakingInfo.stakingCodeHash,
+            query: { balance: { address: secretjs.address, key: lpKey } },
+          });
 
-            const typedResult = result as LPStakingQueryAnswer;
-            stakingState.rawResponse = result as LPStakingQueryAnswer | ViewingKeyErrorResponse; // For debugging
+          const typedResult = result as LPStakingQueryAnswer;
+          stakingState.rawResponse = result as LPStakingQueryAnswer | ViewingKeyErrorResponse; // For debugging
 
-            if (isQueryErrorResponse(typedResult)) {
-              stakingState.isValid = false;
-              stakingState.error = typedResult.query_error.msg;
-            } else if (isBalanceResponse(typedResult)) {
-              stakingState.isValid = true;
-              stakingState.balance = typedResult.balance.amount;
-            } else {
-              stakingState.isValid = false;
-              stakingState.error = 'Unknown response format';
-            }
-          } catch (queryError) {
+          if (isQueryErrorResponse(typedResult)) {
             stakingState.isValid = false;
-            stakingState.error = queryError instanceof Error ? queryError.message : 'Query failed';
+            stakingState.error = typedResult.query_error.msg;
+          } else if (isBalanceResponse(typedResult)) {
+            stakingState.isValid = true;
+            stakingState.balance = typedResult.balance.amount;
+          } else {
+            stakingState.isValid = false;
+            stakingState.error = 'Unknown response format';
           }
+        } catch (queryError) {
+          stakingState.isValid = false;
+          stakingState.error = queryError instanceof Error ? queryError.message : 'Query failed';
         }
-      } catch (keplrError) {
-        stakingState.error = keplrError instanceof Error ? keplrError.message : 'Keplr error';
+      } else {
+        // No LP key or LP key is invalid, so staking validation fails
+        stakingState.hasKey = false;
+        stakingState.error = lpState.error || 'No valid LP token viewing key available';
       }
 
       setStakingContract(stakingState);
 
-      // Determine shared key (use LP key if both exist and match)
-      if (lpKey && stakingKey && lpKey === stakingKey) {
-        setSharedKey(lpKey);
-      } else if (lpKey) {
-        setSharedKey(lpKey);
-      } else {
-        setSharedKey(null);
-      }
+      // Determine shared key (always use LP key when available)
+      // Since staking contracts use the LP VK, the shared key is always the LP key
+      setSharedKey(lpKey);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       setLpToken((prev) => ({ ...prev, isLoading: false, error: errorMsg }));

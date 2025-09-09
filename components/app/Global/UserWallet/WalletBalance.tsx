@@ -1,4 +1,6 @@
+import { TOKENS } from '@/config/tokens';
 import { DEFAULT_BALANCE_STATE, useBalanceFetcherStore } from '@/store/balanceFetcherStore';
+import { useViewingKeyModalStore } from '@/store/viewingKeyModalStore';
 import { SecretString } from '@/types';
 import React, { useEffect } from 'react';
 import { RiKeyLine, RiRefreshLine } from 'react-icons/ri';
@@ -18,9 +20,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
     (state) => state.balances[tokenAddress] ?? DEFAULT_BALANCE_STATE
   );
   const addToQueue = useBalanceFetcherStore((state) => state.addToQueue);
-  const suggestToken = useBalanceFetcherStore((state) => state.suggestToken);
-
-  const [isSettingUpViewingKey, setIsSettingUpViewingKey] = React.useState(false);
+  const openViewingKeyModal = useViewingKeyModalStore((state) => state.open);
 
   // Auto-fetch balance when component mounts
   useEffect(() => {
@@ -63,12 +63,16 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
     return num.toFixed(8); // Show more precision in tooltip
   };
 
-  const openKeplrForViewingKey = async () => {
-    setIsSettingUpViewingKey(true);
-    try {
-      await suggestToken(tokenAddress);
-    } finally {
-      setIsSettingUpViewingKey(false);
+  const handleOpenViewingKeyModal = () => {
+    // Find the token configuration
+    const token = TOKENS.find((t) => t.address === tokenAddress);
+    if (token) {
+      openViewingKeyModal(token, 'wallet-balance', () => {
+        // Refresh balance after successful viewing key creation
+        addToQueue(tokenAddress, 'WalletBalance:PostViewingKey');
+      });
+    } else {
+      console.warn('Token not found for viewing key setup:', tokenAddress);
     }
   };
 
@@ -91,13 +95,13 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
         <span className="text-sm text-white font-normal">{tokenSymbol}</span>
       </div>
 
-      {(balanceState.loading || isSettingUpViewingKey) && (
+      {balanceState.loading && (
         <div className="w-3 h-3 border border-adamant-gradientBright border-t-transparent rounded-full animate-spin"></div>
       )}
 
-      {balanceState.needsViewingKey && !isSettingUpViewingKey && (
+      {balanceState.needsViewingKey && (
         <button
-          onClick={() => void openKeplrForViewingKey()}
+          onClick={handleOpenViewingKeyModal}
           className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 hover:text-yellow-300 rounded transition-colors border border-yellow-500/30 whitespace-nowrap flex-shrink-0"
           title="Click to set viewing key in Keplr"
         >
@@ -106,7 +110,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
         </button>
       )}
 
-      {balanceState.error && !balanceState.needsViewingKey && !isSettingUpViewingKey && (
+      {balanceState.error && !balanceState.needsViewingKey && (
         <button
           onClick={handleRefresh}
           className="p-1 text-red-400 hover:text-red-300 transition-colors"
@@ -119,7 +123,6 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({
       {!balanceState.loading &&
         !balanceState.error &&
         !balanceState.needsViewingKey &&
-        !isSettingUpViewingKey &&
         balanceState.balance !== '-' && (
           <button
             onClick={handleRefresh}

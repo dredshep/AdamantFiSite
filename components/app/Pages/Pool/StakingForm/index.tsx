@@ -1,6 +1,6 @@
 import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
-import ViewingKeyStatusComponent from '@/components/common/ViewingKeyStatus';
+import { ViewingKeyFixButton } from '@/components/staking/ViewingKeyFixButton';
 import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
@@ -179,12 +179,27 @@ const StakingForm: React.FC<StakingFormProps> = ({ initialStakingAmount }) => {
           </p>
         </div>
 
-        <ViewingKeyStatusComponent
-          status={viewingKeyStatus}
-          contractAddress={stakingInfo.stakingAddress}
-          onSetupViewingKey={setupViewingKey}
-          isLoading={staking?.isOperationLoading('setupViewingKey') ?? false}
-        />
+        <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-amber-400 font-semibold mb-2 text-lg">Viewing Key Required</h3>
+              <p className="text-amber-300/80 text-sm leading-relaxed">
+                Set up viewing keys to access your staking balance and rewards. This is required to
+                see your LP token balance and staking position.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <ViewingKeyFixButton
+                lpTokenAddress={pairInfo?.lpToken || ''}
+                stakingContractAddress={stakingInfo.stakingAddress}
+                onSyncSuccess={() => {
+                  // Refresh balances after successful sync
+                  void refreshBalances();
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

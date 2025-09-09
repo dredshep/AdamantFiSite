@@ -25,6 +25,12 @@ function mapStringToTokenBalanceError(errorString: string | null): TokenBalanceE
   if (errorString.includes('VIEWING_KEY_INVALID') || errorString.includes('unauthorized'))
     return TokenBalanceError.VIEWING_KEY_INVALID;
   if (errorString.includes('VIEWING_KEY_REJECTED')) return TokenBalanceError.VIEWING_KEY_REJECTED;
+  // Handle LP token viewing key errors
+  if (
+    errorString.includes('LP Token Viewing Key Invalid') ||
+    errorString === 'LP_TOKEN_VIEWING_KEY_CORRUPTED'
+  )
+    return TokenBalanceError.VIEWING_KEY_INVALID;
 
   return TokenBalanceError.UNKNOWN_ERROR;
 }

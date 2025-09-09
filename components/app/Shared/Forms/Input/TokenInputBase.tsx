@@ -1,8 +1,9 @@
 import { useSecretNetwork } from '@/hooks/useSecretNetwork';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { PoolTokenInputs, SecretString, SwapTokenInputs } from '@/types';
 import * as Dialog from '@radix-ui/react-dialog';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { PiApproximateEquals } from 'react-icons/pi';
 import TokenImageWithFallback from '../../TokenImageWithFallback';
 import TopRightBalance from '../../TopRightBalance';
@@ -41,7 +42,31 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
   showEstimatedPrice = false,
 }) => {
   const { secretjs, connect } = useSecretNetwork();
-  const tokenData = useTokenBalance(tokenAddress, `TokenInputBase:${label}`, true);
+
+  // Smart autoFetch decision - only auto-fetch if balance is not recent
+  const balanceState = useBalanceFetcherStore((state) =>
+    tokenAddress ? state.balances[tokenAddress] : null
+  );
+
+  const shouldAutoFetch = useMemo(() => {
+    if (!tokenAddress) return false;
+    if (!balanceState) return true; // No data, so fetch
+
+    // If balance is fresh (less than 10 seconds old), don't auto-fetch to prevent tab switch 429s
+    const isRecent = balanceState.lastUpdated && Date.now() - balanceState.lastUpdated < 10000;
+    if (isRecent) {
+      console.log(
+        `🔄 Skipping autoFetch for ${tokenAddress} in TokenInputBase - recent balance (${
+          Date.now() - balanceState.lastUpdated
+        }ms)`
+      );
+      return false;
+    }
+
+    return true;
+  }, [tokenAddress, balanceState]);
+
+  const tokenData = useTokenBalance(tokenAddress, `TokenInputBase:${label}`, shouldAutoFetch);
 
   // Attempt to connect if not connected
   useEffect(() => {

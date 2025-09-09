@@ -10,10 +10,10 @@ interface TopRightBalanceLpProps {
   loading: boolean;
   error: LpTokenBalanceError | null;
   tokenSymbol: string;
+  tokenAddress: string;
   hasMax?: boolean;
   inputIdentifier?: PoolInputIdentifier;
   onFetchBalance?: () => void;
-  onSuggestToken?: () => void;
   withLabel?: boolean;
 }
 
@@ -22,10 +22,10 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
   loading,
   error,
   tokenSymbol,
+  tokenAddress,
   hasMax = false,
   inputIdentifier,
   onFetchBalance,
-  onSuggestToken,
   withLabel = true,
 }) => {
   const formatBalance = (bal: string | null): string => {
@@ -59,12 +59,6 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
     }
   };
 
-  const handleSuggestClick = () => {
-    if (onSuggestToken) {
-      onSuggestToken();
-    }
-  };
-
   // Show AddLpViewingKeyButton when we have viewing key errors
   const showAddLpKeyButton =
     error &&
@@ -84,9 +78,9 @@ const TopRightBalanceLp: React.FC<TopRightBalanceLpProps> = ({
             {showAddLpKeyButton ? (
               <AddLpViewingKeyButton
                 error={error}
-                onSuggestToken={handleSuggestClick}
                 onSuccess={handleFetchClick}
                 tokenSymbol={tokenSymbol}
+                tokenAddress={tokenAddress}
               />
             ) : (
               <FetchButton

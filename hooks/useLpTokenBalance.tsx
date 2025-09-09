@@ -22,6 +22,7 @@ function mapTokenErrorToLpError(tokenError: TokenBalanceError | null): LpTokenBa
       return LpTokenBalanceError.NO_KEPLR;
     case TokenBalanceError.NO_VIEWING_KEY:
       return LpTokenBalanceError.NO_VIEWING_KEY;
+    case TokenBalanceError.VIEWING_KEY_INVALID:
     case TokenBalanceError.VIEWING_KEY_REJECTED:
       return LpTokenBalanceError.VIEWING_KEY_REJECTED;
     case TokenBalanceError.NO_SECRET_JS:

@@ -438,154 +438,169 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
   }
 
   return (
-    <div className="max-w-7xl mx-auto mt-12 flex flex-col gap-4">
-      <div className="px-2.5">
-        <div className="max-w-full md:max-w-xl mx-auto">
-          {/* Add breadcrumb navigation */}
-          <nav className="text-sm breadcrumbs mb-4">
-            <ol className="flex items-center space-x-2">
-              <li>
-                <button
-                  onClick={() => void router.push('/pools')}
-                  className="text-adamant-text-box-secondary hover:text-adamant-text-box-main"
-                >
-                  Pools
-                </button>
-              </li>
-              <li className="text-adamant-text-box-secondary">/</li>
-              <li className="text-adamant-text-box-main">{stakingInfo.poolName} Staking</li>
-            </ol>
-          </nav>
-        </div>
+    <div className="flex flex-col gap-6">
+      {/* Header Section - Match original design */}
+      <div className="text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          {/* Get LP token info for icons */}
+          {(() => {
+            const lpTokenInfo = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === lpTokenAddress);
+            const token0 = lpTokenInfo
+              ? TOKENS.find((t) => t.symbol === lpTokenInfo.token0)
+              : undefined;
+            const token1 = lpTokenInfo
+              ? TOKENS.find((t) => t.symbol === lpTokenInfo.token1)
+              : undefined;
 
-        {/* Main container with same styling as pool page */}
-        <div className="mt-4 bg-adamant-app-box rounded-xl max-w-full md:max-w-xl mx-auto mb-4">
-          {/* Use the exact same structure as StakingForm */}
-          <div className="flex flex-col gap-6 py-6 px-6 flex-1">
-            {/* Header Section - Match original design */}
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                {/* Get LP token info for icons */}
-                {(() => {
-                  const lpTokenInfo = LIQUIDITY_PAIRS.find(
-                    (pair) => pair.lpToken === lpTokenAddress
-                  );
-                  const token0 = lpTokenInfo
-                    ? TOKENS.find((t) => t.symbol === lpTokenInfo.token0)
-                    : undefined;
-                  const token1 = lpTokenInfo
-                    ? TOKENS.find((t) => t.symbol === lpTokenInfo.token1)
-                    : undefined;
-
-                  return token0 && token1 ? (
-                    <DualTokenIcon
-                      token0Address={token0.address}
-                      token1Address={token1.address}
-                      token0Symbol={token0.symbol}
-                      token1Symbol={token1.symbol}
-                      size={24}
-                    />
-                  ) : (
-                    <TokenImageWithFallback
-                      tokenAddress={stakingContractAddress as SecretString}
-                      size={24}
-                      alt={`${stakingInfo.poolName} staking pool`}
-                    />
-                  );
-                })()}
-                <h2 className="text-xl font-semibold text-adamant-text-box-main">
-                  Staking {stakingInfo.poolName} LP
-                </h2>
-              </div>
-              <p className="text-adamant-text-box-secondary text-sm">
-                Stake your LP tokens to earn{' '}
-                <span className="font-medium text-adamant-accentText">bADMT</span> rewards
-              </p>
-            </div>
-
-            {/* Main Content */}
-            <div className="space-y-6">
-              <StakingOverview
-                stakedBalance={state.userPosition.data?.stakedBalance || null}
-                pendingRewards={state.userPosition.data?.pendingRewards || null}
-                rewardSymbol="bADMT"
-                isLoading={
-                  state.userPosition.status === 'loading' || state.poolData.status === 'loading'
-                }
-                showRefreshButton={true}
-                onRefresh={refreshAllData}
-                isRefreshing={isRefreshing}
-                stakingContractAddress={stakingContractAddress}
-                pairSymbol={stakingInfo.poolName}
-                lpTokenAddress={lpTokenAddress}
+            return token0 && token1 ? (
+              <DualTokenIcon
+                token0Address={token0.address}
+                token1Address={token1.address}
+                token0Symbol={token0.symbol}
+                token1Symbol={token1.symbol}
+                size={24}
               />
+            ) : (
+              <TokenImageWithFallback
+                tokenAddress={stakingContractAddress as SecretString}
+                size={24}
+                alt={`${stakingInfo.poolName} staking pool`}
+              />
+            );
+          })()}
+          <h2 className="text-xl font-semibold text-adamant-text-box-main">
+            Staking {stakingInfo.poolName} LP
+          </h2>
+        </div>
+        <p className="text-adamant-text-box-secondary text-sm">
+          Stake your LP tokens to earn{' '}
+          <span className="font-medium text-adamant-accentText">bADMT</span> rewards
+        </p>
+      </div>
 
-              {/* Staking Input Section - Only show when viewing keys are valid */}
-              {viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid && (
-                <>
-                  <StaticStakingInput
-                    operation="stake"
-                    balance={lpTokenBalance.balance}
-                    balanceLabel="Available LP Balance"
-                    tokenSymbol={stakingInfo.poolName}
-                    stakingContractAddress={stakingContractAddress}
+      {/* Main Content */}
+      <div className="space-y-6">
+        <StakingOverview
+          stakedBalance={state.userPosition.data?.stakedBalance || null}
+          pendingRewards={state.userPosition.data?.pendingRewards || null}
+          rewardSymbol="bADMT"
+          isLoading={state.userPosition.status === 'loading' || state.poolData.status === 'loading'}
+          showRefreshButton={true}
+          onRefresh={refreshAllData}
+          isRefreshing={isRefreshing}
+          stakingContractAddress={stakingContractAddress}
+          pairSymbol={stakingInfo.poolName}
+          lpTokenAddress={lpTokenAddress}
+        />
+
+        {/* Loading state - Show when viewing keys are being checked */}
+        {(viewingKeys.lpToken.isLoading || viewingKeys.stakingContract.isLoading) && (
+          <div className="flex items-center justify-center min-h-[200px] bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl border border-adamant-box-border">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-adamant-accentText mx-auto mb-4"></div>
+              <p className="text-adamant-text-box-secondary">Checking viewing keys...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Fix Key Button - Show when keys need attention */}
+        {/* {(!viewingKeys.lpToken.isValid || !viewingKeys.stakingContract.isValid) &&
+          !viewingKeys.lpToken.isLoading &&
+          !viewingKeys.stakingContract.isLoading && (
+            <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-amber-400 font-semibold mb-2 text-lg">
+                    Viewing Key Required
+                  </h3>
+                  <p className="text-amber-300/80 text-sm leading-relaxed">
+                    Set up viewing keys to access your staking balance and rewards. This is required
+                    to see your LP token balance and staking position.
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <ViewingKeyFixButton
                     lpTokenAddress={lpTokenAddress}
-                    isLoading={lpTokenBalance.isLoading}
-                    initialAmount={prefilledAmount || ''}
-                    onAmountChange={(amount) => {
-                      console.log('Stake amount changed:', amount);
-                      setStakeAmount(amount);
+                    stakingContractAddress={stakingContractAddress}
+                    onSyncSuccess={() => {
+                      // Refresh viewing keys and data after successful sync
+                      viewingKeys.refresh();
+                      setTimeout(() => {
+                        void Promise.allSettled([
+                          fetchPoolData(),
+                          fetchLpTokenBalance(),
+                          fetchUserPosition(),
+                        ]);
+                      }, 1000);
                     }}
                   />
-
-                  {/* Unstaking Section - Show if we have staked tokens */}
-                  {state.userPosition.data?.stakedBalance &&
-                    state.userPosition.data.stakedBalance !== '0' && (
-                      <StaticStakingInput
-                        operation="unstake"
-                        balance={state.userPosition.data.stakedBalance}
-                        balanceLabel="Staked LP Balance"
-                        tokenSymbol={stakingInfo.poolName}
-                        stakingContractAddress={stakingContractAddress}
-                        lpTokenAddress={lpTokenAddress}
-                        isLoading={state.userPosition.status === 'loading'}
-                        onAmountChange={(amount) => {
-                          console.log('Unstake amount changed:', amount);
-                          setUnstakeAmount(amount);
-                        }}
-                      />
-                    )}
-                </>
-              )}
+                </div>
+              </div>
             </div>
+          )} */}
 
-            {/* Action Buttons - Match original layout */}
-            {(() => {
-              console.log('🎯 STAKING PAGE: Viewing key status:', {
-                lpTokenValid: viewingKeys.lpToken.isValid,
-                stakingContractValid: viewingKeys.stakingContract.isValid,
-                shouldShowActions:
-                  viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid,
-              });
-              return null;
-            })()}
-            {viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid && (
-              <div className="mt-auto pt-6">
-                <StakingActions
+        {/* Staking Input Section - Only show when viewing keys are valid */}
+        {viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid && (
+          <>
+            <StaticStakingInput
+              operation="stake"
+              balance={lpTokenBalance.balance}
+              balanceLabel="Available LP Balance"
+              tokenSymbol={stakingInfo.poolName}
+              stakingContractAddress={stakingContractAddress}
+              lpTokenAddress={lpTokenAddress}
+              isLoading={lpTokenBalance.isLoading}
+              initialAmount={prefilledAmount || ''}
+              onAmountChange={(amount) => {
+                console.log('Stake amount changed:', amount);
+                setStakeAmount(amount);
+              }}
+            />
+
+            {/* Unstaking Section - Show if we have staked tokens */}
+            {state.userPosition.data?.stakedBalance &&
+              state.userPosition.data.stakedBalance !== '0' && (
+                <StaticStakingInput
+                  operation="unstake"
+                  balance={state.userPosition.data.stakedBalance}
+                  balanceLabel="Staked LP Balance"
+                  tokenSymbol={stakingInfo.poolName}
                   stakingContractAddress={stakingContractAddress}
                   lpTokenAddress={lpTokenAddress}
-                  canStake={true}
-                  stakeAmount={stakeAmount}
-                  unstakeAmount={unstakeAmount}
-                  onTransactionComplete={() => {
-                    setTimeout(() => void fetchUserPosition(), 2000);
+                  isLoading={state.userPosition.status === 'loading'}
+                  onAmountChange={(amount) => {
+                    console.log('Unstake amount changed:', amount);
+                    setUnstakeAmount(amount);
                   }}
                 />
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+          </>
+        )}
       </div>
+
+      {/* Action Buttons - Match original layout */}
+      {(() => {
+        console.log('🎯 STAKING PAGE: Viewing key status:', {
+          lpTokenValid: viewingKeys.lpToken.isValid,
+          stakingContractValid: viewingKeys.stakingContract.isValid,
+          shouldShowActions: viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid,
+        });
+        return null;
+      })()}
+      {viewingKeys.lpToken.isValid && viewingKeys.stakingContract.isValid && (
+        <div className="mt-auto pt-6">
+          <StakingActions
+            stakingContractAddress={stakingContractAddress}
+            lpTokenAddress={lpTokenAddress}
+            canStake={true}
+            stakeAmount={stakeAmount}
+            unstakeAmount={unstakeAmount}
+            onTransactionComplete={() => {
+              setTimeout(() => void fetchUserPosition(), 2000);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -44,10 +44,11 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   const resolvedLpTokenAddress = lpTokenAddress || stakingInfo?.lpTokenAddress;
 
   // Use the shared viewing key validation hook
-  const { lpToken: lpKeyState, stakingContract: stakingKeyState } = useLpAndStakingVK(
-    resolvedLpTokenAddress || '',
-    stakingContractAddress
-  );
+  const {
+    lpToken: lpKeyState,
+    stakingContract: stakingKeyState,
+    refresh: refreshViewingKeys,
+  } = useLpAndStakingVK(resolvedLpTokenAddress || '', stakingContractAddress);
 
   const isLpKeyValid = lpKeyState.isValid;
   const isStakingKeyValid = stakingKeyState.isValid;
@@ -234,7 +235,8 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
                 lpTokenAddress={resolvedLpTokenAddress}
                 onSyncSuccess={() => {
                   // Refresh viewing key validation after successful sync
-                  // The hook will automatically re-validate both keys
+                  console.log('🔄 Refreshing viewing keys after sync...');
+                  refreshViewingKeys();
                 }}
               />
             )}

@@ -34,7 +34,7 @@ const RATE_LIMIT_WINDOW_MS = 5000; // 5 seconds minimum between calls for the sa
 
 // Global coordination to prevent multiple simultaneous fetches
 const globalFetchState = new Map<string, { isActive: boolean; lastFetch: number }>();
-const FETCH_COORDINATION_WINDOW_MS = 2000; // 2 seconds
+const FETCH_COORDINATION_WINDOW_MS = 10000; // Increased to 10 seconds to better prevent 429 errors
 
 /**
  * Checks if an API call can proceed based on rate limiting rules.
@@ -103,12 +103,18 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
     if (existingState) {
       // If another component is already fetching, skip
       if (existingState.isActive) {
-        console.log('🔄 Skipping fetchStakedBalance - another component is already fetching');
+        const activeTime = now - existingState.lastFetch;
+        console.log(
+          `🔄 Skipping fetchStakedBalance - another component is already fetching (${activeTime}ms active)`
+        );
         return null;
       }
       // If fetched recently, skip
       if (now - existingState.lastFetch < FETCH_COORDINATION_WINDOW_MS) {
-        console.log('🔄 Skipping fetchStakedBalance - fetched recently by another component');
+        const timeSinceFetch = now - existingState.lastFetch;
+        console.log(
+          `🔄 Skipping fetchStakedBalance - fetched recently by another component (${timeSinceFetch}ms ago)`
+        );
         return null;
       }
     }
@@ -404,7 +410,7 @@ export function useStaking({ secretjs, walletAddress, stakingInfo }: UseStakingP
       pollingIntervalRef.current = setInterval(() => {
         void fetchStakedBalance();
         void fetchPendingRewards();
-      }, 10000); // 10 seconds for more responsive updates
+      }, 30000); // 30 seconds to reduce API load and prevent 429 errors
     }, 100); // 100ms debounce
 
     return () => {
