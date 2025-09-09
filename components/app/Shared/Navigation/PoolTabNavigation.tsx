@@ -1,5 +1,6 @@
 import { Breadcrumb } from '@/components/app/Breadcrumb';
 import StakingPoolSelectionModal from '@/components/app/Shared/Forms/Select/StakingPoolSelectionModal';
+import { LIQUIDITY_PAIRS } from '@/config/tokens';
 import {
   getStakingContractInfoByAddress,
   getStakingContractInfoForPool,
@@ -62,9 +63,9 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
         // We need to find the pool address from the staking info
         // This requires looking up the LP token in LIQUIDITY_PAIRS
         if (stakingInfo) {
-          const { LIQUIDITY_PAIRS } = require('@/config/tokens');
           const matchingPair = LIQUIDITY_PAIRS.find(
-            (pair: any) => pair.lpToken === stakingInfo.lpTokenAddress
+            (pair: { lpToken: string; pairContract: string }) =>
+              pair.lpToken === stakingInfo.lpTokenAddress
           );
           return matchingPair?.pairContract;
         }
@@ -79,7 +80,7 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
     if (effectivePoolAddress) {
       const stakingInfo = getStakingContractInfoForPool(effectivePoolAddress);
       if (stakingInfo) {
-        router.push(`/staking/${stakingInfo.stakingAddress}`);
+        void router.push(`/staking/${stakingInfo.stakingAddress}`);
       } else {
         // Show modal for pools without staking
         setShowStakingPoolModal(true);
@@ -95,7 +96,7 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
     lastNavigationRef.current = Date.now();
 
     if (effectivePoolAddress) {
-      router.push(`/pool/${effectivePoolAddress}?tab=deposit`);
+      void router.push(`/pool/${effectivePoolAddress}?tab=deposit`);
     }
   }, [effectivePoolAddress, router]);
 
@@ -104,7 +105,7 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
     lastNavigationRef.current = Date.now();
 
     if (effectivePoolAddress) {
-      router.push(`/pool/${effectivePoolAddress}?tab=withdraw`);
+      void router.push(`/pool/${effectivePoolAddress}?tab=withdraw`);
     }
   }, [effectivePoolAddress, router]);
 
@@ -117,7 +118,7 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
       if (value === 'staking') {
         handleStakingClick();
       } else if (effectivePoolAddress) {
-        router.push(`/pool/${effectivePoolAddress}?tab=${value}`);
+        void router.push(`/pool/${effectivePoolAddress}?tab=${value}`);
       }
     },
     [effectivePoolAddress, router, handleStakingClick]

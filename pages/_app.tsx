@@ -1,4 +1,4 @@
-import { ConfigToken, TOKENS } from '@/config/tokens';
+import { ConfigToken, LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useSwapStore } from '@/store/swapStore';
 import { useTokenStore } from '@/store/tokenStore';
 import '@/styles/globals.css';
@@ -88,7 +88,10 @@ export default function App({ Component, pageProps }: AppProps) {
             break;
           case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
             // For LP tokens, get the symbol from LIQUIDITY_PAIRS
-            const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+            const lpPair = LIQUIDITY_PAIRS.find(
+              (pair: { lpToken: string; token0: string; token1: string }) =>
+                pair.lpToken === tokenAddress
+            );
             const lpTokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1}` : tokenSymbol;
             viewingKeyErrorAggregator.addError({
               tokenAddress,

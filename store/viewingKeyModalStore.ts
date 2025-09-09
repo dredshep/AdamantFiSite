@@ -62,7 +62,7 @@ export const useViewingKeyModalStore = create<ViewingKeyModalState>((set, get) =
 
       // Refresh balances automatically
       const balanceFetcher = useBalanceFetcherStore.getState();
-      balanceFetcher.fetchBalance(token.address, 'viewing-key-success');
+      void balanceFetcher.fetchBalance(token.address, 'viewing-key-success');
 
       // Show success toast
       showToastOnce(`vk-success-${token.address}`, 'Viewing Key Created', 'success', {

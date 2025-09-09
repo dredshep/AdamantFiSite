@@ -19,7 +19,7 @@ const SparklyTab = ({ value, children, poolAddress }: SparklyTabProps) => {
 
       if (stakingInfo) {
         // Navigate to the new staking page
-        router.push(`/staking/${stakingInfo.stakingAddress}`);
+        void router.push(`/staking/${stakingInfo.stakingAddress}`);
       } else {
         console.warn(`No staking contract found for pool: ${poolAddress}`);
       }
