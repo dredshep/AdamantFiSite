@@ -119,9 +119,10 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
     hasStakedTokens && stakedBalance ? rewardEstimates.getUserSharePercentage(stakedBalance) : 0;
 
   // Calculate staked value in USD - only if we have actual staked balance
+  // Note: stakedBalance is already in display format (divided by 1_000_000), so use it directly
   const stakedValueUsd =
     hasStakedTokens && stakedBalance && rewardEstimates.poolData.lpTokenPrice
-      ? (parseFloat(stakedBalance) / 1_000_000) * rewardEstimates.poolData.lpTokenPrice
+      ? parseFloat(stakedBalance) * rewardEstimates.poolData.lpTokenPrice
       : undefined;
 
   // Get LP token information for proper dual icon display

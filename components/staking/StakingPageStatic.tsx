@@ -2,7 +2,7 @@ import StakingOverview from '@/components/app/Pages/Pool/StakingForm/StakingOver
 import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { calculateDailyRewards } from '@/config/staking';
-import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { useLpAndStakingVK } from '@/hooks/useLpAndStakingVK';
 import { getRewardInfo } from '@/lib/keplr/incentives/getRewardInfo';
@@ -195,15 +195,15 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
       });
 
       // Parse results with proper type guards
-      let stakedBalance = '0';
-      let pendingRewards = '0';
+      let stakedBalanceRaw = '0';
+      let pendingRewardsRaw = '0';
 
       // Handle balance result
       const balanceTyped = balanceResult as LPStakingQueryAnswer;
       if (isQueryErrorResponse(balanceTyped)) {
         throw new Error(`Balance query failed: ${balanceTyped.query_error.msg}`);
       } else if (isBalanceResponse(balanceTyped)) {
-        stakedBalance = balanceTyped.balance.amount;
+        stakedBalanceRaw = balanceTyped.balance.amount;
       }
 
       // Handle rewards result
@@ -211,37 +211,41 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
       if (isQueryErrorResponse(rewardsTyped)) {
         throw new Error(`Rewards query failed: ${rewardsTyped.query_error.msg}`);
       } else if (isRewardsResponse(rewardsTyped)) {
-        pendingRewards = rewardsTyped.rewards.rewards;
+        pendingRewardsRaw = rewardsTyped.rewards.rewards;
       }
 
       // Calculate additional metrics manually
+      // Determine decimals using tokens.ts
+      const lpDecimals = LP_TOKENS.find((t) => t.address === lpTokenAddress)?.decimals ?? 6;
+      const rewardDecimals =
+        TOKENS.find((t) => t.symbol === stakingInfo.rewardTokenSymbol)?.decimals ?? 6;
+
+      const lpDenomFactor = Math.pow(10, lpDecimals);
+      const rewardDenomFactor = Math.pow(10, rewardDecimals);
+
+      // Convert raw amounts to display amounts
+      const stakedBalanceDisplay = (parseFloat(stakedBalanceRaw) / lpDenomFactor).toString();
+      const pendingRewardsDisplay = (parseFloat(pendingRewardsRaw) / rewardDenomFactor).toString();
+
+      // Calculate USD value
       let stakedValueUsd: number | undefined;
+      const lpTokenPrice = await getLpTokenPriceUsd(secretjs, lpTokenAddress);
+      if (lpTokenPrice) {
+        stakedValueUsd = (parseFloat(stakedBalanceRaw) / lpDenomFactor) * lpTokenPrice;
+      }
+
+      // Calculate user share percentage and daily earnings
       let userSharePercentage = 0;
       let dailyEarnings: number | undefined;
+      const rewardInfo = await getRewardInfo({ secretjs, lpToken: lpTokenAddress });
+      const totalLocked = parseFloat(rewardInfo.totalLocked) / lpDenomFactor;
+      const userStaked = parseFloat(stakedBalanceRaw) / lpDenomFactor;
 
-      try {
-        // Get LP token price for USD calculation
-        const lpTokenPrice = await getLpTokenPriceUsd(secretjs, lpTokenAddress);
-        if (lpTokenPrice) {
-          stakedValueUsd = (parseFloat(stakedBalance) / 1_000_000) * lpTokenPrice;
-        }
-
-        // Calculate user share percentage
-        const rewardInfo = await getRewardInfo({ secretjs, lpToken: lpTokenAddress });
-        const totalLocked = parseFloat(rewardInfo.totalLocked) / 1_000_000;
-        const userStaked = parseFloat(stakedBalance) / 1_000_000;
-
-        if (totalLocked > 0) {
-          userSharePercentage = (userStaked / totalLocked) * 100;
-
-          // Calculate daily earnings
-          const dailyPoolRewards = calculateDailyRewards();
-          const userShare = userStaked / totalLocked;
-          dailyEarnings = userShare * dailyPoolRewards;
-        }
-      } catch (calculationError) {
-        console.warn('Failed to calculate additional metrics:', calculationError);
-        // Continue without these metrics
+      if (totalLocked > 0) {
+        userSharePercentage = (userStaked / totalLocked) * 100;
+        const dailyPoolRewards = calculateDailyRewards();
+        const userShare = userStaked / totalLocked;
+        dailyEarnings = userShare * dailyPoolRewards;
       }
 
       setState((prev) => ({
@@ -249,8 +253,8 @@ export const StakingPageStatic: React.FC<StakingPageStaticProps> = ({ stakingCon
         userPosition: {
           status: 'success',
           data: {
-            stakedBalance,
-            pendingRewards,
+            stakedBalance: stakedBalanceDisplay,
+            pendingRewards: pendingRewardsDisplay,
             stakedValueUsd,
             userSharePercentage,
             dailyEarnings,

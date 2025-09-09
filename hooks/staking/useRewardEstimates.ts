@@ -1,4 +1,5 @@
 import { calculateDailyRewards } from '@/config/staking';
+import { LP_TOKENS } from '@/config/tokens';
 import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { getRewardInfo } from '@/lib/keplr/incentives/getRewardInfo';
 import { getLpTokenPriceUsd, getTvlUsd } from '@/utils/pricing/lpTokenPricing';
@@ -55,7 +56,10 @@ export function useRewardEstimates(lpTokenAddress: string): UseRewardEstimatesRe
       // Get reward info which includes total locked
       const rewardInfo = await getRewardInfo({ secretjs, lpToken: lpTokenAddress });
       const totalLocked = rewardInfo.totalLocked;
-      const totalLockedFormatted = parseFloat(totalLocked) / 1_000_000; // Convert from raw amount
+      // Convert using LP token decimals from tokens.ts (default to 6)
+      const lpDecimals = LP_TOKENS.find((t) => t.address === lpTokenAddress)?.decimals ?? 6;
+      const denomFactor = Math.pow(10, lpDecimals);
+      const totalLockedFormatted = parseFloat(totalLocked) / denomFactor;
 
       // Get LP token price and TVL
       const lpTokenPrice = await getLpTokenPriceUsd(secretjs, lpTokenAddress);

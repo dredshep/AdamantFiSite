@@ -1,7 +1,7 @@
 import DualTokenIcon from '@/components/app/Shared/DualTokenIcon';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import { ViewingKeyFixButton } from '@/components/staking/ViewingKeyFixButton';
-import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
 import { usePoolStaking } from '@/hooks/usePoolStaking';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { usePoolStore } from '@/store/forms/poolStore';
@@ -64,15 +64,26 @@ const StakingForm: React.FC<StakingFormProps> = ({ initialStakingAmount }) => {
   const rawStakedBalance = staking?.stakedBalance ?? null;
   const rawPendingRewards = staking?.pendingRewards ?? null;
 
-  // Convert staked balance from raw amount to display amount (6 decimals for LP tokens)
+  // Convert staked balance from raw amount to display amount using LP token decimals
   // Only convert if we have actual data - never show '0' when we don't know
-  const stakedBalance =
-    rawStakedBalance !== null ? (parseInt(rawStakedBalance) / 1_000_000).toString() : null;
+  const stakedBalance = (() => {
+    if (rawStakedBalance === null) return null;
+    const decimals = pairInfo?.lpToken
+      ? LP_TOKENS.find((t) => t.address === pairInfo.lpToken)?.decimals ?? 6
+      : 6;
+    const denom = Math.pow(10, decimals);
+    return (parseFloat(rawStakedBalance) / denom).toString();
+  })();
 
-  // Convert pending rewards from raw amount to display amount (6 decimals for bADMT)
+  // Convert pending rewards from raw amount to display amount using reward token decimals
   // Only convert if we have actual data - never show '0' when we don't know
-  const pendingRewards =
-    rawPendingRewards !== null ? (parseInt(rawPendingRewards) / 1_000_000).toString() : null;
+  const pendingRewards = (() => {
+    if (rawPendingRewards === null) return null;
+    const rewardDecimals =
+      TOKENS.find((t) => t.symbol === (stakingInfo?.rewardTokenSymbol ?? ''))?.decimals ?? 6;
+    const denom = Math.pow(10, rewardDecimals);
+    return (parseFloat(rawPendingRewards) / denom).toString();
+  })();
 
   // Check if we have any data loaded (indicating we've completed initial load)
   const hasAnyData =
