@@ -272,7 +272,9 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
         switch (tokenError.type) {
           case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
             get().setNeedsViewingKey(tokenAddress, true);
-            toastManager.viewingKeyRequired();
+            // Get token symbol from config
+            const requiredToken = TOKENS.find((t) => t.address === tokenAddress);
+            toastManager.viewingKeyRequired(tokenAddress, requiredToken?.symbol);
             break;
           case TokenServiceErrorType.VIEWING_KEY_REJECTED:
             get().setNeedsViewingKey(tokenAddress, true);
@@ -289,7 +291,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
             // Extract token symbol for better error message
             const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
             const tokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1}` : undefined;
-            toastManager.lpTokenViewingKeyMismatch(tokenSymbol);
+            toastManager.lpTokenViewingKeyMismatch(tokenSymbol, tokenAddress);
             break;
           case TokenServiceErrorType.NETWORK_ERROR:
             toastManager.networkError();
@@ -298,7 +300,9 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       } else if (error instanceof Error && error.message.toLowerCase().includes('viewing key')) {
         get().setNeedsViewingKey(tokenAddress, true);
         get().setError(tokenAddress, TokenServiceErrorType.VIEWING_KEY_REQUIRED);
-        toastManager.viewingKeyRequired();
+        // Get token symbol from config for fallback viewing key error
+        const fallbackToken = TOKENS.find((t) => t.address === tokenAddress);
+        toastManager.viewingKeyRequired(tokenAddress, fallbackToken?.symbol);
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         get().setError(tokenAddress, errorMessage);

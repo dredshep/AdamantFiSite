@@ -1,4 +1,4 @@
-import { TOKENS } from '@/config/tokens';
+import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
 import { useViewingKeyModalStore } from '@/store/viewingKeyModalStore';
 
 // Toast ID references to prevent duplicates
@@ -43,7 +43,7 @@ const TOAST_COOLDOWN = 10000; // 10 seconds
 
 // Viewing Key Error Aggregation System
 interface ViewingKeyError {
-  tokenAddress: string;
+  tokenAddress: string; // MANDATORY - we must know which token has the problem
   tokenSymbol: string | undefined;
   errorType: 'invalid' | 'corrupted' | 'required' | 'rejected' | 'failed';
   isLpToken: boolean;
@@ -60,16 +60,9 @@ class ViewingKeyErrorAggregator {
   addError(error: ViewingKeyError) {
     console.log('🔄 ViewingKeyErrorAggregator.addError:', error);
 
-    this.errorBuffer.set(error.tokenAddress, error);
-
-    // Reset debounce timer
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-    }
-
-    this.timeoutId = setTimeout(() => {
-      this.flushErrors();
-    }, this.DEBOUNCE_DELAY);
+    // Viewing key error toasts are disabled - users now have inline buttons to create keys
+    console.log('🔇 Viewing key error toasts disabled - returning early');
+    return;
   }
 
   private flushErrors() {
@@ -224,9 +217,18 @@ Your LP token viewing key will be copied to the staking contract when you click 
           : 'All Done',
         onAction: () => {
           if (currentError?.tokenAddress) {
+            console.log('🔍 Fix button clicked for token:', {
+              tokenAddress: currentError.tokenAddress,
+              tokenSymbol: currentError.tokenSymbol,
+              errorType: currentError.errorType,
+            });
+
             // Find token and open dual setup modal
             const token = TOKENS.find((t) => t.address === currentError.tokenAddress);
+            console.log('🔍 Token lookup result:', { found: !!token, token });
+
             if (token) {
+              console.log('✅ Opening ViewingKey modal for token:', token.symbol);
               useViewingKeyModalStore.getState().open(token, 'aggregate-error');
 
               // Move to next error after opening modal
@@ -244,7 +246,33 @@ Your LP token viewing key will be copied to the staking contract when you click 
                 }
               }, 500);
             } else {
-              // Fallback to copy if token not found
+              console.error('❌ Token not found in TOKENS array:', {
+                searchingFor: currentError.tokenAddress,
+                availableTokens: TOKENS.map((t) => ({ symbol: t.symbol, address: t.address })),
+              });
+
+              // Instead of copying, let's try to use the address to find the token differently
+              // First check if this might be an LP token
+              const lpPair = LIQUIDITY_PAIRS?.find(
+                (pair) => pair.lpToken === currentError.tokenAddress
+              );
+              if (lpPair) {
+                console.log('🔍 Found LP token, creating temporary config:', lpPair);
+                const tempLpToken = {
+                  name: `${lpPair.token0}/${lpPair.token1} LP Token`,
+                  symbol: currentError.tokenSymbol || `${lpPair.token0}/${lpPair.token1}`,
+                  address: currentError.tokenAddress as `secret1${string}`,
+                  codeHash: lpPair.lpTokenCodeHash,
+                  decimals: 6,
+                };
+                console.log('✅ Opening ViewingKey modal for LP token:', tempLpToken.symbol);
+                useViewingKeyModalStore.getState().open(tempLpToken, 'aggregate-error');
+                currentIndex++;
+                return;
+              }
+
+              // Still fallback to copy if absolutely nothing works
+              console.warn('⚠️ Falling back to copy address behavior');
               void navigator.clipboard.writeText(currentError.tokenAddress);
               showToastOnce(`token-not-found-${currentIndex}`, 'Token not found', 'warning', {
                 message: `Address copied: ${currentError.tokenAddress}. Please manually add to Keplr.`,
@@ -253,7 +281,7 @@ Your LP token viewing key will be copied to the staking contract when you click 
               currentIndex++;
             }
           } else {
-            // No more addresses to handle
+            console.error('❌ No token address available for Fix action');
             return;
           }
         },
@@ -392,11 +420,11 @@ export const toastManager = {
       autoClose: false,
     }),
 
-  viewingKeyRequired: () => {
+  viewingKeyRequired: (tokenAddress?: string, tokenSymbol?: string) => {
     // Use aggregation system instead of individual toasts
     viewingKeyErrorAggregator.addError({
-      tokenAddress: 'unknown',
-      tokenSymbol: undefined,
+      tokenAddress: tokenAddress || 'unknown',
+      tokenSymbol,
       errorType: 'required',
       isLpToken: false,
       timestamp: Date.now(),
@@ -447,10 +475,10 @@ export const toastManager = {
     });
   },
 
-  lpTokenViewingKeyMismatch: (tokenSymbol?: string) => {
+  lpTokenViewingKeyMismatch: (tokenSymbol?: string, tokenAddress?: string) => {
     // Use aggregation system instead of individual toasts
     viewingKeyErrorAggregator.addError({
-      tokenAddress: 'unknown',
+      tokenAddress: tokenAddress || 'unknown',
       tokenSymbol,
       errorType: 'corrupted',
       isLpToken: true,

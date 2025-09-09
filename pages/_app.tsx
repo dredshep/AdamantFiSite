@@ -62,11 +62,16 @@ export default function App({ Component, pageProps }: AppProps) {
         console.log('Caught unhandled TokenServiceError:', error.message, error.type);
 
         // Show appropriate toast based on error type using aggregation for viewing key errors
+        // Extract token address and symbol from the error
+        const tokenAddress = error.tokenAddress || 'unknown';
+        const token = TOKENS.find((t) => t.address === tokenAddress);
+        const tokenSymbol = token?.symbol;
+
         switch (error.type) {
           case TokenServiceErrorType.VIEWING_KEY_REQUIRED:
             viewingKeyErrorAggregator.addError({
-              tokenAddress: 'unknown',
-              tokenSymbol: undefined,
+              tokenAddress,
+              tokenSymbol,
               errorType: 'required',
               isLpToken: false,
               timestamp: Date.now(),
@@ -74,17 +79,20 @@ export default function App({ Component, pageProps }: AppProps) {
             break;
           case TokenServiceErrorType.VIEWING_KEY_INVALID:
             viewingKeyErrorAggregator.addError({
-              tokenAddress: 'unknown',
-              tokenSymbol: undefined,
+              tokenAddress,
+              tokenSymbol,
               errorType: 'invalid',
               isLpToken: false,
               timestamp: Date.now(),
             });
             break;
           case TokenServiceErrorType.LP_TOKEN_VIEWING_KEY_CORRUPTED:
+            // For LP tokens, get the symbol from LIQUIDITY_PAIRS
+            const lpPair = LIQUIDITY_PAIRS.find((pair) => pair.lpToken === tokenAddress);
+            const lpTokenSymbol = lpPair ? `${lpPair.token0}/${lpPair.token1}` : tokenSymbol;
             viewingKeyErrorAggregator.addError({
-              tokenAddress: 'unknown',
-              tokenSymbol: undefined,
+              tokenAddress,
+              tokenSymbol: lpTokenSymbol,
               errorType: 'corrupted',
               isLpToken: true,
               timestamp: Date.now(),
@@ -92,8 +100,8 @@ export default function App({ Component, pageProps }: AppProps) {
             break;
           case TokenServiceErrorType.VIEWING_KEY_REJECTED:
             viewingKeyErrorAggregator.addError({
-              tokenAddress: 'unknown',
-              tokenSymbol: undefined,
+              tokenAddress,
+              tokenSymbol,
               errorType: 'rejected',
               isLpToken: false,
               timestamp: Date.now(),

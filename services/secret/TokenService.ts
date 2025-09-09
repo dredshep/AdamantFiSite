@@ -42,7 +42,8 @@ export class TokenServiceError extends Error {
     public isRecoverable: boolean = true,
     public suggestedAction?: string,
     public caller?: string,
-    public traceId?: string
+    public traceId?: string,
+    public tokenAddress?: string
   ) {
     super(message);
     this.name = 'TokenServiceError';
@@ -262,7 +263,8 @@ export class TokenService {
           true,
           'Set a viewing key for this token',
           caller,
-          traceId
+          traceId,
+          tokenAddress
         );
       }
     } catch (error) {
@@ -280,7 +282,8 @@ export class TokenService {
           true,
           'Try again and approve the viewing key request',
           caller,
-          traceId
+          traceId,
+          tokenAddress
         );
       } else {
         throw new TokenServiceError(
@@ -289,7 +292,8 @@ export class TokenService {
           true,
           'Try refreshing and attempting again',
           caller,
-          traceId
+          traceId,
+          tokenAddress
         );
       }
     }
@@ -327,7 +331,8 @@ export class TokenService {
         true,
         'The network may be congested. Please wait and try again.',
         caller,
-        traceId
+        traceId,
+        tokenAddress
       );
       this.errorTimestamp = Date.now();
       throw this.lastError;
@@ -393,7 +398,8 @@ export class TokenService {
             true,
             'Use dual setup to create automatically or set custom key',
             caller,
-            traceId
+            traceId,
+            tokenAddress
           );
         }
 
@@ -405,7 +411,8 @@ export class TokenService {
           true,
           'Use dual setup to create automatically or set custom key',
           caller,
-          traceId
+          traceId,
+          tokenAddress
         );
       }
     }
@@ -423,7 +430,8 @@ export class TokenService {
         true,
         'Check if the token contract is working properly',
         caller,
-        traceId
+        traceId,
+        tokenAddress
       );
     }
 
@@ -533,7 +541,8 @@ export class TokenService {
         true,
         'Use dual viewing key setup',
         caller,
-        traceId
+        traceId,
+        tokenAddress
       );
     }
   }

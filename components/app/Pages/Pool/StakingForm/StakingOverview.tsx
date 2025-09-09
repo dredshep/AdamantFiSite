@@ -3,14 +3,16 @@ import { LoadingPlaceholder } from '@/components/app/Shared/LoadingPlaceholder';
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
 import StakingSyncKeyButton from '@/components/app/Shared/ViewingKeys/StakingSyncKeyButton';
 import ViewingKeyDebugDisplay from '@/components/app/Shared/ViewingKeys/ViewingKeyDebugDisplay';
-import { LIQUIDITY_PAIRS, TOKENS } from '@/config/tokens';
+import ViewingKeyMiniCreator from '@/components/app/Shared/ViewingKeys/ViewingKeyMiniCreator';
+import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useLpAndStakingVK } from '@/hooks/useLpAndStakingVK';
 import { SecretString } from '@/types';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
+import { showToastOnce } from '@/utils/toast/toastManager';
 
 import { RefreshCw } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 
 interface StakingOverviewProps {
   stakedBalance: string | null;
@@ -52,6 +54,14 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
 
   const isLpKeyValid = lpKeyState.isValid;
   const isStakingKeyValid = stakingKeyState.isValid;
+
+  // LP Viewing Key Creator modal state
+  const [isLpVkModalOpen, setIsLpVkModalOpen] = useState(false);
+
+  // Get LP token config for viewing key creation
+  const lpTokenConfig = resolvedLpTokenAddress
+    ? LP_TOKENS.find((token) => token.address === resolvedLpTokenAddress)
+    : null;
 
   // Use reward estimates hook if we have LP token address
   const rewardEstimates = useRewardEstimates(resolvedLpTokenAddress || '');
@@ -193,6 +203,19 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
         </div>
       </div>
 
+      {/* LP Viewing Key Button - Show when LP token is invalid */}
+      {!isLpKeyValid && !lpKeyState.isLoading && lpTokenConfig && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setIsLpVkModalOpen(true)}
+            className="px-4 py-2 bg-adamant-gradientBright hover:bg-adamant-gradientDark text-adamant-text-button-form-main rounded-lg transition-colors text-sm font-medium"
+            title="Create viewing key for LP token"
+          >
+            Add LP viewing key
+          </button>
+        </div>
+      )}
+
       {/* Debug component - Only visible in development mode */}
       <ViewingKeyDebugDisplay isLpKeyValid={isLpKeyValid} isStakingKeyValid={isStakingKeyValid} />
 
@@ -296,6 +319,30 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* LP Viewing Key Creator Modal */}
+      {lpTokenConfig && (
+        <ViewingKeyMiniCreator
+          token={lpTokenConfig}
+          isOpen={isLpVkModalOpen}
+          onClose={() => setIsLpVkModalOpen(false)}
+          onSuccess={() => {
+            setIsLpVkModalOpen(false);
+            showToastOnce('lp-vk-created', 'LP Viewing Key Created', 'success', {
+              message: `Successfully created viewing key for ${lpTokenConfig.symbol}`,
+              autoClose: 3000,
+            });
+            // Refresh viewing keys
+            refreshViewingKeys();
+          }}
+          onError={(error) => {
+            showToastOnce('lp-vk-error', 'Error Creating LP Key', 'error', {
+              message: error.message,
+              autoClose: 5000,
+            });
+          }}
+        />
       )}
     </div>
   );
