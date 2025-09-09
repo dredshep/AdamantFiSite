@@ -1,5 +1,8 @@
 import TokenImageWithFallback from '@/components/app/Shared/TokenImageWithFallback';
+import { TOKENS } from '@/config/tokens';
+import { useAllTokensPricing } from '@/hooks/useCoinGeckoPricing';
 import { useLoadBalancePreference } from '@/hooks/useLoadBalancePreference';
+import { useNativeSCRTBalance } from '@/hooks/useNativeSCRTBalance';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { useWalletTotalValue } from '@/hooks/useWalletTotalValue';
 import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
@@ -9,7 +12,7 @@ import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
 import { isPricingEnabled } from '@/utils/features';
 import { showToastOnce } from '@/utils/toast/toastManager';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HiQrCode } from 'react-icons/hi2';
 import {
   RiArrowRightSLine,
@@ -30,10 +33,66 @@ const WalletSidebar: React.FC = () => {
   const { address } = useWalletStore();
   const { listAllTokens } = useTokenStore();
   const { fetchAllBalances, isProcessingQueue } = useBalanceFetcherStore();
+  const allBalances = useBalanceFetcherStore((state) => state.balances);
   const loadBalanceConfig = useLoadBalancePreference();
 
   const walletBalance = useWalletBalance();
   const walletTotal = isPricingEnabled() ? useWalletTotalValue() : null;
+  const nativeScrt = useNativeSCRTBalance();
+  const pricingState = isPricingEnabled() ? useAllTokensPricing(TOKENS) : null;
+
+  // Computation kept for future use but currently unused
+  useMemo(() => {
+    if (!isPricingEnabled() || !pricingState) {
+      return {
+        totalUSDComputed: 0,
+        totalSCRTComputed: 0,
+        change24hPercentComputed: 0,
+      };
+    }
+
+    const { pricing } = pricingState;
+    const sScrtPrice = (pricing['sSCRT']?.price ?? walletBalance.scrtPrice) || 0;
+    const sScrtChange = pricing['sSCRT']?.change24h ?? 0;
+
+    let currentUSD = 0;
+    let previousUSD = 0;
+
+    // Include native SCRT
+    const nativeBalanceNum = parseFloat(nativeScrt.balance || '0');
+    if (!Number.isNaN(nativeBalanceNum) && nativeBalanceNum > 0 && sScrtPrice > 0) {
+      const prev = sScrtPrice / (1 + sScrtChange / 100);
+      currentUSD += nativeBalanceNum * sScrtPrice;
+      previousUSD += nativeBalanceNum * prev;
+    }
+
+    // Include SNIP-20 tokens
+    TOKENS.forEach((token) => {
+      const balStr = allBalances[token.address]?.balance;
+      const hasBalance = typeof balStr === 'string' && balStr !== '-' && balStr.trim().length > 0;
+      const priceInfo = pricing[token.symbol];
+      if (!hasBalance || !priceInfo) return;
+
+      const balNum = parseFloat(balStr);
+      if (Number.isNaN(balNum) || balNum <= 0) return;
+
+      const tokenPrice = priceInfo.price;
+      const prev = tokenPrice / (1 + (priceInfo.change24h ?? 0) / 100);
+      currentUSD += balNum * tokenPrice;
+      previousUSD += balNum * prev;
+    });
+
+    const changePct = previousUSD > 0 ? ((currentUSD - previousUSD) / previousUSD) * 100 : 0;
+    const totalSCRT = sScrtPrice > 0 ? currentUSD / sScrtPrice : 0;
+
+    // Debug logging removed for production
+
+    return {
+      totalUSDComputed: currentUSD,
+      totalSCRTComputed: totalSCRT,
+      change24hPercentComputed: changePct,
+    };
+  }, [allBalances, nativeScrt.balance, pricingState, walletBalance.scrtPrice, isPricingEnabled()]);
 
   // DEBUG: Log wallet balance calculation details
   React.useEffect(() => {
@@ -199,58 +258,6 @@ const WalletSidebar: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Native SCRT Balance Display */}
-                <div className="text-left py-4">
-                  {walletBalance.loading ? (
-                    <div className="text-2xl font-medium text-white">Loading balance...</div>
-                  ) : (
-                    <>
-                      {/* Total USD Value - Only show if pricing is enabled and we have a valid price */}
-                      {isPricingEnabled() &&
-                        walletBalance.scrtPrice > 0 &&
-                        !walletBalance.error && (
-                          <div className="flex items-end gap-3 mb-1">
-                            <div className="text-4xl font-medium text-white">
-                              ${walletBalance.totalUsdValue.toFixed(2)}
-                            </div>
-                            {walletTotal && !walletTotal.loading && (
-                              <div
-                                className={`mb-1 text-sm font-medium ${
-                                  walletTotal.change24hPercent >= 0
-                                    ? 'text-green-400'
-                                    : 'text-red-400'
-                                }`}
-                              >
-                                {walletTotal.change24hPercent >= 0 ? '+' : ''}
-                                {walletTotal.change24hPercent.toFixed(2)}%
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                      {/* SCRT Equivalent - Show when pricing is enabled, otherwise show placeholder */}
-                      <div
-                        className={`${
-                          isPricingEnabled() && walletBalance.scrtPrice > 0 && !walletBalance.error
-                            ? 'text-base'
-                            : 'text-4xl'
-                        } text-white font-medium`}
-                      >
-                        {isPricingEnabled() && walletBalance.scrtPrice > 0 && !walletBalance.error
-                          ? `${walletBalance.scrtEquivalent} SCRT`
-                          : 'Connect for pricing'}
-                      </div>
-
-                      {/* Error display */}
-                      {walletBalance.error && (
-                        <div className="text-sm text-red-400 mt-2">
-                          Error: {walletBalance.error}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
                 {/* Action buttons */}
                 <div className="flex gap-3 pt-2">
                   <button
@@ -351,6 +358,86 @@ const WalletSidebar: React.FC = () => {
                     className=""
                     style={{ scrollbarWidth: 'thin', scrollbarColor: '#8A754A #1a1a2e' }}
                   >
+                    {/* Native SCRT row */}
+                    <div className="group flex justify-between items-center hover:bg-white hover:bg-opacity-5 py-3 pl-6 transition-all duration-200">
+                      <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
+                        <TokenImageWithFallback
+                          tokenAddress={
+                            TOKENS.find((t) => t.symbol === 'sSCRT')?.address ??
+                            'secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek'
+                          }
+                          size={40}
+                          alt="SCRT"
+                          className="rounded-lg flex-shrink-0"
+                        />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-semibold text-white group-hover:text-white transition-colors text-base">
+                            SCRT
+                          </span>
+                          <span className="text-sm text-adamant-text-box-secondary leading-tight">
+                            Secret (native)
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex flex-col items-end gap-1 relative">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base font-sans text-white font-medium">
+                                {(() => {
+                                  const num = parseFloat(nativeScrt.balance || '0');
+                                  if (Number.isNaN(num)) return '0';
+                                  if (num === 0) return '0';
+                                  if (num < 0.000001) return '< 0.000001';
+                                  return num.toFixed(6);
+                                })()}
+                              </span>
+                              <span className="text-sm text-white font-normal">SCRT</span>
+                            </div>
+                          </div>
+                          {isPricingEnabled() && pricingState && (
+                            <div className="flex flex-col items-end text-right">
+                              <span className="text-sm font-medium text-white">
+                                {(() => {
+                                  const price =
+                                    pricingState.pricing['sSCRT']?.price ??
+                                    walletBalance.scrtPrice ??
+                                    0;
+                                  const bal = parseFloat(nativeScrt.balance || '0');
+                                  const usd =
+                                    !Number.isNaN(bal) && bal > 0 && price > 0 ? bal * price : 0;
+                                  return usd > 0 ? `$${usd.toFixed(2)}` : '—';
+                                })()}
+                              </span>
+                              {(() => {
+                                const ch = pricingState.pricing['sSCRT']?.change24h;
+                                if (typeof ch !== 'number') return null;
+                                const cls = ch >= 0 ? 'text-green-400' : 'text-red-400';
+                                const sign = ch >= 0 ? '+' : '';
+                                return (
+                                  <span className={`text-xs ${cls}`}>{`${sign}${ch.toFixed(
+                                    2
+                                  )}%`}</span>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="w-8 flex justify-center">
+                          <button
+                            onClick={() => nativeScrt.refetch()}
+                            className="p-1 text-adamant-text-box-secondary hover:text-white transition-colors"
+                            title="Refresh balance"
+                          >
+                            <RiRefreshLine
+                              className={`w-3 h-3 ${nativeScrt.loading ? 'animate-spin' : ''}`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                     {tokens.map((token, index) => (
                       <TokenListItem key={index} token={token} />
                     ))}

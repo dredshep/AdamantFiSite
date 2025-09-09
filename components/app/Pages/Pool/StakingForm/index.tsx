@@ -52,7 +52,7 @@ const StakingForm: React.FC<StakingFormProps> = ({ initialStakingAmount }) => {
     staking,
     stakingInfo,
     viewingKeyStatus,
-    setupViewingKey,
+    // setupViewingKey, // Currently unused
     stakeLpTokens,
     unstakeLpTokens,
     claimRewards,

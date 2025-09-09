@@ -48,7 +48,7 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
 
   // Track recent navigation to prevent only API calls, not navigation itself
   const lastNavigationRef = useRef<number>(0);
-  const RAPID_NAV_THRESHOLD_MS = 500; // Only prevent rapid API calls, not navigation
+  // const RAPID_NAV_THRESHOLD_MS = 500; // Only prevent rapid API calls, not navigation - currently unused
 
   // Determine breadcrumb text
   const breadcrumbText = isStakingPage ? `${poolName} Staking` : `${token0Symbol}-${token1Symbol}`;
@@ -244,7 +244,10 @@ const PoolTabNavigation: React.FC<PoolTabNavigationProps> = ({
       {/* Staking Pool Selection Modal */}
       <Dialog.Root open={showStakingPoolModal} onOpenChange={setShowStakingPoolModal}>
         <Dialog.Portal>
-          <StakingPoolSelectionModal onClose={() => setShowStakingPoolModal(false)} />
+          <StakingPoolSelectionModal
+            isOpen={showStakingPoolModal}
+            onClose={() => setShowStakingPoolModal(false)}
+          />
         </Dialog.Portal>
       </Dialog.Root>
     </>

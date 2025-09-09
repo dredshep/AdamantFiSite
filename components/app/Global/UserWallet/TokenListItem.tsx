@@ -93,7 +93,12 @@ export const TokenListItem = ({ token }: TokenListItemProps) => {
             )}
           </div>
           {isPricingEnabled() && (
-            <TokenPriceDisplay coingeckoId={token.coingeckoId} className="text-right" />
+            <TokenPriceDisplay
+              coingeckoId={token.coingeckoId}
+              tokenAddress={token.address}
+              tokenSymbol={token.symbol}
+              className="text-right"
+            />
           )}
         </div>
 
