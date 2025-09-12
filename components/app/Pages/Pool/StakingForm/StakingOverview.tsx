@@ -7,6 +7,7 @@ import ViewingKeyMiniCreator from '@/components/app/Shared/ViewingKeys/ViewingKe
 import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
 import { useLpAndStakingVK } from '@/hooks/useLpAndStakingVK';
+import { usePoolData } from '@/hooks/usePoolData';
 import { SecretString } from '@/types';
 import { getStakingContractInfo } from '@/utils/staking/stakingRegistry';
 import { showToastOnce } from '@/utils/toast/toastManager';
@@ -44,6 +45,15 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
     ? getStakingContractInfo(stakingContractAddress)
     : null;
   const resolvedLpTokenAddress = lpTokenAddress || stakingInfo?.lpTokenAddress;
+
+  // Get pool address from LP token address for TVL data
+  const lpTokenInfo = resolvedLpTokenAddress
+    ? LIQUIDITY_PAIRS.find((pair) => pair.lpToken === resolvedLpTokenAddress)
+    : null;
+  const poolAddress = lpTokenInfo?.pairContract;
+
+  // Use pool data hook to get the correct pool TVL (not just staked TVL)
+  const poolData = usePoolData(poolAddress || '', 'StakingOverview');
 
   // Use the shared viewing key validation hook
   const {
@@ -125,10 +135,7 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
       ? parseFloat(stakedBalance) * rewardEstimates.poolData.lpTokenPrice
       : undefined;
 
-  // Get LP token information for proper dual icon display
-  const lpTokenInfo = resolvedLpTokenAddress
-    ? LIQUIDITY_PAIRS.find((pair) => pair.lpToken === resolvedLpTokenAddress)
-    : null;
+  // Get token information for dual icons (already defined above as lpTokenInfo)
 
   // Get token information for dual icons
   const token0 = lpTokenInfo ? TOKENS.find((t) => t.symbol === lpTokenInfo.token0) : undefined;
@@ -170,10 +177,10 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
           <div>
             <p className="text-adamant-text-box-secondary">TVL</p>
             <div className="font-medium text-adamant-text-box-main">
-              {rewardEstimates.poolData.isLoading ? (
+              {poolData.tvlLoading ? (
                 <LoadingPlaceholder size="small" />
               ) : (
-                formatUsd(rewardEstimates.poolData.tvlUsd)
+                formatUsd(poolData.tvl ?? undefined)
               )}
             </div>
           </div>
