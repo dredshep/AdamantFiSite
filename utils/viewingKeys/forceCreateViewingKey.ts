@@ -1,4 +1,4 @@
-import { BroadcastMode, SecretNetworkClient, TxResultCode } from 'secretjs';
+import { SecretNetworkClient, TxResultCode } from 'secretjs';
 
 // Types for query responses
 interface BalanceResponse {
@@ -150,9 +150,6 @@ export async function forceCreateViewingKey(
       },
       {
         gasLimit,
-        broadcastCheckIntervalMs: 1000,
-        broadcastTimeoutMs: 60_000,
-        broadcastMode: BroadcastMode.Sync,
       }
     );
 
