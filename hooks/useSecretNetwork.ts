@@ -146,7 +146,7 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
     await withRetry(() => keplr.enable(chainId));
 
     const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
-    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, chainId);
+    const encryptionUtils = keplr.getEnigmaUtils(chainId);
     const accounts = await withRetry(() => offlineSigner.getAccounts());
 
     if (!accounts[0]) {
@@ -162,6 +162,45 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
     });
   } catch (error) {
     console.error('Failed to create wallet client:', error);
+    return null;
+  }
+}
+
+// Function to create wallet-connected client with internal encryption utils (for transactions)
+export async function createWalletClientWithInternalUtils(): Promise<SecretNetworkClient | null> {
+  try {
+    const keplr = (window as unknown as KeplrWindow).keplr;
+    if (!keplr) {
+      throw new Error('Keplr not installed');
+    }
+
+    const env = getSecretNetworkEnvVars();
+    const chainId = env.CHAIN_ID;
+
+    // Suggest chain info for pulsar-3 with retry
+    if (chainId === 'pulsar-3') {
+      await withRetry(() => keplr.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
+    }
+
+    await withRetry(() => keplr.enable(chainId));
+
+    const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
+    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, chainId);
+    const accounts = await withRetry(() => offlineSigner.getAccounts());
+
+    if (!accounts[0]) {
+      throw new Error('No accounts found');
+    }
+
+    return new SecretNetworkClient({
+      chainId,
+      url: env.LCD_URL,
+      wallet: offlineSigner,
+      walletAddress: accounts[0].address,
+      encryptionUtils: encryptionUtils,
+    });
+  } catch (error) {
+    console.error('Failed to create wallet client with internal utils:', error);
     return null;
   }
 }
@@ -303,7 +342,7 @@ async function connectKeplr(): Promise<void> {
     updateGlobalState({ keplr: keplrInstance });
 
     const offlineSigner = keplrInstance.getOfflineSignerOnlyAmino(env.CHAIN_ID);
-    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, env.CHAIN_ID);
+    const encryptionUtils = keplrInstance.getEnigmaUtils(env.CHAIN_ID);
 
     if (typeof offlineSigner === 'undefined' || offlineSigner === null) {
       console.error('No offline signer found');

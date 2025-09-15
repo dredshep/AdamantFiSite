@@ -1,6 +1,7 @@
+import { createWalletClientWithInternalUtils } from '@/hooks/useSecretNetwork';
 import { SecretString } from '@/types';
-import { TxResultCode } from 'secretjs';
-import { initKeplr } from './initKeplr';
+import { SecretNetworkClient, TxResultCode } from 'secretjs';
+import { waitForKeplr } from './keplrDetection';
 
 interface SendTokensParams {
   fromAddress: SecretString;
@@ -11,7 +12,26 @@ interface SendTokensParams {
 
 export const sendTokens = async ({ fromAddress, toAddress, amount, denom }: SendTokensParams) => {
   try {
-    const { secretjs } = await initKeplr();
+    const keplr = await waitForKeplr(2300);
+    if (!keplr) {
+      throw new Error('Please install Keplr extension');
+    }
+
+    // Use internal encryption utils for transactions
+    let secretjs: SecretNetworkClient;
+    try {
+      const client = await createWalletClientWithInternalUtils();
+      if (!client) {
+        throw new Error('Failed to initialize SecretJS client');
+      }
+      secretjs = client;
+    } catch (error) {
+      throw new Error(
+        `Failed to create SecretJS client: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
 
     let finalAmount = amount;
     if (denom === 'uscrt') {
