@@ -4,7 +4,6 @@ import { useAllTokensPricing } from '@/hooks/useCoinGeckoPricing';
 import { useLoadBalancePreference } from '@/hooks/useLoadBalancePreference';
 import { useNativeSCRTBalance } from '@/hooks/useNativeSCRTBalance';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
-import { useWalletTotalValue } from '@/hooks/useWalletTotalValue';
 import { useBalanceFetcherStore } from '@/store/balanceFetcherStore';
 import { useModalStore } from '@/store/modalStore';
 import { useTokenStore } from '@/store/tokenStore';
@@ -37,7 +36,6 @@ const WalletSidebar: React.FC = () => {
   const loadBalanceConfig = useLoadBalancePreference();
 
   const walletBalance = useWalletBalance();
-  const walletTotal = isPricingEnabled() ? useWalletTotalValue() : null;
   const nativeScrt = useNativeSCRTBalance();
   const pricingState = isPricingEnabled() ? useAllTokensPricing(TOKENS) : null;
 
