@@ -55,11 +55,7 @@ const TokenInputBase: React.FC<TokenInputBaseProps> = ({
     // If balance is fresh (less than 10 seconds old), don't auto-fetch to prevent tab switch 429s
     const isRecent = balanceState.lastUpdated && Date.now() - balanceState.lastUpdated < 10000;
     if (isRecent) {
-      console.log(
-        `🔄 Skipping autoFetch for ${tokenAddress} in TokenInputBase - recent balance (${
-          Date.now() - balanceState.lastUpdated
-        }ms)`
-      );
+      // AutoFetch skip logging removed to reduce console spam
       return false;
     }
 

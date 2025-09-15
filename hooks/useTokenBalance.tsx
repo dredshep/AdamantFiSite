@@ -108,17 +108,7 @@ export function useTokenBalance(
 
   // Auto-fetch balance when component mounts (if enabled)
   useEffect(() => {
-    console.log('🔍 useTokenBalance effect triggered:', {
-      autoFetch,
-      tokenAddress,
-      caller,
-      balanceState: {
-        balance: balanceState.balance,
-        lastUpdated: balanceState.lastUpdated,
-        loading: balanceState.loading,
-        error: balanceState.error,
-      },
-    });
+    // useTokenBalance effect debug logging removed to reduce console spam
 
     if (autoFetch && tokenAddress) {
       // First check if globalFetcherStore has this balance already

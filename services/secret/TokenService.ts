@@ -199,12 +199,7 @@ export class TokenService {
       );
     }
 
-    console.log('TokenService.getBalance - Starting balance fetch:', {
-      tokenAddress,
-      codeHash,
-      walletAddress,
-      hasRejectedKey: this.rejectedViewingKeys.has(tokenAddress),
-    });
+    // Debug logging removed to reduce console spam
 
     if (this.rejectedViewingKeys.has(tokenAddress)) {
       const truncatedAddress = safeTruncateAddress(tokenAddress);
@@ -231,21 +226,10 @@ export class TokenService {
     // if a key is required but not found after attempting to set it.
     let viewingKey: string | null = null;
     try {
-      console.log('TokenService.getBalance - About to get viewing key from Keplr');
+      // Get viewing key from Keplr (debug logging removed)
       viewingKey = await keplr.getSecret20ViewingKey('secret-4', tokenAddress).catch(() => null);
-      console.log('TokenService.getBalance - Got viewing key from Keplr');
 
-      // DEBUG: Log the actual viewing key details
-      console.log(`[DEBUG] Viewing key for ${tokenAddress}:`, {
-        keyExists: !!viewingKey,
-        keyType: typeof viewingKey,
-        keyLength: viewingKey?.length || 0,
-        keyPreview: viewingKey
-          ? `${viewingKey.substring(0, 8)}...${viewingKey.substring(viewingKey.length - 4)}`
-          : 'null',
-        caller,
-        traceId,
-      });
+      // Viewing key debug logging removed to reduce console spam
 
       if (typeof viewingKey !== 'string' || viewingKey.length === 0) {
         console.log(`[DEBUG] Invalid viewing key detected:`, {
@@ -314,13 +298,10 @@ export class TokenService {
         auth: { key: viewingKey },
       };
 
-      console.log('TokenService.getBalance - Query parameters:', {
-        tokenAddress: queryParams.contract.address,
-        walletAddress: queryParams.address,
-      });
+      // Query parameters debug logging removed
 
       response = await this.throttledQuery(queryParams);
-      console.log('TokenService.getBalance - Raw response:', response);
+      // Raw response debug logging removed
     } catch (error) {
       console.error(
         `TokenService.getBalance - A fatal network/query error occurred for token ${tokenAddress}:`,

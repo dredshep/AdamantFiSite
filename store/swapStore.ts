@@ -117,12 +117,7 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
       (token) => token.address !== otherTokenAddress
     );
 
-    console.log('🔄 Token selection for multihop:', {
-      inputIdentifier,
-      otherTokenAddress,
-      availableTokensCount: availableTokens.length,
-      totalTokens: state.swappableTokens.length,
-    });
+    // Debug logging removed to reduce console spam
 
     return availableTokens;
   },

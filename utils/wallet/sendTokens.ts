@@ -33,14 +33,57 @@ export const sendTokens = async ({ fromAddress, toAddress, amount, denom }: Send
       );
     }
 
+    // Debug: Log the received parameters
+    console.log('🔍 SEND TOKENS DEBUG - Input parameters:', {
+      fromAddress,
+      toAddress,
+      amount,
+      denom,
+      amountType: typeof amount,
+      amountLength: amount.length,
+      amountTrimmed: amount.trim(),
+    });
+
     let finalAmount = amount;
     if (denom === 'uscrt') {
-      const scrtAmount = parseFloat(amount);
+      const trimmedAmount = amount.trim();
+      const scrtAmount = parseFloat(trimmedAmount);
+
+      console.log('🔍 SEND TOKENS DEBUG - SCRT conversion:', {
+        originalAmount: amount,
+        trimmedAmount,
+        scrtAmount,
+        isNaN: isNaN(scrtAmount),
+        multiplication: scrtAmount * 1_000_000,
+        mathFloor: Math.floor(scrtAmount * 1_000_000),
+      });
+
       if (isNaN(scrtAmount)) {
-        throw new Error('Invalid amount format');
+        throw new Error(`Invalid amount format: "${amount}"`);
       }
+
+      if (scrtAmount <= 0) {
+        throw new Error(`Amount must be greater than 0: ${scrtAmount}`);
+      }
+
       finalAmount = Math.floor(scrtAmount * 1_000_000).toString();
     }
+
+    console.log('🔍 SEND TOKENS DEBUG - Final transaction data:', {
+      finalAmount,
+      finalAmountType: typeof finalAmount,
+      denom,
+      transactionData: {
+        from_address: fromAddress,
+        to_address: toAddress,
+        amount: [
+          {
+            amount: finalAmount,
+            denom,
+          },
+        ],
+      },
+    });
 
     const tx = await secretjs.tx.bank.send(
       {

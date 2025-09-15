@@ -94,18 +94,7 @@ const WalletSidebar: React.FC = () => {
     };
   }, [allBalances, nativeScrt.balance, pricingState, walletBalance.scrtPrice, isPricingEnabled()]);
 
-  // DEBUG: Log wallet balance calculation details
-  React.useEffect(() => {
-    if (walletTotal && !walletTotal.loading) {
-      console.log('🏦 WALLET SIDEBAR DEBUG:', {
-        totalUSD: walletTotal.totalUSD,
-        loading: walletTotal.loading,
-        error: walletTotal.error,
-        walletBalanceTotalUSD: walletBalance.totalUsdValue,
-        scrtPrice: walletBalance.scrtPrice,
-      });
-    }
-  }, [walletTotal, walletBalance]);
+  // Debug logging removed to reduce console spam
   const tokens = listAllTokens() ?? [];
   const sidebarRef = useRef<HTMLElement>(null);
 

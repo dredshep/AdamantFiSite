@@ -241,17 +241,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
       const decimals = token.decimals;
       const humanBalance = (Number(rawBalance) / Math.pow(10, decimals)).toString();
 
-      // Enhanced debug logging for balance conversion
-      console.log(`🔧 BALANCE CONVERSION DEBUG [${token.symbol}]:`, {
-        tokenSymbol: token.symbol,
-        tokenAddress,
-        rawBalance,
-        decimals,
-        calculation: `${Number(rawBalance)} / 10^${decimals} = ${humanBalance}`,
-        humanBalance,
-        numberCheck: Number(rawBalance),
-        powCheck: Math.pow(10, decimals),
-      });
+      // Balance conversion debug logging removed to reduce console spam
 
       get().setBalance(tokenAddress, humanBalance);
     } catch (error: unknown) {
@@ -724,9 +714,7 @@ export const useBalanceFetcherStore = create<BalanceFetcherState>((set, get) => 
           const queueLength = get().queue.length;
           const backoffMultiplier = Math.min(queueLength, 10); // Cap at 10x
           const delay = FETCH_DELAY_MS * 3 * backoffMultiplier; // 300ms base * backoff
-          console.log(
-            `⏳ Queue processing delay: ${delay}ms (queue: ${queueLength}, backoff: ${backoffMultiplier}x)`
-          );
+          // Queue processing delay logging removed to reduce console spam
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }

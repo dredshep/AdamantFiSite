@@ -71,11 +71,7 @@ export const useSwapFormLean = () => {
         const estimationPayToken = payToken?.symbol;
         const estimationReceiveToken = receiveToken?.symbol;
 
-        console.log('=== Starting Enhanced Estimation Process ===', {
-          amount: estimationAmount,
-          payToken: estimationPayToken,
-          receiveToken: estimationReceiveToken,
-        });
+        // Enhanced estimation process debug logging removed
 
         // Set default "0" when conditions aren't met
         if (!secretjs) {
@@ -89,7 +85,7 @@ export const useSwapFormLean = () => {
           payDetails.amount === '' ||
           payDetails.amount === '0'
         ) {
-          console.log('❌ Estimation failed: no pay amount or amount is zero');
+          // Estimation failed logging removed
           resetAndSetIsEstimating(false);
           return;
         }

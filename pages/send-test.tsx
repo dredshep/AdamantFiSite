@@ -42,6 +42,7 @@ export default function SendTest() {
       });
 
       console.log('Keplr client created, sending transaction...');
+      console.log('About to call client.tx.bank.send...');
 
       const tx = await client.tx.bank.send(
         {
@@ -51,6 +52,8 @@ export default function SendTest() {
         },
         { gasLimit: 50_000 }
       );
+
+      console.log('Keplr client.tx.bank.send completed, transaction result:', tx);
 
       if (tx.code !== TxResultCode.Success) {
         throw new Error(`Transaction failed: ${tx.rawLog}`);
@@ -95,6 +98,7 @@ export default function SendTest() {
       });
 
       console.log('SecretJS client created, sending transaction...');
+      console.log('About to call client.tx.bank.send...');
 
       const tx = await client.tx.bank.send(
         {
@@ -104,6 +108,8 @@ export default function SendTest() {
         },
         { gasLimit: 50_000 }
       );
+
+      console.log('SecretJS client.tx.bank.send completed, transaction result:', tx);
 
       if (tx.code !== TxResultCode.Success) {
         throw new Error(`Transaction failed: ${tx.rawLog}`);

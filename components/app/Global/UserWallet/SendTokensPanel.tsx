@@ -3,7 +3,7 @@ import { useTokenStore } from '@/store/tokenStore';
 import { SecretString } from '@/types';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import { sendTokens } from '@/utils/wallet/sendTokens';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RiArrowDownSLine } from 'react-icons/ri';
 
 interface SendTokensPanelProps {
@@ -16,6 +16,7 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('uscrt');
   const [isTokenDropdownOpen, setIsTokenDropdownOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { listAllTokens } = useTokenStore();
   const tokens = listAllTokens() ?? [];
@@ -40,18 +41,48 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
+    // Prevent multiple simultaneous send attempts
+    if (isLoading) {
+      return;
+    }
+
     try {
-      if (!recipientAddress || !amount) {
+      setIsLoading(true);
+
+      // Get fresh values at execution time to avoid stale closure issues
+      const currentRecipient = recipientAddress.trim();
+      const currentAmount = amount.trim();
+      const currentToken = selectedToken;
+
+      if (!currentRecipient || !currentAmount) {
         showToastOnce('send-validation-error', 'Please fill in all fields', 'error');
         return;
       }
 
+      // Additional validation to ensure amount is valid
+      const numericAmount = parseFloat(currentAmount);
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        showToastOnce('send-validation-error', 'Please enter a valid amount', 'error');
+        return;
+      }
+
+      console.log('🚀 SEND PANEL DEBUG - Token selection and values:', {
+        fromAddress: walletAddress,
+        toAddress: currentRecipient,
+        amount: currentAmount,
+        denom: currentToken,
+        numericAmount,
+        selectedTokenData,
+        allTokenOptions,
+        selectedTokenState: selectedToken,
+      });
+
       await sendTokens({
         fromAddress: walletAddress,
-        toAddress: recipientAddress as SecretString,
-        amount,
-        denom: selectedToken,
+        toAddress: currentRecipient as SecretString,
+        amount: currentAmount,
+        denom: currentToken,
       });
 
       showToastOnce('send-success', 'Transaction submitted successfully', 'success', {
@@ -63,8 +94,10 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
         message: 'Please check your inputs and try again',
       });
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [recipientAddress, amount, selectedToken, walletAddress, onClose, isLoading]);
 
   return (
     <div className="flex flex-col h-full">
@@ -159,9 +192,14 @@ export const SendTokensPanel: React.FC<SendTokensPanelProps> = ({ walletAddress,
       <div className="p-4 border-t border-adamant-box-border">
         <button
           onClick={() => void handleSend()}
-          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-adamant-gradientBright to-adamant-gradientDark text-black font-bold uppercase hover:from-adamant-gradientDark hover:to-adamant-gradientBright transition-all duration-300 shadow-[0_0_20px_-4px_rgba(167,142,90,0.3)]"
+          disabled={isLoading}
+          className={`w-full py-3.5 rounded-xl bg-gradient-to-r font-bold uppercase transition-all duration-300 shadow-[0_0_20px_-4px_rgba(167,142,90,0.3)] ${
+            isLoading
+              ? 'from-gray-400 to-gray-500 text-gray-200 cursor-not-allowed'
+              : 'from-adamant-gradientBright to-adamant-gradientDark text-black hover:from-adamant-gradientDark hover:to-adamant-gradientBright'
+          }`}
         >
-          Send
+          {isLoading ? 'Sending...' : 'Send'}
         </button>
       </div>
     </div>

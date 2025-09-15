@@ -228,31 +228,14 @@ export const useWalletTotalValue = (): WalletTotalValue => {
           const currentPrice = priceInfo.price;
           const change24hPercent = priceInfo.change24h || 0;
 
-          // Enhanced debug logging for balance parsing
-          console.log(`🔍 TOKEN BALANCE DEBUG [${token.symbol}]:`, {
-            rawBalance: balanceState.balance,
-            parsedBalance: balance,
-            currentPrice,
-            balanceIsNaN: isNaN(balance),
-            balanceIsPositive: balance > 0,
-            tokenSymbol: token.symbol,
-            tokenAddress: token.address,
-            coingeckoId: token.coingeckoId,
-          });
+          // Debug logging removed to reduce console spam
 
           if (!isNaN(balance) && balance > 0) {
             const tokenValueUSD = balance * currentPrice;
             const previousPrice = currentPrice / (1 + change24hPercent / 100);
             const previousTokenValueUSD = balance * previousPrice;
 
-            // Enhanced calculation logging
-            console.log(`💰 CALCULATION DEBUG [${token.symbol}]:`, {
-              balance,
-              currentPrice,
-              calculation: `${balance} × ${currentPrice} = ${tokenValueUSD}`,
-              tokenValueUSD,
-              expectedRange: balance < 0.1 ? 'Should be small value' : 'Large balance',
-            });
+            // Calculation debug logging removed to reduce console spam
 
             tokenDetail.calculations = {
               balanceNumber: balance,
@@ -283,29 +266,7 @@ export const useWalletTotalValue = (): WalletTotalValue => {
         tokenDetails.push(tokenDetail);
       });
 
-      // Comprehensive logging before final calculation
-      console.log('🚀 WALLET TOTAL VALUE CALCULATION:', {
-        timestamp: new Date().toISOString(),
-        totalTokensConfigured: tokens.length,
-        tokensWithBalance: tokenDetails.filter((t) => t.balanceState !== 'No balance state').length,
-        tokensWithPrice: tokenDetails.filter((t) => t.priceInfo !== 'No price info').length,
-        tokensContributingToTotal: tokenDetails.filter((t) => t.calculations?.contributsToTotal)
-          .length,
-        preliminaryTotals: {
-          totalUSD,
-          totalPreviousValue,
-        },
-        allTokenDetails: tokenDetails,
-        pricingState: {
-          loading: pricingLoading,
-          error: pricingError,
-          availablePricing: Object.keys(pricing),
-        },
-        balanceState: {
-          totalBalanceEntries: Object.keys(allBalances).length,
-          balanceAddresses: Object.keys(allBalances),
-        },
-      });
+      // Wallet total value calculation logging removed to reduce console spam
 
       totalChange24hUSD = totalUSD - totalPreviousValue;
       const change24hPercent =
