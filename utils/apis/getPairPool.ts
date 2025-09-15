@@ -1,11 +1,13 @@
 import { SecretString } from '@/types';
 import { PoolResponse } from '@/types/api/Pair';
+import { getSecretNetworkEnvVars } from '@/utils/env';
 import { SecretNetworkClient } from 'secretjs';
 
-// TODO: have a single client somewhere to import instead.
+// Use environment variables for client configuration
+const envVars = getSecretNetworkEnvVars();
 const secretjs = new SecretNetworkClient({
-  url: 'https://rpc.ankr.com/http/scrt_cosmos',
-  chainId: 'secret-4',
+  url: envVars.RPC_URL,
+  chainId: envVars.CHAIN_ID,
 });
 
 export async function queryPool(

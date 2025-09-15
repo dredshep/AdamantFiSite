@@ -1,16 +1,18 @@
+import { getSecretNetworkEnvVars } from '@/utils/env';
 import isNotNullish from '@/utils/isNotNullish';
 import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useState } from 'react';
 import { SecretNetworkClient } from 'secretjs';
 
-export function useKeplrConnection(
-  chainId = 'secret-4',
-  rpcUrl = 'https://rpc.ankr.com/http/scrt_cosmos'
-) {
+export function useKeplrConnection(chainId?: string, rpcUrl?: string) {
+  // Use environment variables as defaults
+  const envVars = getSecretNetworkEnvVars();
+  const finalChainId = chainId ?? envVars.CHAIN_ID;
+  const finalRpcUrl = rpcUrl ?? envVars.RPC_URL;
   const [secretjs, setSecretjs] = useState<SecretNetworkClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [currentChainId, setCurrentChainId] = useState<string>(chainId);
+  const [currentChainId, setCurrentChainId] = useState<string>(finalChainId);
 
   const connect = useCallback(async () => {
     const keplr = (window as unknown as Window).keplr;
@@ -20,10 +22,10 @@ export function useKeplrConnection(
     }
 
     try {
-      await keplr.enable(chainId);
+      await keplr.enable(finalChainId);
 
-      const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
-      const enigmaUtils = keplr.getEnigmaUtils(chainId);
+      const offlineSigner = keplr.getOfflineSignerOnlyAmino(finalChainId);
+      const enigmaUtils = keplr.getEnigmaUtils(finalChainId);
       const accounts = await offlineSigner?.getAccounts();
 
       if (!accounts?.length || !accounts[0]) {
@@ -41,8 +43,8 @@ export function useKeplrConnection(
       }
 
       const client = new SecretNetworkClient({
-        chainId,
-        url: rpcUrl,
+        chainId: finalChainId,
+        url: finalRpcUrl,
         wallet: offlineSigner,
         walletAddress: accounts[0].address,
         encryptionUtils: enigmaUtils,
@@ -50,7 +52,7 @@ export function useKeplrConnection(
 
       setWalletAddress(accounts[0].address);
       setSecretjs(client);
-      setCurrentChainId(chainId);
+      setCurrentChainId(finalChainId);
       return client;
     } catch (error) {
       console.error('Error connecting to Keplr:', error);
@@ -59,7 +61,7 @@ export function useKeplrConnection(
       });
       return null;
     }
-  }, [chainId, rpcUrl]);
+  }, [finalChainId, finalRpcUrl]);
 
   useEffect(() => {
     void connect();

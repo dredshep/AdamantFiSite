@@ -11,6 +11,7 @@ import {
   TokenInputState,
   WalletState,
 } from '@/types';
+import { getSecretNetworkEnvVars } from '@/utils/env';
 import { create } from 'zustand';
 import { findMultihopPath, getReachableTokens } from './routing';
 
@@ -37,7 +38,7 @@ export const useSwapStore = create<SwapStoreState>((set, get) => ({
     ADMTBalance: '0',
   } as WalletState,
   swappableTokens: [] as ConfigToken[],
-  chainId: 'secret-4',
+  chainId: getSecretNetworkEnvVars().CHAIN_ID,
   connectionRefused: false,
 
   setTokenInputProperty: <T extends keyof TokenInputState>(

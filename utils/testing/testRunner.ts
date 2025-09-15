@@ -1,4 +1,5 @@
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
+import { getSecretNetworkEnvVars } from '@/utils/env';
 import { SecretNetworkClient } from 'secretjs';
 import { runQuickDiagnostic, runStakingTestSuite } from './stakingTestSuite';
 
@@ -6,16 +7,19 @@ import { runQuickDiagnostic, runStakingTestSuite } from './stakingTestSuite';
  * Main test runner script that can be executed to test the staking system
  */
 
+// Get environment variables
+const envVars = getSecretNetworkEnvVars();
+
 // Configuration for testing
 export const TEST_CONFIG = {
   // The sSCRT/USDC.nbl LP token address
   LP_TOKEN_ADDRESS: 'secret18xd8j88jrwzagnv09cegv0fm3aca6d3qlfem6v',
 
-  // Secret Network RPC endpoint - using the proper one from env
-  RPC_ENDPOINT: 'https://rpc.ankr.com/http/scrt_cosmos', // From NEXT_PUBLIC_RPC_URL
+  // Secret Network RPC endpoint - using environment variables
+  RPC_ENDPOINT: envVars.RPC_URL,
 
-  // Chain ID
-  CHAIN_ID: 'secret-4', // From NEXT_PUBLIC_CHAIN_ID
+  // Chain ID - using environment variables
+  CHAIN_ID: envVars.CHAIN_ID,
 
   // Optional user credentials for testing user-specific functions
   // These would need to be provided when running the test

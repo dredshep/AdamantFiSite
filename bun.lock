@@ -50,7 +50,7 @@
         "react-toastify": "^11.0.5",
         "react-tooltip": "^5.28.0",
         "react-vega": "^7.6.0",
-        "secretjs": "1.12.1",
+        "secretjs": "1.12.2",
         "seedrandom": "^3.0.5",
         "styled-components": "^6.1.11",
         "tailwind-merge": "^2.3.0",
@@ -1276,7 +1276,7 @@
 
     "scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
 
-    "secretjs": ["secretjs@1.12.1", "", { "dependencies": { "@cosmjs/encoding": "0.27.1", "@cosmjs/math": "0.27.1", "@noble/hashes": "1.0.0", "@noble/secp256k1": "1.7.0", "bech32": "2.0.0", "big-integer": "1.6.51", "bignumber.js": "9.0.2", "bip32": "2.0.6", "bip39": "3.0.4", "cross-fetch": "3.1.5", "curve25519-js": "0.0.4", "google-protobuf": "^3.14.0", "miscreant": "0.3.2", "pako": "2.0.4", "protobufjs": "7.2.5", "secure-random": "1.1.2" } }, "sha512-EmvgVJIgxZDj73En2WI5lNopy5eIv88gA8lhWfWW2MGED5pchvN5NEhCfIijTVB8JlK51iZkMZnGdD2q2b9hrA=="],
+    "secretjs": ["secretjs@1.12.2", "", { "dependencies": { "@cosmjs/encoding": "0.27.1", "@cosmjs/math": "0.27.1", "@noble/hashes": "1.0.0", "@noble/secp256k1": "1.7.0", "bech32": "2.0.0", "big-integer": "1.6.51", "bignumber.js": "9.0.2", "bip32": "2.0.6", "bip39": "3.0.4", "cross-fetch": "3.1.5", "curve25519-js": "0.0.4", "google-protobuf": "^3.14.0", "miscreant": "0.3.2", "pako": "2.0.4", "protobufjs": "7.2.5", "secure-random": "1.1.2" } }, "sha512-b5ODntdf7vEzE+FEtIEFyg6SIQRE+XCY24rL3A6xmElwT3fBW2c7qiKmOz6mPJ5YWwRjnohIu7CpFjx8T2pC7A=="],
 
     "section-matter": ["section-matter@1.0.0", "", { "dependencies": { "extend-shallow": "^2.0.1", "kind-of": "^6.0.0" } }, "sha512-vfD3pmTzGpufjScBh50YHKzEu2lxBWhVEHsNGoEXmCmn2hKGfeNLYMzCJpe8cD7gqX7TJluOVpBkAequ6dgMmA=="],
 

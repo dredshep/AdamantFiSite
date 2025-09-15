@@ -1,6 +1,7 @@
 import { useSwapStore } from '@/store/swapStore';
 import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
+import { getSecretNetworkEnvVars } from '@/utils/env';
 import { GLOBAL_TOAST_IDS, resetToastCooldown, toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 
@@ -12,7 +13,8 @@ const keplrConnect = async () => {
   const { keplr } = window as unknown as Window;
   if (keplr) {
     try {
-      const chainId = 'secret-4';
+      const envVars = getSecretNetworkEnvVars();
+      const chainId = envVars.CHAIN_ID;
       await keplr.enable(chainId);
       const offlineSigner = keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
