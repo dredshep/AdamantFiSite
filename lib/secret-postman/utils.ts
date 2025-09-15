@@ -25,11 +25,7 @@ export async function createWalletSecretClient(
   try {
     await window.keplr.enable(networkConfig.chainId);
     const offlineSigner = window.keplr.getOfflineSignerOnlyAmino(networkConfig.chainId);
-    const encryptionUtils = new EncryptionUtilsImpl(
-      networkConfig.lcdUrl,
-      undefined,
-      networkConfig.chainId
-    );
+    const encryptionUtils = new EncryptionUtilsImpl(networkConfig.lcdUrl, undefined);
     const accounts = await offlineSigner.getAccounts();
 
     if (!accounts[0]) {

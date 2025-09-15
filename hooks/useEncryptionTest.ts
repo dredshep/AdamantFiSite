@@ -132,7 +132,7 @@ export function useEncryptionTest() {
 
       // Use LCD URL like our main app does
       console.log('Testing EncryptionUtilsImpl with LCD URL (same as main app)...');
-      const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, env.CHAIN_ID);
+      const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined);
       const accounts = await offlineSigner.getAccounts();
 
       if (!accounts[0]) {

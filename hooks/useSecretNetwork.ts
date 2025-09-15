@@ -185,7 +185,7 @@ export async function createWalletClientWithInternalUtils(): Promise<SecretNetwo
     await withRetry(() => keplr.enable(chainId));
 
     const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
-    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, chainId);
+    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined);
     const accounts = await withRetry(() => offlineSigner.getAccounts());
 
     if (!accounts[0]) {

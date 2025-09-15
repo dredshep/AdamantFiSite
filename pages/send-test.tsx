@@ -79,7 +79,7 @@ export default function SendTest() {
       await keplr.enable(env.CHAIN_ID);
 
       const offlineSigner = keplr.getOfflineSignerOnlyAmino(env.CHAIN_ID);
-      const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, env.CHAIN_ID);
+      const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined);
       const accounts = await offlineSigner.getAccounts();
 
       if (!accounts[0]) {
