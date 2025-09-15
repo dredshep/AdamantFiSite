@@ -8,9 +8,9 @@ const TEST_AMOUNT = '10000'; // 0.01 SCRT in uscrt
 
 export default function SendTest() {
   const [keplrResult, setKeplrResult] = useState<string>('');
-  const [secretjsResult, setSecrerjsResult] = useState<string>('');
+  const [secretjsResult, setSecretjsResult] = useState<string>('');
   const [isKeplrTesting, setIsKeplrTesting] = useState(false);
-  const [isSecrerjsTesting, setIsSecrerjsTesting] = useState(false);
+  const [isSecretjsTesting, setIsSecretjsTesting] = useState(false);
 
   const testWithKeplrEnigma = async () => {
     setIsKeplrTesting(true);
@@ -65,9 +65,9 @@ export default function SendTest() {
     }
   };
 
-  const testWithSecrerjsEncryption = async () => {
-    setIsSecrerjsTesting(true);
-    setSecrerjsResult('Testing...');
+  const testWithSecretjsEncryption = async () => {
+    setIsSecretjsTesting(true);
+    setSecretjsResult('Testing...');
 
     try {
       const keplr = (window as unknown as Window).keplr;
@@ -109,12 +109,12 @@ export default function SendTest() {
         throw new Error(`Transaction failed: ${tx.rawLog}`);
       }
 
-      setSecrerjsResult(`SUCCESS: ${tx.transactionHash}`);
+      setSecretjsResult(`SUCCESS: ${tx.transactionHash}`);
     } catch (error) {
       console.error('SecretJS test failed:', error);
-      setSecrerjsResult(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+      setSecretjsResult(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      setIsSecrerjsTesting(false);
+      setIsSecretjsTesting(false);
     }
   };
 
@@ -156,19 +156,19 @@ export default function SendTest() {
       <div style={{ marginBottom: '30px' }}>
         <h2>2. SecretJS EncryptionUtilsImpl</h2>
         <button
-          onClick={() => void testWithSecrerjsEncryption()}
-          disabled={isSecrerjsTesting}
+          onClick={() => void testWithSecretjsEncryption()}
+          disabled={isSecretjsTesting}
           style={{
             padding: '10px 20px',
             marginRight: '10px',
-            backgroundColor: isSecrerjsTesting ? '#ccc' : '#28a745',
+            backgroundColor: isSecretjsTesting ? '#ccc' : '#28a745',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: isSecrerjsTesting ? 'not-allowed' : 'pointer',
+            cursor: isSecretjsTesting ? 'not-allowed' : 'pointer',
           }}
         >
-          {isSecrerjsTesting ? 'Testing...' : 'Send with SecretJS EncryptionUtilsImpl'}
+          {isSecretjsTesting ? 'Testing...' : 'Send with SecretJS EncryptionUtilsImpl'}
         </button>
         <div
           style={{
