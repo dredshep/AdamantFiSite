@@ -4,6 +4,7 @@ import { showToastOnce, toastManager } from '@/utils/toast/toastManager';
 import { Window } from '@keplr-wallet/types';
 import { useCallback, useEffect, useState } from 'react';
 import { SecretNetworkClient } from 'secretjs';
+import { createWalletClient } from './useSecretNetwork';
 
 export function useKeplrConnection(chainId?: string, rpcUrl?: string) {
   // Use environment variables as defaults
@@ -22,10 +23,18 @@ export function useKeplrConnection(chainId?: string, rpcUrl?: string) {
     }
 
     try {
-      await keplr.enable(finalChainId);
+      // Use the centralized wallet client creation
+      const client = await createWalletClient();
+      if (!client) {
+        showToastOnce('keplr-connection-error', 'Connection error', 'error', {
+          message: 'Failed to connect to Keplr wallet. Please refresh the page and try again.',
+        });
+        return null;
+      }
 
+      // Get wallet address from Keplr
+      await keplr.enable(finalChainId);
       const offlineSigner = keplr.getOfflineSignerOnlyAmino(finalChainId);
-      const enigmaUtils = keplr.getEnigmaUtils(finalChainId);
       const accounts = await offlineSigner?.getAccounts();
 
       if (!accounts?.length || !accounts[0]) {
@@ -34,21 +43,6 @@ export function useKeplrConnection(chainId?: string, rpcUrl?: string) {
         });
         return null;
       }
-
-      if (offlineSigner === undefined) {
-        showToastOnce('no-offline-signer', 'No offline signer found', 'error', {
-          message: 'Unable to access Keplr wallet signer',
-        });
-        return null;
-      }
-
-      const client = new SecretNetworkClient({
-        chainId: finalChainId,
-        url: finalRpcUrl,
-        wallet: offlineSigner,
-        walletAddress: accounts[0].address,
-        encryptionUtils: enigmaUtils,
-      });
 
       setWalletAddress(accounts[0].address);
       setSecretjs(client);

@@ -1,3 +1,4 @@
+import { createWalletClient } from '@/hooks/useSecretNetwork';
 import { getSecretNetworkEnvVars } from '@/utils/env';
 import { SecretNetworkClient } from 'secretjs';
 
@@ -316,11 +317,20 @@ export async function connectKeplr(): Promise<{
     // Enable the chain
     await window.keplr.enable(env.CHAIN_ID);
 
-    // Get signers
-    const offlineSigner = window.keplr.getOfflineSignerOnlyAmino(env.CHAIN_ID);
-    const enigmaUtils = window.keplr.getEnigmaUtils(env.CHAIN_ID);
+    // Use centralized wallet client creation
+    const client = await createWalletClient();
+    if (!client) {
+      return {
+        success: false,
+        error: {
+          type: KeplrErrorType.UNEXPECTED,
+          message: 'Failed to create wallet client',
+        },
+      };
+    }
 
-    // Get accounts
+    // Get accounts for address
+    const offlineSigner = window.keplr.getOfflineSignerOnlyAmino(env.CHAIN_ID);
     const accounts = await offlineSigner.getAccounts();
     if (accounts.length === 0) {
       return {
@@ -343,15 +353,6 @@ export async function connectKeplr(): Promise<{
         },
       };
     }
-
-    // Create SecretJS client
-    const client = new SecretNetworkClient({
-      chainId: env.CHAIN_ID,
-      url: env.LCD_URL,
-      wallet: offlineSigner,
-      walletAddress: address,
-      encryptionUtils: enigmaUtils,
-    });
 
     // Test the connection with a simple query
     try {

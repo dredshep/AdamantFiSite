@@ -3,7 +3,7 @@ import isNotNullish from '@/utils/isNotNullish';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import { Window as KeplrWindow } from '@keplr-wallet/types';
 import { useEffect, useState } from 'react';
-import { SecretNetworkClient } from 'secretjs';
+import { EncryptionUtilsImpl, SecretNetworkClient } from 'secretjs';
 
 enum SecretNetworkError {
   NO_KEPLR = 'NO_KEPLR',
@@ -146,7 +146,7 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
     await withRetry(() => keplr.enable(chainId));
 
     const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
-    const enigmaUtils = keplr.getEnigmaUtils(chainId);
+    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, chainId);
     const accounts = await withRetry(() => offlineSigner.getAccounts());
 
     if (!accounts[0]) {
@@ -158,7 +158,7 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
       url: env.LCD_URL,
       wallet: offlineSigner,
       walletAddress: accounts[0].address,
-      encryptionUtils: enigmaUtils,
+      encryptionUtils: encryptionUtils,
     });
   } catch (error) {
     console.error('Failed to create wallet client:', error);
@@ -303,7 +303,7 @@ async function connectKeplr(): Promise<void> {
     updateGlobalState({ keplr: keplrInstance });
 
     const offlineSigner = keplrInstance.getOfflineSignerOnlyAmino(env.CHAIN_ID);
-    const enigmaUtils = keplrInstance.getEnigmaUtils(env.CHAIN_ID);
+    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined, env.CHAIN_ID);
 
     if (typeof offlineSigner === 'undefined' || offlineSigner === null) {
       console.error('No offline signer found');
@@ -333,7 +333,7 @@ async function connectKeplr(): Promise<void> {
       url: env.LCD_URL,
       wallet: offlineSigner,
       walletAddress: firstAccount.address,
-      encryptionUtils: enigmaUtils,
+      encryptionUtils: encryptionUtils,
     });
 
     console.log('Successfully connected to Secret Network');

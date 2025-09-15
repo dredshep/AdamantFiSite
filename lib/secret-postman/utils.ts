@@ -1,5 +1,5 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
-import { SecretNetworkClient } from 'secretjs';
+import { EncryptionUtilsImpl, SecretNetworkClient } from 'secretjs';
 import { NetworkConfig, QueryRequest, QueryResponse, TemplateContext } from './types';
 
 /**
@@ -25,7 +25,11 @@ export async function createWalletSecretClient(
   try {
     await window.keplr.enable(networkConfig.chainId);
     const offlineSigner = window.keplr.getOfflineSignerOnlyAmino(networkConfig.chainId);
-    const enigmaUtils = window.keplr.getEnigmaUtils(networkConfig.chainId);
+    const encryptionUtils = new EncryptionUtilsImpl(
+      networkConfig.lcdUrl,
+      undefined,
+      networkConfig.chainId
+    );
     const accounts = await offlineSigner.getAccounts();
 
     if (!accounts[0]) {
@@ -37,7 +41,7 @@ export async function createWalletSecretClient(
       url: networkConfig.lcdUrl,
       wallet: offlineSigner,
       walletAddress: accounts[0].address,
-      encryptionUtils: enigmaUtils,
+      encryptionUtils: encryptionUtils,
     });
   } catch (error) {
     console.error('Failed to create wallet client:', error);
