@@ -1,5 +1,5 @@
 import { LIQUIDITY_PAIRS } from '@/config/tokens';
-import { secretClient } from '@/hooks/useSecretNetwork';
+import { createWalletClient } from '@/hooks/useSecretNetwork';
 import { Window } from '@keplr-wallet/types';
 import pThrottle from 'p-throttle';
 // Inline truncate function to avoid linter issues
@@ -90,8 +90,11 @@ export class TokenService {
     }
 
     try {
-      // Create wallet client on demand
-      const secretjs = secretClient;
+      // Use wallet-connected client for encrypted SNIP-20 queries
+      const secretjs = await createWalletClient();
+      if (!secretjs) {
+        throw new Error('Wallet not connected - unable to create encrypted client');
+      }
 
       const result = await secretjs.query.compute.queryContract<QueryArgs, QueryResult>({
         contract_address: params.contract.address,
