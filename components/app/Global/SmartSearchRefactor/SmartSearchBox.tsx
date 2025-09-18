@@ -121,16 +121,12 @@ const SmartSearchBox: React.FC<SmartSearchBoxProps> = ({
         e.preventDefault();
         inputRef.current?.focus();
         setIsOpen(true);
-      } else if (e.key === '/' && !isOpen) {
-        e.preventDefault();
-        inputRef.current?.focus();
-        setIsOpen(true);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
     setActiveIndex(0);

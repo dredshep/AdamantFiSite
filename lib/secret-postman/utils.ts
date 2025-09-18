@@ -1,4 +1,5 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
+import { getRuntimeNetworkConfig } from '@/utils/network/runtimeNetwork';
 import { EncryptionUtilsImpl, SecretNetworkClient } from 'secretjs';
 import { NetworkConfig, QueryRequest, QueryResponse, TemplateContext } from './types';
 
@@ -266,10 +267,11 @@ export function formatJson(obj: unknown): string {
  */
 export function getDefaultNetworkConfig(): NetworkConfig {
   const env = getSecretNetworkEnvVars();
+  const runtime = getRuntimeNetworkConfig();
   return {
     chainId: env.CHAIN_ID,
-    lcdUrl: env.LCD_URL,
-    rpcUrl: env.RPC_URL,
+    lcdUrl: runtime.lcdUrl,
+    rpcUrl: runtime.rpcUrl,
     name: env.CHAIN_ID === 'pulsar-3' ? 'Secret Testnet' : 'Secret Network',
   };
 }

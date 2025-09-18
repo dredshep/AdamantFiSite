@@ -6,6 +6,7 @@ import ViewingKeyDebugDisplay from '@/components/app/Shared/ViewingKeys/ViewingK
 import ViewingKeyMiniCreator from '@/components/app/Shared/ViewingKeys/ViewingKeyMiniCreator';
 import { LIQUIDITY_PAIRS, LP_TOKENS, TOKENS } from '@/config/tokens';
 import { useRewardEstimates } from '@/hooks/staking/useRewardEstimates';
+import { useKeplrConnection } from '@/hooks/useKeplrConnection';
 import { useLpAndStakingVK } from '@/hooks/useLpAndStakingVK';
 import { usePoolData } from '@/hooks/usePoolData';
 import { SecretString } from '@/types';
@@ -40,6 +41,8 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
   pairSymbol = 'LP',
   lpTokenAddress,
 }) => {
+  const { secretjs } = useKeplrConnection();
+  const [isUpdatingAllocation, setIsUpdatingAllocation] = useState(false);
   // Get LP token address from staking contract if not provided
   const stakingInfo = stakingContractAddress
     ? getStakingContractInfo(stakingContractAddress)
@@ -113,6 +116,83 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
     return `${value.toFixed(2)}%`;
   };
 
+  // Update allocation function - calls bulk distributor to refresh allocations
+  const handleUpdateAllocation = async () => {
+    if (!secretjs) {
+      showToastOnce('keplr-not-installed', 'Keplr not available', 'error', {
+        message: 'Please connect your Keplr wallet first',
+      });
+      return;
+    }
+
+    try {
+      setIsUpdatingAllocation(true);
+
+      // Bulk distributor contract details
+      const bulkDistributorAddress = 'secret1s563hkkrzjzx9q8qcx3r47h7s0hn5kfgy9t62r';
+      const bulkDistributorCodeHash =
+        '89083455710f42520356d0fbaa2d3a6f8e1362e1b67040cd59d365d02378fad5'; // From docs
+
+      // Execute update_allocation message
+      const executeMsg = {
+        update_allocation: {
+          spy_addr: stakingContractAddress, // LP staking contract address
+          spy_hash: 'c644edd309de7fd865b4fbe22054bcbe85a6c0b8abf5f110053fe1b2d0e8a72a', // LP staking contract code hash
+          hook: null, // Optional hook, using null as per docs
+        },
+      };
+
+      console.log('🚀 Triggering update_allocation on bulk distributor:', {
+        bulkDistributorAddress,
+        executeMsg,
+      });
+
+      const tx = await secretjs.tx.compute.executeContract(
+        {
+          sender: secretjs.address,
+          contract_address: bulkDistributorAddress,
+          code_hash: bulkDistributorCodeHash,
+          msg: executeMsg,
+          sent_funds: [],
+        },
+        {
+          gasLimit: 200000,
+          gasPriceInFeeDenom: 0.1,
+        }
+      );
+
+      console.log('✅ Update allocation transaction successful:', tx);
+
+      // Show success toast
+      showToastOnce('update-allocation-success', 'Update allocation triggered', 'success', {
+        message:
+          'Successfully triggered reward allocation update. Balances are automatically refreshed every 10 seconds.',
+        autoClose: 8000,
+      });
+
+      // Refresh data after successful update
+      if (onRefresh) {
+        setTimeout(() => {
+          onRefresh();
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('❌ Failed to update allocation:', error);
+
+      let errorMessage = 'Failed to trigger update allocation';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      showToastOnce('update-allocation-error', 'Update allocation failed', 'error', {
+        message: errorMessage,
+        autoClose: 8000,
+      });
+    } finally {
+      setIsUpdatingAllocation(false);
+    }
+  };
+
   // Properly distinguish between null (unknown) and '0' (actually zero)
   const hasStakedTokens = stakedBalance !== null && stakedBalance !== '0';
   const hasPendingRewards =
@@ -150,15 +230,28 @@ const StakingOverview: React.FC<StakingOverviewProps> = ({
       <div className="bg-adamant-box-dark/30 backdrop-blur-sm rounded-xl p-4 border border-adamant-box-border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-adamant-text-box-main">Pool Statistics</h3>
-          {showRefreshButton && onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="p-1 text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Update Allocation Button - Development Only */}
+            {process.env.NODE_ENV === 'development' && (
+              <button
+                onClick={handleUpdateAllocation}
+                disabled={isUpdatingAllocation}
+                className="px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800 text-white rounded transition-colors"
+                title="Trigger bulk distributor update_allocation call"
+              >
+                {isUpdatingAllocation ? 'Updating...' : 'Update Allocation'}
+              </button>
+            )}
+            {showRefreshButton && onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="p-1 text-adamant-text-box-secondary hover:text-adamant-text-box-main transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-xs">

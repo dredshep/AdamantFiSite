@@ -1,5 +1,10 @@
 import { getSecretNetworkEnvVars } from '@/utils/env';
 import isNotNullish from '@/utils/isNotNullish';
+import {
+  buildKeplrChainInfo,
+  getRuntimeNetworkConfig,
+  onNetworkConfigChange,
+} from '@/utils/network/runtimeNetwork';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import { Window as KeplrWindow } from '@keplr-wallet/types';
 import { useEffect, useState } from 'react';
@@ -38,51 +43,11 @@ const TOAST_IDS = {
   NETWORK_ERROR: 'secret-network-network-error',
 };
 
-const PULSAR_3_CHAIN_INFO = {
-  chainId: 'pulsar-3',
-  chainName: 'Secret Network Testnet',
-  rpc: getSecretNetworkEnvVars().RPC_URL,
-  rest: getSecretNetworkEnvVars().LCD_URL,
-  bip44: {
-    coinType: 529,
-  },
-  bech32Config: {
-    bech32PrefixAccAddr: 'secret',
-    bech32PrefixAccPub: 'secretpub',
-    bech32PrefixValAddr: 'secretvaloper',
-    bech32PrefixValPub: 'secretvaloperpub',
-    bech32PrefixConsAddr: 'secretvalcons',
-    bech32PrefixConsPub: 'secretvalconspub',
-  },
-  currencies: [
-    {
-      coinDenom: 'SCRT',
-      coinMinimalDenom: 'uscrt',
-      coinDecimals: 6,
-      coinGeckoId: 'secret',
-    },
-  ],
-  feeCurrencies: [
-    {
-      coinDenom: 'SCRT',
-      coinMinimalDenom: 'uscrt',
-      coinDecimals: 6,
-      coinGeckoId: 'secret',
-    },
-  ],
-  stakeCurrency: {
-    coinDenom: 'SCRT',
-    coinMinimalDenom: 'uscrt',
-    coinDecimals: 6,
-    coinGeckoId: 'secret',
-  },
-  gasPriceStep: {
-    low: 0.25,
-    average: 0.5,
-    high: 1,
-  },
-  features: ['secretwasm'],
-};
+function getPulsar3ChainInfo() {
+  const env = getSecretNetworkEnvVars();
+  const runtime = getRuntimeNetworkConfig();
+  return buildKeplrChainInfo(env.CHAIN_ID, runtime.lcdUrl, runtime.rpcUrl);
+}
 
 // Helper function to add delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -118,7 +83,7 @@ export const getSecretClient = (): SecretNetworkClient => {
   if (!_secretClient) {
     _secretClient = new SecretNetworkClient({
       chainId: getSecretNetworkEnvVars().CHAIN_ID,
-      url: getSecretNetworkEnvVars().LCD_URL,
+      url: getRuntimeNetworkConfig().lcdUrl,
     });
   }
   return _secretClient;
@@ -137,10 +102,11 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
 
     const env = getSecretNetworkEnvVars();
     const chainId = env.CHAIN_ID;
+    const runtime = getRuntimeNetworkConfig();
 
     // Suggest chain info for pulsar-3 with retry
     if (chainId === 'pulsar-3') {
-      await withRetry(() => keplr.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
+      await withRetry(() => keplr.experimentalSuggestChain(getPulsar3ChainInfo()));
     }
 
     await withRetry(() => keplr.enable(chainId));
@@ -155,7 +121,7 @@ export async function createWalletClient(): Promise<SecretNetworkClient | null> 
 
     return new SecretNetworkClient({
       chainId,
-      url: env.LCD_URL,
+      url: runtime.lcdUrl,
       wallet: offlineSigner,
       walletAddress: accounts[0].address,
       encryptionUtils: encryptionUtils,
@@ -176,16 +142,17 @@ export async function createWalletClientWithInternalUtils(): Promise<SecretNetwo
 
     const env = getSecretNetworkEnvVars();
     const chainId = env.CHAIN_ID;
+    const runtime = getRuntimeNetworkConfig();
 
     // Suggest chain info for pulsar-3 with retry
     if (chainId === 'pulsar-3') {
-      await withRetry(() => keplr.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
+      await withRetry(() => keplr.experimentalSuggestChain(getPulsar3ChainInfo()));
     }
 
     await withRetry(() => keplr.enable(chainId));
 
     const offlineSigner = keplr.getOfflineSignerOnlyAmino(chainId);
-    const encryptionUtils = new EncryptionUtilsImpl(env.LCD_URL, undefined);
+    const encryptionUtils = new EncryptionUtilsImpl(runtime.lcdUrl, undefined);
     const accounts = await withRetry(() => offlineSigner.getAccounts());
 
     if (!accounts[0]) {
@@ -194,7 +161,7 @@ export async function createWalletClientWithInternalUtils(): Promise<SecretNetwo
 
     return new SecretNetworkClient({
       chainId,
-      url: env.LCD_URL,
+      url: runtime.lcdUrl,
       wallet: offlineSigner,
       walletAddress: accounts[0].address,
       encryptionUtils: encryptionUtils,
@@ -330,11 +297,12 @@ async function connectKeplr(): Promise<void> {
     }
 
     const env = getSecretNetworkEnvVars();
+    const runtime = getRuntimeNetworkConfig();
 
     // Suggest chain info for pulsar-3 with retry
     if (env.CHAIN_ID === 'pulsar-3') {
       console.log('Suggesting chain info for pulsar-3...');
-      await withRetry(() => keplrInstance.experimentalSuggestChain(PULSAR_3_CHAIN_INFO));
+      await withRetry(() => keplrInstance.experimentalSuggestChain(getPulsar3ChainInfo()));
     }
 
     console.log(`Enabling Keplr for ${env.CHAIN_ID}...`);
@@ -369,7 +337,7 @@ async function connectKeplr(): Promise<void> {
     console.log('Creating SecretNetworkClient...');
     const client = new SecretNetworkClient({
       chainId: env.CHAIN_ID,
-      url: env.LCD_URL,
+      url: runtime.lcdUrl,
       wallet: offlineSigner,
       walletAddress: firstAccount.address,
       encryptionUtils: encryptionUtils,
@@ -435,6 +403,19 @@ export function useSecretNetwork() {
 
     subscribers.add(unsubscribe);
 
+    // Recreate clients on runtime network changes
+    const unsubscribeNetwork = onNetworkConfigChange(() => {
+      // Reset read-only client; reconnect wallet client if connected
+      _secretClient = null;
+      if (!globalState.isConnecting) {
+        // If previously connected, attempt to reconnect with new endpoints
+        if (globalState.walletAddress !== null || globalState.secretjs !== null) {
+          updateGlobalState({ secretjs: null });
+          void connectKeplr();
+        }
+      }
+    });
+
     // Initial connection attempt
     if (globalState.secretjs === null && !globalState.isConnecting && globalState.error === null) {
       console.log('Initializing Secret Network connection...');
@@ -443,6 +424,7 @@ export function useSecretNetwork() {
 
     return () => {
       subscribers.delete(unsubscribe);
+      unsubscribeNetwork();
     };
   }, []);
 

@@ -10,6 +10,14 @@ import { useTokenStore } from '@/store/tokenStore';
 import { useWalletStore } from '@/store/walletStore';
 import { SecretString } from '@/types';
 import { isPricingEnabled } from '@/utils/features';
+import {
+  addCustomEndpoint,
+  getRuntimeNetworkConfig,
+  listEndpoints,
+  onNetworkConfigChange,
+  probeEndpoint,
+  setActiveEndpoint,
+} from '@/utils/network/runtimeNetwork';
 import { showToastOnce } from '@/utils/toast/toastManager';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HiQrCode } from 'react-icons/hi2';
@@ -100,6 +108,25 @@ const WalletSidebar: React.FC = () => {
   const [currentView, setCurrentView] = useState<
     'main' | 'send' | 'receive' | 'settings' | 'contractKeys'
   >('main');
+
+  // Runtime network config (RPC/LCD) state
+  const [networkEndpoints, setNetworkEndpoints] = useState([] as ReturnType<typeof listEndpoints>);
+  const [activeEndpointId, setActiveEndpointId] = useState<string>('');
+  const [addingLabel, setAddingLabel] = useState<string>('');
+  const [addingLcdUrl, setAddingLcdUrl] = useState<string>('');
+  const [addingRpcUrl, setAddingRpcUrl] = useState<string>('');
+  const [isProbing, setIsProbing] = useState<boolean>(false);
+  const [probeResult, setProbeResult] = useState<{ lcdOk: boolean; rpcOk: boolean } | null>(null);
+
+  useEffect(() => {
+    const refresh = () => {
+      setNetworkEndpoints(listEndpoints());
+      setActiveEndpointId(getRuntimeNetworkConfig().id);
+    };
+    refresh();
+    const unsub = onNetworkConfigChange(refresh);
+    return () => unsub();
+  }, []);
 
   const truncatedAddress = address === null ? '' : address.slice(0, 8) + '...' + address.slice(-6);
 
@@ -228,13 +255,13 @@ const WalletSidebar: React.FC = () => {
 
                   {/* Settings and close buttons - positioned top right */}
                   <div className="flex items-center gap-2">
-                    {/* <button
-                    onClick={openSettings}
-                    className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
-                    title="Settings"
-                  >
-                    <RiSettings3Line className="w-4 h-4" />
-                  </button> */}
+                    <button
+                      onClick={() => setCurrentView('settings')}
+                      className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
+                      title="Settings"
+                    >
+                      <RiSettings3Line className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={handleCloseSidebar}
                       className="p-2 rounded-lg hover:bg-adamant-box-dark/50 transition-all duration-200 text-adamant-text-box-secondary hover:text-white group"
@@ -474,6 +501,200 @@ const WalletSidebar: React.FC = () => {
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
               <div className="space-y-4">
+                {/* Network Configuration */}
+                <div className="bg-adamant-app-input backdrop-blur-sm rounded-lg p-4 border border-adamant-box-inputBorder transition-all duration-200 hover:bg-adamant-app-input/90">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <RiSettings3Line className="w-4 h-4 text-adamant-gradientBright" />
+                      Network Configuration
+                    </h4>
+                  </div>
+
+                  {/* Active Endpoint Selector */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-white">
+                        Active Endpoint
+                      </label>
+                      <select
+                        value={activeEndpointId}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          setActiveEndpointId(id);
+                          setActiveEndpoint(id);
+                          showToastOnce('network-switched', 'Network switched', 'success', {
+                            message: 'Reconnecting with selected RPC/LCD...',
+                          });
+                        }}
+                        className="w-full bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg px-3 py-2 text-sm text-white outline-none transition-all duration-200 hover:bg-adamant-app-input/90 focus:bg-adamant-app-input/90 focus:border-adamant-gradientBright/40"
+                      >
+                        {networkEndpoints.map((ep) => (
+                          <option key={ep.id} value={ep.id} className="bg-adamant-box-veryDark">
+                            {ep.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Current endpoint details */}
+                      <div className="bg-adamant-box-veryDark/50 rounded-lg p-3 space-y-1">
+                        <div className="text-xs text-adamant-text-box-secondary">
+                          <span className="text-adamant-text-box-main font-medium">LCD:</span>{' '}
+                          <span className="font-mono break-all">
+                            {getRuntimeNetworkConfig().lcdUrl}
+                          </span>
+                        </div>
+                        <div className="text-xs text-adamant-text-box-secondary">
+                          <span className="text-adamant-text-box-main font-medium">RPC:</span>{' '}
+                          <span className="font-mono break-all">
+                            {getRuntimeNetworkConfig().rpcUrl}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Add Custom Endpoint Section */}
+                    <div className="pt-4 border-t border-adamant-box-border/30">
+                      <h5 className="text-sm font-medium text-white mb-3">Add Custom Endpoint</h5>
+                      <div className="space-y-3">
+                        {/* Label Input */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-medium text-adamant-text-box-main">
+                            Label
+                          </label>
+                          <input
+                            value={addingLabel}
+                            onChange={(e) => setAddingLabel(e.target.value)}
+                            placeholder="My Custom Node"
+                            className="w-full bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg px-3 py-2 text-sm text-white outline-none transition-all duration-200 hover:bg-adamant-app-input/90 focus:bg-adamant-app-input/90 focus:border-adamant-gradientBright/40 placeholder:text-gray-500/50"
+                          />
+                        </div>
+
+                        {/* LCD URL Input */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-medium text-adamant-text-box-main">
+                            LCD URL
+                          </label>
+                          <input
+                            value={addingLcdUrl}
+                            onChange={(e) => setAddingLcdUrl(e.target.value)}
+                            placeholder="https://lcd.secret.org"
+                            className="w-full bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg px-3 py-2 text-sm text-white outline-none transition-all duration-200 hover:bg-adamant-app-input/90 focus:bg-adamant-app-input/90 focus:border-adamant-gradientBright/40 placeholder:text-gray-500/50 font-mono"
+                          />
+                        </div>
+
+                        {/* RPC URL Input */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-medium text-adamant-text-box-main">
+                            RPC URL
+                          </label>
+                          <input
+                            value={addingRpcUrl}
+                            onChange={(e) => setAddingRpcUrl(e.target.value)}
+                            placeholder="https://rpc.secret.org"
+                            className="w-full bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg px-3 py-2 text-sm text-white outline-none transition-all duration-200 hover:bg-adamant-app-input/90 focus:bg-adamant-app-input/90 focus:border-adamant-gradientBright/40 placeholder:text-gray-500/50 font-mono"
+                          />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-3 pt-2">
+                          <button
+                            onClick={async () => {
+                              setIsProbing(true);
+                              setProbeResult(null);
+                              try {
+                                const fake = {
+                                  id: 'temp',
+                                  label: addingLabel || 'Custom',
+                                  chainId: getRuntimeNetworkConfig().chainId,
+                                  lcdUrl: addingLcdUrl,
+                                  rpcUrl: addingRpcUrl,
+                                  userProvided: true,
+                                };
+                                const res = await probeEndpoint(fake);
+                                setProbeResult(res);
+                                showToastOnce(
+                                  'probe-result',
+                                  res.lcdOk && res.rpcOk
+                                    ? 'Endpoint reachable'
+                                    : 'Endpoint check failed',
+                                  res.lcdOk && res.rpcOk ? 'success' : 'error'
+                                );
+                              } catch (err) {
+                                setProbeResult({ lcdOk: false, rpcOk: false });
+                              } finally {
+                                setIsProbing(false);
+                              }
+                            }}
+                            disabled={isProbing || !addingLcdUrl || !addingRpcUrl}
+                            className="px-4 py-2 text-sm bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg text-white font-medium transition-all duration-200 hover:enabled:bg-adamant-app-input/90 hover:enabled:border-adamant-gradientBright/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isProbing ? 'Testing...' : 'Test Connection'}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (!addingLcdUrl || !addingRpcUrl) return;
+                              const id = addCustomEndpoint({
+                                label: addingLabel || 'Custom',
+                                lcdUrl: addingLcdUrl,
+                                rpcUrl: addingRpcUrl,
+                              });
+                              setActiveEndpoint(id);
+                              setAddingLabel('');
+                              setAddingLcdUrl('');
+                              setAddingRpcUrl('');
+                              setProbeResult(null);
+                              showToastOnce('endpoint-added', 'Custom endpoint added', 'success', {
+                                message: 'Reconnecting with new RPC/LCD...',
+                              });
+                            }}
+                            disabled={!addingLcdUrl || !addingRpcUrl}
+                            className="px-4 py-2 text-sm bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Add & Switch
+                          </button>
+                        </div>
+
+                        {/* Connection Test Results */}
+                        {probeResult && (
+                          <div className="bg-adamant-box-veryDark/50 rounded-lg p-3">
+                            <div className="text-xs text-adamant-text-box-secondary">
+                              <div className="font-medium text-adamant-text-box-main mb-1">
+                                Connection Test Results:
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <span
+                                  className={`flex items-center gap-1 ${
+                                    probeResult.lcdOk ? 'text-green-400' : 'text-red-400'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-2 h-2 rounded-full ${
+                                      probeResult.lcdOk ? 'bg-green-400' : 'bg-red-400'
+                                    }`}
+                                  ></span>
+                                  LCD {probeResult.lcdOk ? 'Connected' : 'Failed'}
+                                </span>
+                                <span
+                                  className={`flex items-center gap-1 ${
+                                    probeResult.rpcOk ? 'text-green-400' : 'text-red-400'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-2 h-2 rounded-full ${
+                                      probeResult.rpcOk ? 'bg-green-400' : 'bg-red-400'
+                                    }`}
+                                  ></span>
+                                  RPC {probeResult.rpcOk ? 'Connected' : 'Failed'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 {/* Comment out balance auto-loading since it's not in use */}
                 {/* 
               <div>
@@ -497,10 +718,6 @@ const WalletSidebar: React.FC = () => {
                 </div>
               </button>
               */}
-
-                <div className="text-center text-adamant-text-box-secondary text-sm">
-                  Settings panel simplified - advanced features will be added as needed.
-                </div>
               </div>
             </div>
           </div>
