@@ -167,14 +167,18 @@ function ensureInitialized(): { endpoints: Endpoint[]; activeId: string } {
   let activeId = storedActive ?? '';
   if (!activeId) {
     // Prefer the env default as initial active
-    activeId = defaults[0]?.id ?? endpoints[0].id;
-    writeLocalStorage(STORAGE_KEYS.activeId, activeId);
+    activeId = defaults[0]?.id ?? endpoints[0]?.id ?? '';
+    if (activeId) {
+      writeLocalStorage(STORAGE_KEYS.activeId, activeId);
+    }
   }
 
   // Validate activeId still exists
   if (!endpoints.some((e) => e.id === activeId)) {
-    activeId = endpoints[0].id;
-    writeLocalStorage(STORAGE_KEYS.activeId, activeId);
+    activeId = endpoints[0]?.id ?? '';
+    if (activeId) {
+      writeLocalStorage(STORAGE_KEYS.activeId, activeId);
+    }
   }
 
   return { endpoints, activeId };
@@ -187,7 +191,25 @@ export function listEndpoints(): Endpoint[] {
 export function getRuntimeNetworkConfig(): Endpoint {
   const { endpoints, activeId } = ensureInitialized();
   const found = endpoints.find((e) => e.id === activeId);
-  return found ?? endpoints[0];
+
+  if (found) {
+    return found;
+  }
+
+  // Fallback to first endpoint or create a minimal one
+  if (endpoints.length > 0 && endpoints[0]) {
+    return endpoints[0];
+  }
+
+  // Create a fallback endpoint using env vars if no endpoints exist
+  const env = getSecretNetworkEnvVars();
+  return {
+    id: 'fallback',
+    label: 'Fallback',
+    chainId: env.CHAIN_ID,
+    lcdUrl: env.LCD_URL,
+    rpcUrl: env.RPC_URL,
+  };
 }
 
 export function setActiveEndpoint(id: string): void {
@@ -264,7 +286,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       })
       .catch((err) => {
         clearTimeout(timer);
-        reject(err);
+        reject(err instanceof Error ? err : new Error(String(err)));
       });
   });
 }

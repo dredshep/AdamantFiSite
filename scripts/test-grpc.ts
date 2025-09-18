@@ -9,8 +9,8 @@ async function main() {
     chainId, // 👈 not "grpcWebUrl" anymore
   });
 
-  const latest = await client.query.tendermint.getLatestBlock();
+  const latest = await client.query.tendermint.getLatestBlock({});
   console.log('Latest block height:', latest.block?.header?.height);
 }
 
-main();
+void main();

@@ -598,32 +598,34 @@ const WalletSidebar: React.FC = () => {
                         {/* Action Buttons */}
                         <div className="flex items-center gap-3 pt-2">
                           <button
-                            onClick={async () => {
-                              setIsProbing(true);
-                              setProbeResult(null);
-                              try {
-                                const fake = {
-                                  id: 'temp',
-                                  label: addingLabel || 'Custom',
-                                  chainId: getRuntimeNetworkConfig().chainId,
-                                  lcdUrl: addingLcdUrl,
-                                  rpcUrl: addingRpcUrl,
-                                  userProvided: true,
-                                };
-                                const res = await probeEndpoint(fake);
-                                setProbeResult(res);
-                                showToastOnce(
-                                  'probe-result',
-                                  res.lcdOk && res.rpcOk
-                                    ? 'Endpoint reachable'
-                                    : 'Endpoint check failed',
-                                  res.lcdOk && res.rpcOk ? 'success' : 'error'
-                                );
-                              } catch (err) {
-                                setProbeResult({ lcdOk: false, rpcOk: false });
-                              } finally {
-                                setIsProbing(false);
-                              }
+                            onClick={() => {
+                              void (async () => {
+                                setIsProbing(true);
+                                setProbeResult(null);
+                                try {
+                                  const fake = {
+                                    id: 'temp',
+                                    label: addingLabel || 'Custom',
+                                    chainId: getRuntimeNetworkConfig().chainId,
+                                    lcdUrl: addingLcdUrl,
+                                    rpcUrl: addingRpcUrl,
+                                    userProvided: true,
+                                  };
+                                  const res = await probeEndpoint(fake);
+                                  setProbeResult(res);
+                                  showToastOnce(
+                                    'probe-result',
+                                    res.lcdOk && res.rpcOk
+                                      ? 'Endpoint reachable'
+                                      : 'Endpoint check failed',
+                                    res.lcdOk && res.rpcOk ? 'success' : 'error'
+                                  );
+                                } catch (_err) {
+                                  setProbeResult({ lcdOk: false, rpcOk: false });
+                                } finally {
+                                  setIsProbing(false);
+                                }
+                              })();
                             }}
                             disabled={isProbing || !addingLcdUrl || !addingRpcUrl}
                             className="px-4 py-2 text-sm bg-adamant-app-input backdrop-blur-sm border border-adamant-box-inputBorder rounded-lg text-white font-medium transition-all duration-200 hover:enabled:bg-adamant-app-input/90 hover:enabled:border-adamant-gradientBright/40 disabled:opacity-50 disabled:cursor-not-allowed"
